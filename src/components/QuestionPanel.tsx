@@ -1,6 +1,5 @@
 import React from 'react';
 import { useExamStore } from '../stores/examStore';
-import type { Question } from '../stores/examStore';
 
 export const QuestionPanel: React.FC = () => {
   const { questions, currentQuestionIndex, answers, setAnswer } = useExamStore();
