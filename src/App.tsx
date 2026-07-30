@@ -1,6 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import { Instructions } from './pages/Instructions';
-import { Exam } from './pages/Exam';
+import Exam from './pages/Exam';
 import { Results } from './pages/Results';
 
 function App() {

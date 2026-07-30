@@ -1,45 +1,66 @@
 import React from 'react';
 import { useExamStore } from '../stores/examStore';
-import clsx from 'clsx';
+import type { Question } from '../stores/examStore';
 
-export const QuestionPalette: React.FC = () => {
-  const { questions, currentQuestionIndex, answers, markedForReview, goToQuestion } = useExamStore();
+interface Props {
+  questions?: Question[];
+  answers?: Record<string, any>;
+  markedForReview?: string[];
+  currentId?: string;
+  onSelect?: (q: Question) => void;
+}
+
+export const QuestionPalette: React.FC<Props> = (props) => {
+  const store = useExamStore();
+
+  const questions = props.questions ?? store.questions;
+  const answers = props.answers ?? store.answers;
+  const markedForReview = props.markedForReview ?? store.markedForReview;
+  const currentId = props.currentId ?? store.questions[store.currentQuestionIndex]?.id;
+
+  const handleClick = (q: Question, idx: number) => {
+    if (props.onSelect) {
+      props.onSelect(q);
+    } else {
+      store.goToQuestion(idx);
+    }
+  };
 
   return (
-    <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800 flex flex-col gap-4 h-full">
-      <h3 className="font-bold text-white text-lg">Question Palette</h3>
-      
-      <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 overflow-y-auto">
-        {questions.map((q, idx) => {
-          const isAnswered = answers[q.id] !== undefined;
-          const isMarked = markedForReview.includes(q.id);
-          const isCurrent = currentQuestionIndex === idx;
+    <div className="grid grid-cols-5 gap-1.5">
+      {questions.map((q, idx) => {
+        const isAnswered = answers[q.id] !== undefined;
+        const isMarked = markedForReview.includes(q.id);
+        const isCurrent = q.id === currentId;
 
-          return (
-            <button
-              key={q.id}
-              onClick={() => goToQuestion(idx)}
-              className={clsx(
-                "w-10 h-10 rounded-lg flex items-center justify-center font-medium transition-colors border",
-                isCurrent ? "border-white ring-2 ring-white/20" : "border-transparent",
-                isAnswered && isMarked ? "bg-amber-500 text-white" : // Answered & Marked
-                isMarked ? "bg-orange-500 text-white" : // Marked
-                isAnswered ? "bg-green-500 text-white" : // Answered
-                "bg-neutral-800 text-neutral-400 hover:bg-neutral-700" // Unanswered
-              )}
-            >
-              {idx + 1}
-            </button>
-          );
-        })}
-      </div>
+        let bg = '#2a2a2a';
+        let color = '#888';
+        if (isAnswered && isMarked) { bg = '#d97706'; color = '#fff'; }
+        else if (isMarked) { bg = '#f97316'; color = '#fff'; }
+        else if (isAnswered) { bg = '#22c55e'; color = '#fff'; }
 
-      <div className="mt-auto flex flex-col gap-2 text-sm text-neutral-400">
-        <div className="flex items-center gap-2"><div className="w-4 h-4 bg-green-500 rounded" /> Answered</div>
-        <div className="flex items-center gap-2"><div className="w-4 h-4 bg-orange-500 rounded" /> Marked for Review</div>
-        <div className="flex items-center gap-2"><div className="w-4 h-4 bg-amber-500 rounded" /> Answered & Marked</div>
-        <div className="flex items-center gap-2"><div className="w-4 h-4 bg-neutral-800 rounded" /> Unanswered</div>
-      </div>
+        return (
+          <button
+            key={q.id}
+            onClick={() => handleClick(q, idx)}
+            title={`Question ${idx + 1}`}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 6,
+              background: bg,
+              color: color,
+              border: isCurrent ? '2px solid #d4a520' : '1px solid #333',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.15s'
+            }}
+          >
+            {idx + 1}
+          </button>
+        );
+      })}
     </div>
   );
 };
