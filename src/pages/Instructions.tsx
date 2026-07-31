@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertCircle, Clock, ShieldAlert, Award, FileText, User } from 'lucide-react';
+import { AlertCircle, User } from 'lucide-react';
 import { useExamStore } from '../stores/examStore';
-import { getTestMeta } from '../lib/api';
 
 export const Instructions: React.FC = () => {
   const navigate = useNavigate();

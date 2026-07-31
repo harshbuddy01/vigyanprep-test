@@ -5,6 +5,10 @@ export type Question = {
   id: string;
   type: 'MCQ' | 'MSQ' | 'Numerical';
   text: string;
+  question_text?: string;
+  question_number?: number;
+  correct_answer?: string;
+  correctAnswer?: string;
   image_url?: string;
   imageUrl?: string;
   options?: string[];
