@@ -66,7 +66,7 @@ export const useExamStore = create<ExamState>()(
       warningCount: 0,
       isOnline: true,
       
-      setQuestions: (questions) => set({ questions }),
+      setQuestions: (questions) => set({ questions, isSubmitted: false, warningCount: 0, currentQuestionIndex: 0 }),
       
       setAnswer: (questionId, answer) => set((state) => ({
         answers: { ...state.answers, [questionId]: answer }
