@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useExamStore } from '../stores/examStore';
 import { MathText } from '../components/MathText';
-import { CheckCircle2, XCircle, ArrowLeft, Download, Home, BookOpen } from 'lucide-react';
+import { CheckCircle2, XCircle, Download, Home, BookOpen } from 'lucide-react';
 
 function formatImageUrl(url: string): string {
   if (!url) return '';
