@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertCircle, CheckCircle, Clock, ShieldAlert, Award, FileText } from 'lucide-react';
+import { AlertCircle, Clock, ShieldAlert, Award, FileText } from 'lucide-react';
 import { useExamStore } from '../stores/examStore';
 import { getTestMeta } from '../lib/api';
 
