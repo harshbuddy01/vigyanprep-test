@@ -1,18 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { useExamStore } from '../stores/examStore';
+import { getTestMeta } from '../lib/api';
 
 export const Instructions: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const testType = searchParams.get('testType') || 'general';
+  const testId = searchParams.get('testId');
+  const token = searchParams.get('token');
+  const { setTestMeta, testTitle, examType } = useExamStore();
   
   const [agreed, setAgreed] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMeta = async () => {
+      if (testId && token) {
+        try {
+          const meta = await getTestMeta(testId, token);
+          setTestMeta({ testTitle: meta.title, examType: meta.examType, testId });
+        } catch (err) {
+          console.error(err);
+        }
+      }
+      setLoading(false);
+    };
+    fetchMeta();
+  }, [testId, token, setTestMeta]);
+
+  if (loading) {
+    return <div className="min-h-screen bg-[#0f0f0f] text-neutral-200 flex items-center justify-center">Loading Instructions...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-neutral-200 flex flex-col items-center py-12 px-4">
       <div className="max-w-3xl w-full bg-neutral-900 rounded-2xl border border-neutral-800 p-8">
-        <h1 className="text-3xl font-bold text-white mb-6">Instructions for {testType.toUpperCase()} Exam</h1>
+        <h1 className="text-3xl font-bold text-white mb-6">Instructions for {testTitle || 'Exam'}</h1>
         
         <div className="space-y-6 text-neutral-300">
           <section>
@@ -31,9 +55,16 @@ export const Instructions: React.FC = () => {
               <CheckCircle className="text-green-400" /> Marking Scheme
             </h2>
             <ul className="list-disc pl-6 space-y-2">
-              <li>MCQ: +4 for correct, -1 for incorrect.</li>
-              <li>MSQ: +4 for all correct, no partial marking, 0 for incorrect.</li>
-              <li>Numerical: +4 for correct, 0 for incorrect.</li>
+              {examType === 'NEST' && <li>NEST: +3/-1 best 3/4 sections.</li>}
+              {examType === 'IAT' && <li>IAT: +4/-1 all 4 sections.</li>}
+              {examType === 'CMI' && <li>CMI: Part A + B special marking.</li>}
+              {!examType && (
+                <>
+                  <li>MCQ: +4 for correct, -1 for incorrect.</li>
+                  <li>MSQ: +4 for all correct, no partial marking, 0 for incorrect.</li>
+                  <li>Numerical: +4 for correct, 0 for incorrect.</li>
+                </>
+              )}
             </ul>
           </section>
 

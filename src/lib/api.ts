@@ -1,23 +1,48 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
+const API_URL = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
 
-export const api = {
-  getQuestions: async (testId: string) => {
-    const res = await fetch(`${BASE_URL}/tests/${testId}/questions`);
-    if (!res.ok) throw new Error('Failed to fetch questions');
-    return res.json();
-  },
-  submitExam: async (testId: string, answers: Record<string, string | string[]>) => {
-    const res = await fetch(`${BASE_URL}/tests/${testId}/submit`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ answers }),
-    });
-    if (!res.ok) throw new Error('Failed to submit exam');
-    return res.json();
-  },
-  getResults: async (testId: string) => {
-    const res = await fetch(`${BASE_URL}/tests/${testId}/results`);
-    if (!res.ok) throw new Error('Failed to fetch results');
-    return res.json();
-  }
+export const getTestMeta = async (testId: string, token: string) => {
+  const res = await fetch(`${API_URL}/tests/${testId}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Failed to fetch test meta');
+  return res.json();
+};
+
+export const submitExam = async (attemptId: string, answers: any, token: string) => {
+  const res = await fetch(`${API_URL}/attempts/${attemptId}/submit`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ answers })
+  });
+  if (!res.ok) throw new Error('Failed to submit exam');
+  return res.json();
+};
+
+export const sendHeartbeat = async (attemptId: string, timeRemaining: number, answers: any, warningCount: number, token: string) => {
+  const res = await fetch(`${API_URL}/attempts/${attemptId}/heartbeat`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ timeRemaining, answers, warningCount })
+  });
+  if (!res.ok) throw new Error('Failed to send heartbeat');
+  return res.json();
+};
+
+export const submitFeedback = async (testId: string, studentId: string, data: any, token: string) => {
+  const res = await fetch(`${API_URL}/feedback`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ testId, studentId, ...data })
+  });
+  if (!res.ok) throw new Error('Failed to submit feedback');
+  return res.json();
 };
