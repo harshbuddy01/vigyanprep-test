@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useExamStore } from '../stores/examStore';
 import { Timer } from '../components/Timer';
 import { QuestionPalette } from '../components/QuestionPalette';
@@ -18,12 +18,40 @@ function formatImageUrl(url: string): string {
 
 export default function Exam() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const testIdParam = searchParams.get('testId');
   const {
     questions, currentQuestionIndex, answers, markedForReview,
     setAnswer, clearAnswer, markForReview, nextQuestion, prevQuestion,
     goToQuestion, submitExam, isSubmitted, attemptId, timeRemaining, warningCount,
-    incrementWarning, setOnline, token
+    incrementWarning, setOnline, token, setQuestions, setTestMeta
   } = useExamStore();
+
+  // Auto-fetch questions if state is empty and testId is present in URL
+  useEffect(() => {
+    const autoFetchQuestions = async () => {
+      if (questions.length === 0 && testIdParam) {
+        try {
+          const apiBase = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
+          const res = await fetch(`${apiBase}/api/public/tests/${testIdParam}`);
+          const data = await res.json();
+          if (data.questions && Array.isArray(data.questions) && data.questions.length > 0) {
+            setQuestions(data.questions);
+            if (data.test) {
+              setTestMeta({
+                testTitle: data.test.title,
+                examType: data.test.exam_type || data.test.test_type || 'IAT',
+                testId: testIdParam
+              });
+            }
+          }
+        } catch (e) {
+          console.error('Failed to auto-fetch test questions:', e);
+        }
+      }
+    };
+    autoFetchQuestions();
+  }, [questions.length, testIdParam, setQuestions, setTestMeta]);
 
   const [activeSection, setActiveSection] = useState('Physics');
   const [showSubmitModal, setShowSubmitModal] = useState(false);
