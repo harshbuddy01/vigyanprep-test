@@ -5,6 +5,8 @@ export type Question = {
   id: string;
   type: 'MCQ' | 'MSQ' | 'Numerical';
   text: string;
+  image_url?: string;
+  imageUrl?: string;
   options?: string[];
   section: string;
 };
