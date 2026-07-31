@@ -1,15 +1,33 @@
 import React, { useState } from 'react';
+import { useExamStore } from '../stores/examStore';
 
 export const ChallengeModal: React.FC<{ question: any, onClose: () => void }> = ({ question, onClose }) => {
   const [reason, setReason] = useState('');
   const [proofUrl, setProofUrl] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate API call
-    setSubmitted(true);
-    setTimeout(() => onClose(), 3000);
+    setError('');
+    
+    const { token, testId } = useExamStore.getState();
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com'}/api/challenges`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` // get token from examStore or prop
+        },
+        body: JSON.stringify({ test_id: testId, question_id: question.id, reason, proof_image_url: proofUrl })
+      });
+      if (!res.ok) throw new Error('Failed to submit challenge');
+      setSubmitted(true);
+      setTimeout(() => onClose(), 3000);
+    } catch (err: any) {
+      setError(err.message);
+    }
   };
 
   return (
@@ -23,6 +41,7 @@ export const ChallengeModal: React.FC<{ question: any, onClose: () => void }> = 
         ) : (
           <>
             <h2 className="text-xl font-bold mb-4">Challenge Question</h2>
+            {error && <div className="text-red-500 mb-4">{error}</div>}
             <div className="bg-gray-100 p-3 rounded mb-4 text-sm text-gray-700">
               {question?.text}
             </div>

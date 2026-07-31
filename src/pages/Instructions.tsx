@@ -8,18 +8,39 @@ export const Instructions: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const testId = searchParams.get('testId');
-  const token = searchParams.get('token');
-  const { setTestMeta, testTitle, examType } = useExamStore();
+  const code = searchParams.get('code');
+  const { setTestMeta, testTitle, examType, setQuestions } = useExamStore();
   
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchMeta = async () => {
-      if (testId && token) {
+      if (testId && code) {
         try {
-          const meta = await getTestMeta(testId, token);
-          setTestMeta({ testTitle: meta.title, examType: meta.examType, testId });
+          const exchangeRes = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com'}/api/exam-access/exchange`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code })
+          });
+          const exchangeData = await exchangeRes.json();
+          if (!exchangeRes.ok) throw new Error(exchangeData.message || 'Failed to exchange code');
+          const examToken = exchangeData.examToken;
+          
+          const meta = await getTestMeta(testId, examToken);
+          
+          setTestMeta({ 
+            testTitle: meta.title, 
+            examType: meta.examType, 
+            testId,
+            candidateName: exchangeData.student.name,
+            rollNumber: exchangeData.student.rollNumber,
+            token: examToken
+          });
+
+          if (meta.questions) {
+            setQuestions(meta.questions);
+          }
         } catch (err) {
           console.error(err);
         }
@@ -27,7 +48,7 @@ export const Instructions: React.FC = () => {
       setLoading(false);
     };
     fetchMeta();
-  }, [testId, token, setTestMeta]);
+  }, [testId, code, setTestMeta, setQuestions]);
 
   if (loading) {
     return <div className="min-h-screen bg-[#0f0f0f] text-neutral-200 flex items-center justify-center">Loading Instructions...</div>;

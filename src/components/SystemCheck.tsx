@@ -21,7 +21,7 @@ export const SystemCheck: React.FC = () => {
     // Check network
     fetch('/health')
       .then(() => setNetworkOk(true))
-      .catch(() => setNetworkOk(true)); // Fallback to true if /health isn't actually implemented, but usually should check res.ok
+      .catch(() => setNetworkOk(false)); // Fallback to true if /health isn't actually implemented, but usually should check res.ok
 
     return () => window.removeEventListener('resize', checkScreen);
   }, []);

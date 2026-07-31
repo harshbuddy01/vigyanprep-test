@@ -23,6 +23,7 @@ interface ExamState {
   candidateName: string | null;
   rollNumber: string | null;
   attemptId: string | null;
+  token: string | null;
   warningCount: number;
   isOnline: boolean;
 
@@ -59,6 +60,7 @@ export const useExamStore = create<ExamState>()(
       candidateName: null,
       rollNumber: null,
       attemptId: null,
+      token: null,
       warningCount: 0,
       isOnline: true,
       

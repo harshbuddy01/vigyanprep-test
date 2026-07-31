@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useExamStore } from '../stores/examStore';
 import { Timer } from '../components/Timer';
@@ -12,17 +12,20 @@ export default function Exam() {
     questions, currentQuestionIndex, answers, markedForReview,
     setAnswer, clearAnswer, markForReview, nextQuestion, prevQuestion,
     goToQuestion, submitExam, isSubmitted, attemptId, timeRemaining, warningCount,
-    incrementWarning, setOnline
+    incrementWarning, setOnline, token
   } = useExamStore();
 
   const [activeSection, setActiveSection] = useState('Physics');
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showTabWarning, setShowTabWarning] = useState(false);
-  const token = new URLSearchParams(window.location.search).get('token') || '';
 
   const sections = ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
 
+  const submittingRef = useRef(false);
+
   const doSubmit = useCallback(async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     submitExam();
     try {
       if (attemptId && token) await apiSubmitExam(attemptId, answers, token);
@@ -56,19 +59,51 @@ export default function Exam() {
         setTimeout(() => setShowTabWarning(false), 4000);
       }
     };
+
+    const handleWindowBlur = () => {
+      if (!document.hidden && !isSubmitted) {
+        incrementWarning();
+        setShowTabWarning(true);
+        if (warningCount + 1 >= 3) {
+          doSubmit();
+        }
+        setTimeout(() => setShowTabWarning(false), 4000);
+      }
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleWindowBlur);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleWindowBlur);
+    };
   }, [isSubmitted, warningCount, incrementWarning, doSubmit]);
 
   // Heartbeat
+  const attemptIdRef = useRef(attemptId);
+  const tokenRef = useRef(token);
+  const timeRemainingRef = useRef(timeRemaining);
+  const answersRef = useRef(answers);
+  const warningCountRef = useRef(warningCount);
+
+  useEffect(() => {
+    attemptIdRef.current = attemptId;
+    tokenRef.current = token;
+    timeRemainingRef.current = timeRemaining;
+    answersRef.current = answers;
+    warningCountRef.current = warningCount;
+  }, [attemptId, token, timeRemaining, answers, warningCount]);
+
   useEffect(() => {
     const interval = setInterval(() => {
-      if (attemptId && token) {
-        sendHeartbeat(attemptId, timeRemaining, answers, warningCount, token).catch(console.error);
+      const aId = attemptIdRef.current;
+      const tk = tokenRef.current;
+      if (aId && tk) {
+        sendHeartbeat(aId, timeRemainingRef.current, answersRef.current, warningCountRef.current, tk).catch(console.error);
       }
     }, 15000);
     return () => clearInterval(interval);
-  }, [attemptId, timeRemaining, answers, warningCount, token]);
+  }, []);
 
   // Anti-cheating & Fullscreen
   useEffect(() => {
@@ -171,7 +206,12 @@ export default function Exam() {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="flex-1 flex flex-col overflow-y-auto" style={{ background: '#0d0d0d' }}>
+        <div className={`flex-1 flex flex-col overflow-y-auto ${isSubmitted ? 'pointer-events-none opacity-50' : ''}`} style={{ background: '#0d0d0d' }}>
+          {isSubmitted && (
+            <div className="bg-amber-500 text-black text-center py-2 font-bold z-10 sticky top-0">
+              Exam submitted. Redirecting to feedback...
+            </div>
+          )}
           {currentQ ? (
             <div className="p-8 space-y-6 max-w-3xl mx-auto w-full">
               <div className="flex items-center justify-between">
