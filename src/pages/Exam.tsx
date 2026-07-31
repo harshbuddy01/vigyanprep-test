@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useExamStore } from '../stores/examStore';
 import { QuestionPalette } from '../components/QuestionPalette';
 import { ScientificCalculator } from '../components/ScientificCalculator';
+import { MathText } from '../components/MathText';
 import { submitExam as apiSubmitExam } from '../lib/api';
 import { User, Clock, ShieldAlert, Award, Calculator, ChevronRight, ChevronLeft } from 'lucide-react';
 
@@ -37,6 +38,13 @@ export default function Exam() {
 
   const sections = ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
   const submittingRef = useRef(false);
+
+  // SESSION LOCK: If exam is submitted, prevent re-entry and replace history
+  useEffect(() => {
+    if (isSubmitted) {
+      navigate('/response-sheet' + window.location.search, { replace: true });
+    }
+  }, [isSubmitted, navigate]);
 
   // Auto-fetch questions if state is empty and testId is present in URL
   useEffect(() => {
@@ -85,7 +93,8 @@ export default function Exam() {
     } catch (e) {
       console.error(e);
     }
-    navigate('/response-sheet' + window.location.search);
+    // Replace history entry so back button doesn't re-open exam
+    navigate('/response-sheet' + window.location.search, { replace: true });
   }, [submitExam, attemptId, answers, token, navigate]);
 
   // Tab switch proctoring
@@ -284,10 +293,10 @@ export default function Exam() {
                 </span>
               </div>
 
-              {/* Question Body */}
+              {/* Question Body with KaTeX Math Rendering */}
               <div className="p-6 bg-gray-50 rounded-xl border border-gray-200 text-sm leading-relaxed text-gray-900 min-h-[140px] space-y-4">
                 <div className="font-medium text-base">
-                  {(currentQ as any).question_text || currentQ.text || 'Question text will appear here.'}
+                  <MathText text={(currentQ as any).question_text || currentQ.text || 'Question text will appear here.'} />
                 </div>
 
                 {/* Question Diagram Image */}
@@ -302,7 +311,7 @@ export default function Exam() {
                 )}
               </div>
 
-              {/* Multiple Choice Options */}
+              {/* Multiple Choice Options with KaTeX Math Rendering */}
               <div className="space-y-3 pt-2">
                 {((currentQ.options && currentQ.options.length === 4) ? currentQ.options : ['Option A', 'Option B', 'Option C', 'Option D']).map((opt, idx) => {
                   const optKey = ['A', 'B', 'C', 'D'][idx];
@@ -322,7 +331,9 @@ export default function Exam() {
                       }`}>
                         {optKey}
                       </span>
-                      <span className="text-sm font-medium">{opt}</span>
+                      <span className="text-sm font-medium">
+                        <MathText text={opt} />
+                      </span>
                     </button>
                   );
                 })}

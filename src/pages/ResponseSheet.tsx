@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useExamStore } from '../stores/examStore';
-import { CheckCircle2, XCircle, ArrowLeft, Download } from 'lucide-react';
+import { MathText } from '../components/MathText';
+import { CheckCircle2, XCircle, ArrowLeft, Download, Home, BookOpen } from 'lucide-react';
 
 function formatImageUrl(url: string): string {
   if (!url) return '';
@@ -14,7 +14,6 @@ function formatImageUrl(url: string): string {
 }
 
 export const ResponseSheet: React.FC = () => {
-  const navigate = useNavigate();
   const { questions, answers, testTitle, candidateName, rollNumber, examType } = useExamStore();
   const [activeTab, setActiveTab] = useState('Physics');
 
@@ -36,9 +35,11 @@ export const ResponseSheet: React.FC = () => {
     const sec = q.section || 'Physics';
     if (!sectionScores[sec]) sectionScores[sec] = { correct: 0, incorrect: 0, score: 0 };
 
+    const correctKey = q.correct_answer || q.correctAnswer;
+
     if (!studentAns) {
       unattemptedCount++;
-    } else if (studentAns === q.correct_answer || studentAns === (q as any).correctAnswer) {
+    } else if (studentAns === correctKey) {
       correctCount++;
       totalScore += 4;
       sectionScores[sec].correct++;
@@ -64,22 +65,35 @@ export const ResponseSheet: React.FC = () => {
 
       {/* Header */}
       <header className="bg-[#1b365d] text-white py-4 px-6 shadow-md border-b-4 border-amber-400">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate('/')} className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition">
-              <ArrowLeft size={18} />
-            </button>
             <div>
               <h1 className="text-lg font-bold tracking-wide">OFFICIAL CANDIDATE RESPONSE SHEET & MARKSHEET</h1>
               <p className="text-xs text-amber-300 font-semibold">{testTitle || 'IISER / NEST Examination 2024'}</p>
             </div>
           </div>
-          <button
-            onClick={() => window.print()}
-            className="px-4 py-2 bg-[#28a745] hover:bg-[#218838] text-white font-bold text-xs rounded-lg flex items-center gap-2 shadow"
-          >
-            <Download size={16} /> Print / Save Response Sheet
-          </button>
+
+          {/* Navigation & Print Buttons */}
+          <div className="flex items-center gap-3">
+            <a
+              href="https://vigyanprep.com"
+              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-lg flex items-center gap-2 border border-white/20 transition"
+            >
+              <Home size={15} /> Home Page
+            </a>
+            <a
+              href="https://vigyanprep.com/pyq/iiser"
+              className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-neutral-950 font-bold text-xs rounded-lg flex items-center gap-2 transition shadow"
+            >
+              <BookOpen size={15} /> Back to PYQ Section
+            </a>
+            <button
+              onClick={() => window.print()}
+              className="px-4 py-2 bg-[#28a745] hover:bg-[#218838] text-white font-bold text-xs rounded-lg flex items-center gap-2 shadow transition"
+            >
+              <Download size={15} /> Print / Save PDF
+            </button>
+          </div>
         </div>
       </header>
 
@@ -159,7 +173,8 @@ export const ResponseSheet: React.FC = () => {
         <div className="space-y-6">
           {filteredQuestions.map((q, idx) => {
             const studentAns = answers[q.id];
-            const isCorrect = studentAns === q.correct_answer || studentAns === (q as any).correctAnswer;
+            const correctKey = q.correct_answer || q.correctAnswer;
+            const isCorrect = studentAns === correctKey;
             const isUnattempted = !studentAns;
 
             return (
@@ -188,10 +203,10 @@ export const ResponseSheet: React.FC = () => {
                   )}
                 </div>
 
-                {/* Question Text */}
+                {/* Question Text with KaTeX Rendering */}
                 <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 text-sm leading-relaxed text-gray-900 space-y-3">
                   <div className="font-medium text-base">
-                    {(q as any).question_text || q.text}
+                    <MathText text={(q as any).question_text || q.text} />
                   </div>
 
                   {/* Question Diagram Image */}
@@ -206,12 +221,12 @@ export const ResponseSheet: React.FC = () => {
                   )}
                 </div>
 
-                {/* Options List with Selection Highlights */}
+                {/* Options List with Selection Highlights and KaTeX Rendering */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                   {((q.options && q.options.length === 4) ? q.options : ['Option A', 'Option B', 'Option C', 'Option D']).map((opt, optIdx) => {
                     const optKey = ['A', 'B', 'C', 'D'][optIdx];
                     const isChosen = studentAns === optKey;
-                    const isKey = (q.correct_answer || (q as any).correctAnswer) === optKey;
+                    const isKey = correctKey === optKey;
 
                     let bgClass = 'bg-white border-gray-200 text-gray-800';
                     let keyBadge = null;
@@ -234,7 +249,9 @@ export const ResponseSheet: React.FC = () => {
                         }`}>
                           {optKey}
                         </span>
-                        <span className="font-medium">{opt}</span>
+                        <span className="font-medium">
+                          <MathText text={opt} />
+                        </span>
                         {keyBadge}
                       </div>
                     );
