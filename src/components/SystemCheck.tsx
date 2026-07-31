@@ -48,10 +48,10 @@ export const SystemCheck: React.FC = () => {
         </div>
         <button
           disabled={!allPass}
-          onClick={() => navigate('/instructions')}
+          onClick={() => navigate('/instructions' + window.location.search)}
           className="mt-8 w-full bg-amber-500 hover:bg-amber-400 disabled:bg-amber-900/50 disabled:text-amber-700 text-black font-bold py-3 px-4 rounded transition-colors"
         >
-          Continue
+          Continue to Instructions
         </button>
       </div>
     </div>
