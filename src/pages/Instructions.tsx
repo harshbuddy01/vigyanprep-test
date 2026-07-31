@@ -8,7 +8,7 @@ export const Instructions: React.FC = () => {
   const [searchParams] = useSearchParams();
   const testId = searchParams.get('testId');
   const code = searchParams.get('code');
-  const { setTestMeta, testTitle, examType, candidateName, rollNumber, setQuestions } = useExamStore();
+  const { setTestMeta, examType, candidateName, rollNumber, setQuestions } = useExamStore();
 
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(true);

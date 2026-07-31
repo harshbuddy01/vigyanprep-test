@@ -2,8 +2,8 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useExamStore } from '../stores/examStore';
 import { QuestionPalette } from '../components/QuestionPalette';
-import { submitExam as apiSubmitExam, sendHeartbeat } from '../lib/api';
-import { User, Clock, ShieldAlert, CheckCircle, Award } from 'lucide-react';
+import { submitExam as apiSubmitExam } from '../lib/api';
+import { User, Clock, ShieldAlert, Award } from 'lucide-react';
 
 function formatImageUrl(url: string): string {
   if (!url) return '';
@@ -20,10 +20,10 @@ export default function Exam() {
   const [searchParams] = useSearchParams();
   const testIdParam = searchParams.get('testId');
   const {
-    questions, currentQuestionIndex, answers, markedForReview,
+    questions, currentQuestionIndex, answers,
     setAnswer, clearAnswer, markForReview, nextQuestion, prevQuestion,
     goToQuestion, submitExam, isSubmitted, attemptId, timeRemaining, warningCount,
-    incrementWarning, setOnline, token, setQuestions, setTestMeta, candidateName, rollNumber, testTitle, examType
+    incrementWarning, token, setQuestions, setTestMeta, candidateName, rollNumber, testTitle, examType
   } = useExamStore();
 
   const [activeSection, setActiveSection] = useState('Physics');
