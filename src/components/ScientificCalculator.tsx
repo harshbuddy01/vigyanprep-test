@@ -7,7 +7,6 @@ interface Props {
 
 export const ScientificCalculator: React.FC<Props> = ({ onClose }) => {
   const [display, setDisplay] = useState('0');
-  const [memory, setMemory] = useState<number | null>(null);
   const [isRad, setIsRad] = useState(true);
 
   const handleNum = (n: string) => {
