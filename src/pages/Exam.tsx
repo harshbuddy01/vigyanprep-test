@@ -6,6 +6,16 @@ import { QuestionPalette } from '../components/QuestionPalette';
 import { HallTicketBanner } from '../components/HallTicketBanner';
 import { submitExam as apiSubmitExam, sendHeartbeat } from '../lib/api';
 
+function formatImageUrl(url: string): string {
+  if (!url) return '';
+  const trimmed = url.trim();
+  const driveMatch = trimmed.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (driveMatch && driveMatch[1]) {
+    return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+  }
+  return trimmed;
+}
+
 export default function Exam() {
   const navigate = useNavigate();
   const {
@@ -225,7 +235,7 @@ export default function Exam() {
                 {(currentQ.image_url || (currentQ as any).imageUrl) && (
                   <div className="p-3 bg-[#000] border border-gray-800 rounded-lg text-center">
                     <img
-                      src={currentQ.image_url || (currentQ as any).imageUrl}
+                      src={formatImageUrl(currentQ.image_url || (currentQ as any).imageUrl || '')}
                       alt="Question Diagram"
                       className="max-h-80 mx-auto object-contain rounded-md"
                     />
