@@ -220,8 +220,17 @@ export default function Exam() {
                 </span>
                 <span className="px-2 py-1 bg-gray-800 rounded text-xs text-gray-400">{currentQ.type}</span>
               </div>
-              <div className="bg-[#111] border border-[#222] rounded-xl p-6 text-[0.95rem] leading-relaxed text-[#e2e2e2] min-h-[120px]">
-                {currentQ.text || 'Question text will appear here.'}
+              <div className="bg-[#111] border border-[#222] rounded-xl p-6 text-[0.95rem] leading-relaxed text-[#e2e2e2] min-h-[120px] space-y-4">
+                <div>{currentQ.text || 'Question text will appear here.'}</div>
+                {(currentQ.image_url || (currentQ as any).imageUrl) && (
+                  <div className="p-3 bg-[#000] border border-gray-800 rounded-lg text-center">
+                    <img
+                      src={currentQ.image_url || (currentQ as any).imageUrl}
+                      alt="Question Diagram"
+                      className="max-h-80 mx-auto object-contain rounded-md"
+                    />
+                  </div>
+                )}
               </div>
 
               {currentQ.type === 'MSQ' && (
