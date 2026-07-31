@@ -1,10 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useExamStore } from '../stores/examStore';
-import { Timer } from '../components/Timer';
 import { QuestionPalette } from '../components/QuestionPalette';
-import { HallTicketBanner } from '../components/HallTicketBanner';
 import { submitExam as apiSubmitExam, sendHeartbeat } from '../lib/api';
+import { User, Clock, ShieldAlert, CheckCircle, Award } from 'lucide-react';
 
 function formatImageUrl(url: string): string {
   if (!url) return '';
@@ -24,13 +23,22 @@ export default function Exam() {
     questions, currentQuestionIndex, answers, markedForReview,
     setAnswer, clearAnswer, markForReview, nextQuestion, prevQuestion,
     goToQuestion, submitExam, isSubmitted, attemptId, timeRemaining, warningCount,
-    incrementWarning, setOnline, token, setQuestions, setTestMeta
+    incrementWarning, setOnline, token, setQuestions, setTestMeta, candidateName, rollNumber, testTitle, examType
   } = useExamStore();
+
+  const [activeSection, setActiveSection] = useState('Physics');
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showTabWarning, setShowTabWarning] = useState(false);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+
+  const sections = ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
+  const submittingRef = useRef(false);
 
   // Auto-fetch questions if state is empty and testId is present in URL
   useEffect(() => {
     const autoFetchQuestions = async () => {
       if (questions.length === 0 && testIdParam) {
+        setLoadingQuestions(true);
         try {
           const apiBase = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
           const res = await fetch(`${apiBase}/api/public/tests/${testIdParam}`);
@@ -47,19 +55,13 @@ export default function Exam() {
           }
         } catch (e) {
           console.error('Failed to auto-fetch test questions:', e);
+        } finally {
+          setLoadingQuestions(false);
         }
       }
     };
     autoFetchQuestions();
   }, [questions.length, testIdParam, setQuestions, setTestMeta]);
-
-  const [activeSection, setActiveSection] = useState('Physics');
-  const [showSubmitModal, setShowSubmitModal] = useState(false);
-  const [showTabWarning, setShowTabWarning] = useState(false);
-
-  const sections = ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
-
-  const submittingRef = useRef(false);
 
   const doSubmit = useCallback(async () => {
     if (submittingRef.current) return;
@@ -70,20 +72,8 @@ export default function Exam() {
     } catch (e) {
       console.error(e);
     }
-    navigate('/feedback');
+    navigate('/response-sheet' + window.location.search);
   }, [submitExam, attemptId, answers, token, navigate]);
-
-  // Offline detection
-  useEffect(() => {
-    const handleOnline = () => setOnline(true);
-    const handleOffline = () => setOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [setOnline]);
 
   // Tab switch proctoring
   useEffect(() => {
@@ -117,32 +107,6 @@ export default function Exam() {
     };
   }, [isSubmitted, warningCount, incrementWarning, doSubmit]);
 
-  // Heartbeat
-  const attemptIdRef = useRef(attemptId);
-  const tokenRef = useRef(token);
-  const timeRemainingRef = useRef(timeRemaining);
-  const answersRef = useRef(answers);
-  const warningCountRef = useRef(warningCount);
-
-  useEffect(() => {
-    attemptIdRef.current = attemptId;
-    tokenRef.current = token;
-    timeRemainingRef.current = timeRemaining;
-    answersRef.current = answers;
-    warningCountRef.current = warningCount;
-  }, [attemptId, token, timeRemaining, answers, warningCount]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const aId = attemptIdRef.current;
-      const tk = tokenRef.current;
-      if (aId && tk) {
-        sendHeartbeat(aId, timeRemainingRef.current, answersRef.current, warningCountRef.current, tk).catch(console.error);
-      }
-    }, 15000);
-    return () => clearInterval(interval);
-  }, []);
-
   // Anti-cheating & Fullscreen
   useEffect(() => {
     const preventDefault = (e: any) => e.preventDefault();
@@ -168,192 +132,258 @@ export default function Exam() {
     };
   }, []);
 
-  // Auto-submit on timer=0
-  useEffect(() => {
-    if (timeRemaining <= 0 && !isSubmitted) {
-      doSubmit();
-    }
-  }, [timeRemaining, isSubmitted, doSubmit]);
-
   const currentQ = questions[currentQuestionIndex];
-  const currentAnswer = currentQ ? answers[currentQ.id] : null;
-  const sectionQuestions = questions.filter(q => q.section === activeSection);
+  const currentAnswer = currentQ ? answers[currentQ.id] : undefined;
 
-  const _answered = Object.keys(answers).length;
-  const _markedForReview = markedForReview.length;
-  const _notAnswered = questions.length - _answered;
-  void _markedForReview; void _notAnswered;
-
-  const handleMSQToggle = (optKey: string) => {
-    let selected = currentAnswer ? currentAnswer.split(',') : [];
-    if (selected.includes(optKey)) {
-      selected = selected.filter((k: string) => k !== optKey);
-    } else {
-      selected.push(optKey);
-    }
-    selected.sort();
-    setAnswer(currentQ.id, selected.length > 0 ? selected.join(',') : undefined);
+  const formatTimer = (seconds: number) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden" style={{ background: '#0a0a0a', color: '#e2e2e2', fontFamily: 'Inter, sans-serif' }}>
-      <HallTicketBanner />
+    <div className="flex flex-col h-screen overflow-hidden bg-[#f4f6f9] font-sans text-gray-800">
 
+      {/* Warning Banner */}
       {showTabWarning && (
-        <div className="fixed top-0 inset-x-0 z-50 bg-red-600 text-white text-center py-3 font-bold text-sm animate-pulse">
-          ⚠️ WARNING: Tab switch detected! ({warningCount}/3). Auto-submit triggers at 3 violations.
+        <div className="fixed top-0 inset-x-0 z-50 bg-red-600 text-white text-center py-2 font-bold text-xs shadow-lg animate-pulse flex items-center justify-center gap-2">
+          <ShieldAlert size={16} /> ⚠️ SECURITY WARNING: Tab switch detected! ({warningCount}/3). 3 violations will auto-submit exam.
         </div>
       )}
 
-      <header style={{ background: '#111', borderBottom: '1px solid #222' }} className="flex items-center justify-between px-6 py-3 shrink-0">
-        <div className="flex items-center gap-4">
-          <span style={{ color: '#d4a520', fontWeight: 700, fontSize: '1rem', letterSpacing: 2 }}>VIGYAN.prep</span>
+      {/* NTA Official Header */}
+      <header className="bg-[#1b365d] text-white px-6 py-3 shrink-0 flex items-center justify-between shadow border-b-4 border-amber-400">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-white text-[#1b365d] font-bold text-lg rounded flex items-center justify-center shadow">
+            VP
+          </div>
+          <div>
+            <h1 className="text-base font-bold tracking-wide uppercase">{testTitle || 'IISER IAT Official Question Paper'}</h1>
+            <p className="text-xs text-amber-300 font-semibold">Category: {examType || 'IAT'} • NTA Standard CBT Mode</p>
+          </div>
         </div>
-        <Timer />
-        <button
-          onClick={() => setShowSubmitModal(true)}
-          style={{ background: 'linear-gradient(135deg, #d4a520, #e8720a)', color: '#111', fontWeight: 700, border: 'none', borderRadius: 8, padding: '8px 20px', cursor: 'pointer', fontSize: '0.85rem' }}
-        >
-          Submit Exam
-        </button>
+
+        {/* Timer & Submit Header Controls */}
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg border border-white/10">
+            <Clock className="text-amber-300" size={18} />
+            <div className="text-right">
+              <p className="text-[10px] text-amber-200 uppercase font-bold tracking-wider">Time Remaining</p>
+              <p className="text-lg font-mono font-bold text-white tracking-widest">{formatTimer(timeRemaining)}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowSubmitModal(true)}
+            className="px-5 py-2.5 bg-[#dc3545] hover:bg-[#c82333] text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow transition"
+          >
+            Submit Exam
+          </button>
+        </div>
       </header>
 
-      <div style={{ background: '#111', borderBottom: '1px solid #222' }} className="flex items-center px-6 gap-2 py-2 shrink-0">
+      {/* NTA Subject Tabs Bar */}
+      <div className="bg-white border-b px-6 py-2 flex items-center gap-2 shrink-0 shadow-sm">
+        <span className="text-xs font-bold text-[#1b365d] uppercase mr-3">Sections:</span>
         {sections.map(sec => {
-          const secAnswered = questions.filter(q => q.section === sec && answers[q.id]).length;
+          const secAnswered = questions.filter(q => q.section === sec && answers[q.id] !== undefined).length;
           const secTotal = questions.filter(q => q.section === sec).length;
+          const isActive = activeSection === sec;
           return (
             <button
               key={sec}
-              onClick={() => setActiveSection(sec)}
-              style={{
-                background: activeSection === sec ? '#d4a520' : 'transparent',
-                color: activeSection === sec ? '#111' : '#aaa',
-                border: activeSection === sec ? 'none' : '1px solid #333',
-                borderRadius: 6,
-                padding: '5px 16px',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                cursor: 'pointer'
+              onClick={() => {
+                setActiveSection(sec);
+                const firstQIndex = questions.findIndex(q => q.section === sec);
+                if (firstQIndex !== -1) goToQuestion(firstQIndex);
               }}
+              className={`px-4 py-2 rounded text-xs font-bold transition flex items-center gap-2 ${
+                isActive
+                  ? 'bg-[#1b365d] text-white shadow'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+              }`}
             >
-              {sec} ({secAnswered}/{secTotal})
+              {sec}
+              <span className={`px-2 py-0.5 rounded-full text-[10px] ${isActive ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'}`}>
+                {secAnswered}/{secTotal}
+              </span>
             </button>
           );
         })}
       </div>
 
+      {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
-        <div className={`flex-1 flex flex-col overflow-y-auto ${isSubmitted ? 'pointer-events-none opacity-50' : ''}`} style={{ background: '#0d0d0d' }}>
-          {isSubmitted && (
-            <div className="bg-amber-500 text-black text-center py-2 font-bold z-10 sticky top-0">
-              Exam submitted. Redirecting to feedback...
+
+        {/* Left Side: Question Panel */}
+        <div className="flex-1 flex flex-col justify-between overflow-y-auto p-6 bg-white border-r">
+          {loadingQuestions ? (
+            <div className="flex flex-col items-center justify-center h-full space-y-3 text-gray-500">
+              <div className="w-8 h-8 border-4 border-[#1b365d] border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-xs font-semibold">Loading Question Paper...</p>
             </div>
-          )}
-          {currentQ ? (
-            <div className="p-8 space-y-6 max-w-3xl mx-auto w-full">
-              <div className="flex items-center justify-between">
-                <span style={{ color: '#d4a520', fontSize: '0.75rem', fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>
-                  Question {currentQuestionIndex + 1} of {questions.length} • {currentQ.section}
+          ) : currentQ ? (
+            <div className="space-y-6 max-w-4xl mx-auto w-full">
+
+              {/* Question Number & Type Header */}
+              <div className="flex items-center justify-between border-b pb-3">
+                <span className="text-sm font-bold text-[#1b365d] uppercase tracking-wider">
+                  Question No. {currentQuestionIndex + 1} of {questions.length} ({currentQ.section})
                 </span>
-                <span className="px-2 py-1 bg-gray-800 rounded text-xs text-gray-400">{currentQ.type}</span>
+                <span className="px-3 py-1 bg-blue-50 text-blue-800 border border-blue-200 font-bold text-xs rounded-full">
+                  Marks: +4 | -1
+                </span>
               </div>
-              <div className="bg-[#111] border border-[#222] rounded-xl p-6 text-[0.95rem] leading-relaxed text-[#e2e2e2] min-h-[120px] space-y-4">
-                <div>{(currentQ as any).question_text || currentQ.text || 'Question text will appear here.'}</div>
+
+              {/* Question Body */}
+              <div className="p-6 bg-gray-50 rounded-xl border border-gray-200 text-sm leading-relaxed text-gray-900 min-h-[140px] space-y-4">
+                <div className="font-medium text-base">
+                  {(currentQ as any).question_text || currentQ.text || 'Question text will appear here.'}
+                </div>
+
+                {/* Question Diagram Image */}
                 {(currentQ.image_url || (currentQ as any).imageUrl) && (
-                  <div className="p-3 bg-[#000] border border-gray-800 rounded-lg text-center">
+                  <div className="p-3 bg-white border border-gray-300 rounded-lg text-center shadow-sm">
                     <img
                       src={formatImageUrl(currentQ.image_url || (currentQ as any).imageUrl || '')}
                       alt="Question Diagram"
-                      className="max-h-80 mx-auto object-contain rounded-md"
+                      className="max-h-80 mx-auto object-contain rounded"
                     />
                   </div>
                 )}
               </div>
 
-              {currentQ.type === 'MSQ' && (
-                <div className="space-y-3">
-                  {(currentQ.options || ['A', 'B', 'C', 'D']).map((opt, idx) => {
-                    const optKey = ['A', 'B', 'C', 'D'][idx];
-                    const isSelected = currentAnswer && currentAnswer.split(',').includes(optKey);
-                    return (
-                      <label key={idx} className={`flex items-center gap-4 p-4 rounded-lg cursor-pointer border ${isSelected ? 'border-amber-500 bg-amber-500/10' : 'border-gray-800 bg-[#111]'}`}>
-                        <input type="checkbox" checked={isSelected} onChange={() => handleMSQToggle(optKey)} className="w-5 h-5 accent-amber-500" />
-                        <span className="text-sm">{opt}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
-
-              {currentQ.type === 'MCQ' && (
-                <div className="space-y-3">
-                  {(currentQ.options || ['A', 'B', 'C', 'D']).map((opt, idx) => {
-                    const optKey = ['A', 'B', 'C', 'D'][idx];
-                    const isSelected = currentAnswer === optKey;
-                    return (
-                      <button key={idx} onClick={() => setAnswer(currentQ.id, optKey)} className={`flex items-start gap-4 p-4 rounded-lg text-left border w-full ${isSelected ? 'border-amber-500 bg-amber-500/10 text-amber-50' : 'border-gray-800 bg-[#111] text-gray-400'}`}>
-                        <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${isSelected ? 'bg-amber-500 text-black' : 'bg-gray-800 text-gray-500'}`}>{optKey}</span>
-                        <span className="text-sm">{opt}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {currentQ.type === 'Numerical' && (
-                <div>
-                  <label className="text-gray-500 text-sm block mb-2">Enter Numerical Answer:</label>
-                  <input
-                    type="number"
-                    value={currentAnswer || ''}
-                    onChange={(e) => setAnswer(currentQ.id, e.target.value)}
-                    className="bg-[#111] border border-gray-800 rounded p-3 text-white outline-none focus:border-amber-500 w-64"
-                    placeholder="Type answer..."
-                  />
-                </div>
-              )}
-
-              <div className="flex items-center justify-between pt-4 border-t border-[#1e1e1e]">
-                <div className="flex gap-3">
-                  <button onClick={() => { markForReview(currentQ.id); nextQuestion(); }} className="bg-orange-500 text-white rounded px-4 py-2 font-semibold text-sm">Mark for Review & Next</button>
-                  <button onClick={() => clearAnswer(currentQ.id)} className="border border-gray-800 text-gray-400 rounded px-4 py-2 font-semibold text-sm">Clear Response</button>
-                </div>
-                <div className="flex gap-3">
-                  <button onClick={prevQuestion} disabled={currentQuestionIndex === 0} className="border border-gray-800 bg-[#1a1a1a] text-gray-400 rounded px-4 py-2 font-semibold text-sm disabled:opacity-50">← Previous</button>
-                  <button onClick={nextQuestion} disabled={currentQuestionIndex === questions.length - 1} className="bg-amber-500 text-black rounded px-5 py-2 font-bold text-sm disabled:opacity-50">Save & Next →</button>
-                </div>
+              {/* Multiple Choice Options */}
+              <div className="space-y-3 pt-2">
+                {((currentQ.options && currentQ.options.length === 4) ? currentQ.options : ['Option A', 'Option B', 'Option C', 'Option D']).map((opt, idx) => {
+                  const optKey = ['A', 'B', 'C', 'D'][idx];
+                  const isSelected = currentAnswer === optKey;
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setAnswer(currentQ.id, optKey)}
+                      className={`flex items-center gap-4 p-4 rounded-xl border w-full text-left transition ${
+                        isSelected
+                          ? 'border-[#007bff] bg-blue-50/80 text-blue-900 shadow-sm'
+                          : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-800'
+                      }`}
+                    >
+                      <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition ${
+                        isSelected ? 'bg-[#007bff] text-white shadow' : 'bg-gray-100 border border-gray-300 text-gray-700'
+                      }`}>
+                        {optKey}
+                      </span>
+                      <span className="text-sm font-medium">{opt}</span>
+                    </button>
+                  );
+                })}
               </div>
+
             </div>
           ) : (
-            <div className="flex items-center justify-center flex-1 text-gray-500">No questions loaded.</div>
+            <div className="text-center py-16 text-gray-500">No questions loaded.</div>
           )}
-        </div>
 
-        <div className="w-64 bg-[#111] border-l border-[#1e1e1e] flex flex-col shrink-0 overflow-y-auto">
-          <div className="p-4 border-b border-[#1e1e1e]">
-            <QuestionPalette
-              questions={sectionQuestions}
-              answers={answers}
-              markedForReview={markedForReview}
-              currentId={currentQ?.id}
-              onSelect={(q) => goToQuestion(questions.findIndex(x => x.id === q.id))}
-            />
+          {/* Bottom Control Bar */}
+          <div className="border-t pt-4 mt-6 flex items-center justify-between bg-white max-w-4xl mx-auto w-full">
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  markForReview(currentQ.id);
+                  nextQuestion();
+                }}
+                className="px-5 py-2.5 bg-[#6f42c1] hover:bg-[#5a32a3] text-white font-bold text-xs rounded-lg shadow transition"
+              >
+                Mark for Review & Next
+              </button>
+              <button
+                onClick={() => clearAnswer(currentQ.id)}
+                className="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold text-xs rounded-lg transition"
+              >
+                Clear Response
+              </button>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={prevQuestion}
+                disabled={currentQuestionIndex === 0}
+                className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 font-bold text-xs rounded-lg disabled:opacity-40 transition"
+              >
+                ← Previous
+              </button>
+              <button
+                onClick={nextQuestion}
+                className="px-6 py-2.5 bg-[#28a745] hover:bg-[#218838] text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow transition"
+              >
+                Save & Next →
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Right Side: Candidate Panel & NTA Question Palette */}
+        <div className="w-80 bg-gray-50 flex flex-col justify-between p-4 overflow-y-auto shrink-0 border-l">
+
+          {/* Candidate Profile Box */}
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-3">
+            <div className="w-14 h-14 bg-gray-100 rounded-lg border border-gray-300 flex items-center justify-center text-gray-400 shrink-0">
+              <User size={32} />
+            </div>
+            <div className="overflow-hidden">
+              <p className="text-xs font-bold text-[#1b365d] truncate">{candidateName || 'Candidate Name'}</p>
+              <p className="text-[11px] text-gray-500 truncate">Roll: {rollNumber || 'VP-2024-890'}</p>
+              <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-0.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Live Online
+              </p>
+            </div>
+          </div>
+
+          {/* Question Palette Section */}
+          <div className="my-4 flex-1 space-y-3">
+            <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Question Palette</h3>
+            <QuestionPalette />
+          </div>
+
+          {/* Submit Test Button */}
+          <button
+            onClick={() => setShowSubmitModal(true)}
+            className="w-full py-3 bg-[#dc3545] hover:bg-[#c82333] text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow transition mt-2"
+          >
+            Submit Examination
+          </button>
+        </div>
+
       </div>
 
+      {/* Submit Confirmation Modal */}
       {showSubmitModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-          <div className="bg-[#111] border border-gray-800 rounded-xl p-8 max-w-sm w-full text-center">
-            <h2 className="text-white text-xl font-bold mb-4">Confirm Submission</h2>
-            <div className="flex gap-3 justify-center mt-6">
-              <button onClick={() => setShowSubmitModal(false)} className="px-6 py-2 rounded bg-[#1a1a1a] text-gray-400 border border-gray-800">Cancel</button>
-              <button onClick={() => { setShowSubmitModal(false); doSubmit(); }} className="px-6 py-2 rounded bg-amber-500 text-black font-bold">Submit</button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full border border-gray-200 shadow-2xl space-y-4 text-center">
+            <Award size={48} className="mx-auto text-amber-500" />
+            <h2 className="text-xl font-bold text-[#1b365d]">Submit Examination?</h2>
+            <p className="text-xs text-gray-600">
+              Are you sure you want to submit your exam? You have answered <strong>{Object.keys(answers).length}</strong> out of <strong>{questions.length}</strong> questions.
+            </p>
+
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                onClick={() => setShowSubmitModal(false)}
+                className="py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl"
+              >
+                Return to Test
+              </button>
+              <button
+                onClick={doSubmit}
+                className="py-2.5 bg-[#28a745] hover:bg-[#218838] text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow"
+              >
+                Confirm & Submit
+              </button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }

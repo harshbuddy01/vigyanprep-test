@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertCircle, Clock, ShieldAlert, Award, FileText } from 'lucide-react';
+import { AlertCircle, Clock, ShieldAlert, Award, FileText, User } from 'lucide-react';
 import { useExamStore } from '../stores/examStore';
 import { getTestMeta } from '../lib/api';
 
@@ -17,30 +17,38 @@ export const Instructions: React.FC = () => {
 
   useEffect(() => {
     const fetchMeta = async () => {
-      if (testId && code) {
+      if (testId) {
         try {
-          const exchangeRes = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com'}/api/exam-access/exchange`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code })
-          });
-          const exchangeData = await exchangeRes.json();
-          if (!exchangeRes.ok) throw new Error(exchangeData.message || 'Failed to exchange exam access code');
-          const examToken = exchangeData.examToken;
+          const apiBase = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
+          
+          let examToken = '';
+          if (code) {
+            const exchangeRes = await fetch(`${apiBase}/api/exam-access/exchange`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ code })
+            });
+            const exchangeData = await exchangeRes.json();
+            if (exchangeRes.ok && exchangeData.examToken) {
+              examToken = exchangeData.examToken;
+            }
+          }
 
-          const meta = await getTestMeta(testId, examToken);
+          const res = await fetch(`${apiBase}/api/public/tests/${testId}`);
+          const data = await res.json();
 
-          setTestMeta({
-            testTitle: meta.title || 'Official Entrance Examination',
-            examType: meta.examType || 'IAT',
-            testId,
-            candidateName: exchangeData.student.name,
-            rollNumber: exchangeData.student.rollNumber,
-            token: examToken
-          });
-
-          if (meta.questions && Array.isArray(meta.questions)) {
-            setQuestions(meta.questions);
+          if (data.success && data.test) {
+            setTestMeta({
+              testTitle: data.test.title || 'IISER IAT Official Question Paper',
+              examType: data.test.exam_type || data.test.test_type || 'IAT',
+              testId,
+              candidateName: candidateName || 'Candidate',
+              rollNumber: rollNumber || 'VP-2024-890',
+              token: examToken
+            });
+            if (data.questions && Array.isArray(data.questions)) {
+              setQuestions(data.questions);
+            }
           }
         } catch (err: any) {
           console.error(err);
@@ -53,7 +61,6 @@ export const Instructions: React.FC = () => {
   }, [testId, code, setTestMeta, setQuestions]);
 
   const handleStartExam = () => {
-    // Attempt fullscreen mode for proctored security
     if (document.documentElement.requestFullscreen) {
       document.documentElement.requestFullscreen().catch(() => {});
     }
@@ -62,121 +69,173 @@ export const Instructions: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] text-neutral-200 flex flex-col items-center justify-center space-y-4">
-        <div className="w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-sm font-semibold tracking-wider text-neutral-400">Loading Official Exam Instructions...</p>
+      <div className="min-h-screen bg-[#f4f6f9] text-gray-800 flex flex-col items-center justify-center space-y-4 font-sans">
+        <div className="w-10 h-10 border-4 border-[#1b365d] border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm font-semibold tracking-wider text-[#1b365d]">Loading Official Examination Instructions...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-neutral-200 flex flex-col items-center py-10 px-4">
-      <div className="max-w-4xl w-full bg-[#111] rounded-2xl border border-neutral-800 p-8 space-y-8 shadow-2xl">
+    <div className="min-h-screen bg-[#f4f6f9] text-gray-800 font-sans flex flex-col justify-between">
 
-        {/* Candidate Banner */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-6 bg-neutral-900/80 rounded-xl border border-amber-500/20 gap-4">
-          <div>
-            <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">Official Exam Center</span>
-            <h1 className="text-2xl font-extrabold text-white mt-1">{testTitle || 'IISER / NEST Entrance Examination'}</h1>
-            <p className="text-xs text-neutral-400 mt-1">Category: {examType || 'IAT'} • Duration: 180 Minutes • Total Questions: 60</p>
+      {/* Official Header */}
+      <header className="bg-[#1b365d] text-white py-4 px-6 shadow-md border-b-4 border-amber-400">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center font-bold text-[#1b365d] text-xl shadow">
+              VP
+            </div>
+            <div>
+              <h1 className="text-lg font-bold tracking-wide">VIGYAN.PREP CBT TEST PORTAL</h1>
+              <p className="text-xs text-amber-300 uppercase tracking-widest font-semibold">National Testing Agency (NTA) Standard Interface</p>
+            </div>
           </div>
-          <div className="text-left md:text-right bg-neutral-950 px-4 py-3 rounded-lg border border-white/5 shrink-0">
-            <p className="text-xs text-neutral-400">Candidate Name: <strong className="text-white ml-1">{candidateName || 'Student'}</strong></p>
-            <p className="text-xs text-neutral-400">Roll Number: <strong className="text-amber-400 ml-1">{rollNumber || 'VP-2024'}</strong></p>
+          <div className="text-right">
+            <span className="text-xs bg-white/10 px-3 py-1 rounded text-white font-medium">Default Language: English</span>
           </div>
         </div>
+      </header>
 
-        {error && (
-          <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm flex items-center gap-2">
-            <AlertCircle size={18} /> {error}
+      {/* Main Instructions Area */}
+      <main className="max-w-7xl mx-auto w-full p-6 flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+        {/* Instructions Body */}
+        <div className="lg:col-span-3 bg-white rounded-xl shadow-sm border border-gray-200 p-8 space-y-6 text-sm text-gray-700">
+
+          <div className="border-b pb-4">
+            <h2 className="text-xl font-bold text-[#1b365d]">GENERAL INSTRUCTIONS</h2>
+            <p className="text-xs text-gray-500 mt-1">Please read the instructions carefully before starting the examination.</p>
           </div>
-        )}
 
-        {/* Section 1: General Timing & Instructions */}
-        <div className="space-y-6 text-sm text-neutral-300">
-          <section className="bg-neutral-900/50 p-6 rounded-xl border border-white/5 space-y-3">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Clock className="text-amber-400" size={20} /> 1. General Exam Guidelines
-            </h2>
-            <ul className="list-disc pl-6 space-y-2 text-neutral-300">
-              <li>The clock will be set at the server. The countdown timer at the top right of the screen will display the remaining time available for you to complete the examination.</li>
-              <li>When the timer reaches zero, the examination will end by default. You are not required to end or submit your examination.</li>
-              <li>The Question Palette displayed on the right side of screen will show the status of each question using one of the following symbols:</li>
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
+              <AlertCircle size={18} /> {error}
+            </div>
+          )}
+
+          <section className="space-y-3">
+            <h3 className="font-bold text-gray-900 text-base">1. General Guidelines & Timing</h3>
+            <ul className="list-disc pl-5 space-y-2 text-gray-700 leading-relaxed">
+              <li>The total duration of the examination is <strong>180 minutes (3 Hours)</strong>.</li>
+              <li>The clock will be set at the server. The countdown timer in the top right corner will display the remaining time available for you to complete the exam.</li>
+              <li>When the timer reaches zero, the examination will end automatically. You do not need to click submit.</li>
+              <li>The Question Palette displayed on the right side of screen shows the status of each question using one of the following symbols:</li>
             </ul>
 
-            {/* Question Status Legend */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t border-white/5">
-              <div className="flex items-center gap-2 p-2 bg-neutral-950 rounded border border-white/5">
-                <span className="w-6 h-6 rounded-full bg-neutral-800 border border-neutral-600 flex items-center justify-center text-xs font-bold text-neutral-400">1</span>
-                <span className="text-xs text-neutral-400">Not Visited</span>
+            {/* Official NTA Symbol Legend Table */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded border border-gray-200">
+                <span className="w-8 h-8 rounded bg-gray-200 border border-gray-400 flex items-center justify-center font-bold text-xs text-gray-700">1</span>
+                <span className="text-xs text-gray-700 font-medium">You have not visited the question yet.</span>
               </div>
-              <div className="flex items-center gap-2 p-2 bg-neutral-950 rounded border border-white/5">
-                <span className="w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center text-xs font-bold">2</span>
-                <span className="text-xs text-neutral-400">Not Answered</span>
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded border border-gray-200">
+                <span className="w-8 h-8 rounded bg-[#dc3545] text-white flex items-center justify-center font-bold text-xs shadow">2</span>
+                <span className="text-xs text-gray-700 font-medium">You have not answered the question.</span>
               </div>
-              <div className="flex items-center gap-2 p-2 bg-neutral-950 rounded border border-white/5">
-                <span className="w-6 h-6 rounded-full bg-emerald-500 text-black flex items-center justify-center text-xs font-bold">3</span>
-                <span className="text-xs text-neutral-400">Answered</span>
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded border border-gray-200">
+                <span className="w-8 h-8 rounded bg-[#28a745] text-white flex items-center justify-center font-bold text-xs shadow">3</span>
+                <span className="text-xs text-gray-700 font-medium">You have answered the question.</span>
               </div>
-              <div className="flex items-center gap-2 p-2 bg-neutral-950 rounded border border-white/5">
-                <span className="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs font-bold">4</span>
-                <span className="text-xs text-neutral-400">Marked for Review</span>
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded border border-gray-200">
+                <span className="w-8 h-8 rounded-full bg-[#6f42c1] text-white flex items-center justify-center font-bold text-xs shadow">4</span>
+                <span className="text-xs text-gray-700 font-medium">You have NOT answered, but marked for review.</span>
               </div>
             </div>
           </section>
 
-          {/* Section 2: Marking Scheme */}
-          <section className="bg-neutral-900/50 p-6 rounded-xl border border-white/5 space-y-3">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Award className="text-emerald-400" size={20} /> 2. Marking Scheme
-            </h2>
-            <ul className="list-disc pl-6 space-y-2 text-neutral-300">
-              <li><strong>Correct Answer:</strong> +4 Marks will be awarded for each correct option selected.</li>
-              <li><strong>Incorrect Answer:</strong> -1 Mark will be deducted for each incorrect attempt in MCQ section.</li>
-              <li><strong>Unanswered:</strong> 0 Marks will be awarded for questions left unattempted.</li>
+          <section className="space-y-3 pt-2">
+            <h3 className="font-bold text-gray-900 text-base">2. Navigating & Answering Questions</h3>
+            <ul className="list-disc pl-5 space-y-2 text-gray-700 leading-relaxed">
+              <li>To select an option, click on the button of one of the options (A, B, C, D).</li>
+              <li>To deselect your chosen answer, click on the <strong>Clear Response</strong> button.</li>
+              <li>To save your answer, you MUST click on the <strong>Save & Next</strong> button.</li>
+              <li>To mark a question for review, click on the <strong>Mark for Review & Next</strong> button.</li>
             </ul>
           </section>
 
-          {/* Section 3: Anti-Cheating & Security Proctoring */}
-          <section className="bg-red-500/10 p-6 rounded-xl border border-red-500/20 space-y-3">
-            <h2 className="text-lg font-bold text-red-400 flex items-center gap-2">
-              <ShieldAlert className="text-red-400" size={20} /> 3. Anti-Cheating & Security Rules
-            </h2>
-            <ul className="list-disc pl-6 space-y-2 text-neutral-300">
-              <li><strong>Fullscreen Requirement:</strong> The exam must be taken in Fullscreen Mode. Exiting fullscreen is monitored.</li>
-              <li><strong>Tab Switching Penalty:</strong> Switching browser tabs or windows triggers an automatic security violation warning. 3 tab switch violations will automatically submit your exam.</li>
-              <li><strong>Copy / Paste Blocking:</strong> Copying question text, right-clicking, or opening developer console tools is strictly prohibited and logged.</li>
-            </ul>
+          <section className="space-y-3 pt-2">
+            <h3 className="font-bold text-gray-900 text-base">3. Section & Marking Scheme</h3>
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-900 space-y-1 text-xs">
+              <p className="font-bold">IISER IAT / NISER NEST Marking Scheme:</p>
+              <p>• Correct Answer: <strong>+4 Marks</strong></p>
+              <p>• Incorrect Answer: <strong>-1 Mark</strong></p>
+              <p>• Unattempted: <strong>0 Marks</strong></p>
+            </div>
           </section>
+
+          <section className="space-y-3 pt-2">
+            <h3 className="font-bold text-red-600 text-base">4. Proctored Security Notice</h3>
+            <p className="text-xs text-red-700 bg-red-50 p-3 rounded border border-red-200">
+              ⚠️ <strong>Strict Proctoring Enabled:</strong> Fullscreen mode is compulsory. Switching tabs or windows will trigger a security violation warning. 3 tab violations will automatically submit your exam.
+            </p>
+          </section>
+
+          {/* Declaration Checkbox */}
+          <div className="pt-6 border-t border-gray-200 space-y-4">
+            <label className="flex items-start gap-3 cursor-pointer p-4 bg-amber-50 rounded-lg border border-amber-300">
+              <input
+                type="checkbox"
+                className="w-5 h-5 accent-[#1b365d] rounded mt-0.5"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+              />
+              <span className="text-xs font-semibold text-gray-800 leading-relaxed">
+                I have read and understood all the instructions. All computer hardware allotted to me is in proper working condition. I agree to follow all proctoring guidelines.
+              </span>
+            </label>
+
+            <div className="flex justify-end">
+              <button
+                onClick={handleStartExam}
+                disabled={!agreed}
+                className="px-8 py-3.5 bg-[#28a745] hover:bg-[#218838] disabled:bg-gray-300 disabled:text-gray-500 text-white font-bold rounded-lg shadow-md transition-all text-sm uppercase tracking-wider"
+              >
+                I am ready to begin →
+              </button>
+            </div>
+          </div>
+
         </div>
 
-        {/* Declaration & Start Button */}
-        <div className="pt-6 border-t border-neutral-800 space-y-6">
-          <label className="flex items-start gap-3 cursor-pointer p-4 bg-neutral-900 rounded-xl border border-white/5 hover:border-amber-400/40 transition">
-            <input
-              type="checkbox"
-              className="w-5 h-5 accent-amber-400 rounded mt-0.5"
-              checked={agreed}
-              onChange={(e) => setAgreed(e.target.checked)}
-            />
-            <span className="text-xs text-neutral-300 leading-relaxed">
-              I have read and understood all the instructions. I declare that I am not in possession of any prohibited material and agree to follow all proctoring guidelines. I am ready to begin the examination.
-            </span>
-          </label>
+        {/* Right Sidebar: Candidate Profile Panel */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6 h-fit">
+          <div className="text-center space-y-3 pb-4 border-b">
+            <div className="w-24 h-24 bg-gray-100 rounded-lg border border-gray-300 mx-auto flex items-center justify-center text-gray-400">
+              <User size={48} />
+            </div>
+            <div>
+              <h3 className="font-bold text-[#1b365d] text-base">{candidateName || 'Candidate Name'}</h3>
+              <p className="text-xs text-gray-500">Roll No: {rollNumber || 'VP-2024-890'}</p>
+            </div>
+          </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-neutral-500">Official Computer Based Test (CBT) Portal</span>
-            <button
-              onClick={handleStartExam}
-              disabled={!agreed}
-              className="px-8 py-3.5 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 disabled:opacity-40 disabled:cursor-not-allowed text-neutral-950 font-bold rounded-xl transition-all shadow-lg text-sm flex items-center gap-2"
-            >
-              <FileText size={18} /> Start Exam Now
-            </button>
+          <div className="space-y-2 text-xs">
+            <div className="flex justify-between py-1 border-b text-gray-600">
+              <span>Exam Paper:</span>
+              <strong className="text-gray-900">{examType || 'IAT'} 2024</strong>
+            </div>
+            <div className="flex justify-between py-1 border-b text-gray-600">
+              <span>Duration:</span>
+              <strong className="text-gray-900">180 Minutes</strong>
+            </div>
+            <div className="flex justify-between py-1 border-b text-gray-600">
+              <span>Total Questions:</span>
+              <strong className="text-gray-900">60 Questions</strong>
+            </div>
+            <div className="flex justify-between py-1 text-gray-600">
+              <span>Maximum Marks:</span>
+              <strong className="text-gray-900">240 Marks</strong>
+            </div>
           </div>
         </div>
 
-      </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t py-3 text-center text-xs text-gray-500">
+        © 2026 Vigyan.prep NTA Standard Examination System • All Rights Reserved
+      </footer>
     </div>
   );
 };

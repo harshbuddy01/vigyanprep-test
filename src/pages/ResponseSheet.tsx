@@ -1,90 +1,252 @@
-import React, { useState, useEffect } from 'react';
-import { ChallengeModal } from '../components/ChallengeModal';
+import React, { useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useExamStore } from '../stores/examStore';
+import { CheckCircle2, XCircle, AlertCircle, ArrowLeft, Award, FileText, Download } from 'lucide-react';
+
+function formatImageUrl(url: string): string {
+  if (!url) return '';
+  const trimmed = url.trim();
+  const driveMatch = trimmed.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (driveMatch && driveMatch[1]) {
+    return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+  }
+  return trimmed;
+}
 
 export const ResponseSheet: React.FC = () => {
-  const [showChallenge, setShowChallenge] = useState(false);
-  const [selectedQuestion, setSelectedQuestion] = useState<any>(null);
-  
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  
-  const { token, attemptId } = useExamStore();
-  
-  const fetchResults = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com'}/api/exam/results?attempt_id=${attemptId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error('Failed to fetch results');
-      const json = await res.json();
-      setData(json);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  const navigate = useNavigate();
+  const { questions, answers, testTitle, candidateName, rollNumber, examType } = useExamStore();
+  const [activeTab, setActiveTab] = useState('Physics');
+
+  // Calculate Scores & Breakdown
+  let correctCount = 0;
+  let incorrectCount = 0;
+  let unattemptedCount = 0;
+  let totalScore = 0;
+
+  const sectionScores: Record<string, { correct: number; incorrect: number; score: number }> = {
+    Physics: { correct: 0, incorrect: 0, score: 0 },
+    Chemistry: { correct: 0, incorrect: 0, score: 0 },
+    Mathematics: { correct: 0, incorrect: 0, score: 0 },
+    Biology: { correct: 0, incorrect: 0, score: 0 },
   };
 
-  useEffect(() => {
-    if (attemptId && token) {
-      fetchResults();
+  questions.forEach(q => {
+    const studentAns = answers[q.id];
+    const sec = q.section || 'Physics';
+    if (!sectionScores[sec]) sectionScores[sec] = { correct: 0, incorrect: 0, score: 0 };
+
+    if (!studentAns) {
+      unattemptedCount++;
+    } else if (studentAns === q.correct_answer || studentAns === (q as any).correctAnswer) {
+      correctCount++;
+      totalScore += 4;
+      sectionScores[sec].correct++;
+      sectionScores[sec].score += 4;
+    } else {
+      incorrectCount++;
+      totalScore -= 1;
+      sectionScores[sec].incorrect++;
+      sectionScores[sec].score -= 1;
     }
-  }, [attemptId, token]);
+  });
 
-  const handleChallenge = (q: any) => {
-    setSelectedQuestion(q);
-    setShowChallenge(true);
-  };
+  const totalMaxScore = questions.length * 4;
+  const accuracy = (correctCount + incorrectCount) > 0
+    ? Math.round((correctCount / (correctCount + incorrectCount)) * 100)
+    : 0;
 
-  if (loading) return <div className="min-h-screen bg-gray-50 p-8 flex justify-center items-center">Loading results...</div>;
-  if (error) return <div className="min-h-screen bg-gray-50 p-8 flex flex-col justify-center items-center">Error: {error} <button className="mt-4 px-4 py-2 bg-blue-500 text-white rounded" onClick={fetchResults}>Retry</button></div>;
-  if (!data) return <div className="min-h-screen bg-gray-50 p-8 flex justify-center items-center">No results data.</div>;
+  const sections = ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
+  const filteredQuestions = questions.filter(q => q.section === activeTab || (!sections.includes(q.section) && activeTab === 'Physics'));
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="bg-white p-6 rounded shadow">
-          <h1 className="text-2xl font-bold mb-2">Score Summary</h1>
-          <div className="flex space-x-8 text-gray-700">
-            <div>Score: <span className="font-bold">{data.score} / {data.totalMarks}</span></div>
-            <div>Rank: <span className="font-bold">{data.rank || 'N/A'}</span></div>
-            <div>Percentile: <span className="font-bold">{data.percentile || 'N/A'}</span></div>
+    <div className="min-h-screen bg-[#f4f6f9] text-gray-800 font-sans pb-16">
+
+      {/* Header */}
+      <header className="bg-[#1b365d] text-white py-4 px-6 shadow-md border-b-4 border-amber-400">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate('/')} className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition">
+              <ArrowLeft size={18} />
+            </button>
+            <div>
+              <h1 className="text-lg font-bold tracking-wide">OFFICIAL CANDIDATE RESPONSE SHEET & MARKSHEET</h1>
+              <p className="text-xs text-amber-300 font-semibold">{testTitle || 'IISER / NEST Examination 2024'}</p>
+            </div>
           </div>
+          <button
+            onClick={() => window.print()}
+            className="px-4 py-2 bg-[#28a745] hover:bg-[#218838] text-white font-bold text-xs rounded-lg flex items-center gap-2 shadow"
+          >
+            <Download size={16} /> Print / Save Response Sheet
+          </button>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto p-6 space-y-6">
+
+        {/* Candidate & Total Score Summary Banner */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 grid grid-cols-1 md:grid-cols-4 gap-6">
+
+          {/* Column 1: Candidate Meta */}
+          <div className="space-y-2 border-r border-gray-100 pr-4">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#1b365d]">Candidate Profile</span>
+            <h2 className="text-xl font-extrabold text-gray-900">{candidateName || 'Student Name'}</h2>
+            <p className="text-xs text-gray-500">Roll No: <strong>{rollNumber || 'VP-2024-890'}</strong></p>
+            <p className="text-xs text-gray-500">Exam Category: <strong>{examType || 'IAT'}</strong></p>
+          </div>
+
+          {/* Column 2: Total Score */}
+          <div className="space-y-1 text-center border-r border-gray-100 pr-4 flex flex-col justify-center">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Total Marks Secured</span>
+            <div className="text-4xl font-extrabold text-[#1b365d]">
+              {totalScore} <span className="text-base text-gray-400 font-normal">/ {totalMaxScore}</span>
+            </div>
+            <p className="text-xs font-semibold text-emerald-600">Accuracy: {accuracy}%</p>
+          </div>
+
+          {/* Column 3: Attempt Breakdown */}
+          <div className="grid grid-cols-3 gap-2 text-center border-r border-gray-100 pr-4 items-center">
+            <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-200">
+              <span className="block text-xl font-bold text-emerald-700">{correctCount}</span>
+              <span className="text-[10px] font-bold text-emerald-800 uppercase">Correct</span>
+            </div>
+            <div className="p-2 bg-red-50 rounded-lg border border-red-200">
+              <span className="block text-xl font-bold text-red-700">{incorrectCount}</span>
+              <span className="text-[10px] font-bold text-red-800 uppercase">Wrong</span>
+            </div>
+            <div className="p-2 bg-gray-100 rounded-lg border border-gray-300">
+              <span className="block text-xl font-bold text-gray-700">{unattemptedCount}</span>
+              <span className="text-[10px] font-bold text-gray-700 uppercase">Left</span>
+            </div>
+          </div>
+
+          {/* Column 4: Sectional Score Chips */}
+          <div className="space-y-1.5 text-xs flex flex-col justify-center">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Sectional Scores</span>
+            {sections.map(sec => (
+              <div key={sec} className="flex justify-between items-center bg-gray-50 px-3 py-1 rounded border border-gray-200">
+                <span className="text-gray-600 font-medium">{sec}:</span>
+                <strong className="text-[#1b365d]">{sectionScores[sec]?.score || 0} Marks</strong>
+              </div>
+            ))}
+          </div>
+
         </div>
 
-        <div className="space-y-4">
-          {(data.questions || []).map((q: any, i: number) => (
-            <div key={q.id} className="bg-white p-6 rounded shadow relative">
-              <h3 className="font-bold mb-2">Q{i + 1}. {q.text}</h3>
-              <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                <div>Selected: <span className="font-semibold text-blue-600">{q.selected || 'None'}</span></div>
-                <div>Correct: <span className="font-semibold text-green-600">{q.correct}</span></div>
-                <div>Marks: <span className={`font-semibold ${q.marks > 0 ? 'text-green-600' : 'text-red-600'}`}>{q.marks}</span></div>
-              </div>
-              <div className="bg-gray-100 p-4 rounded text-sm mb-4">
-                <strong>Solution:</strong> {q.solution}
-              </div>
-              <button 
-                onClick={() => handleChallenge(q)}
-                className="bg-orange-100 text-orange-700 px-4 py-2 rounded text-sm font-semibold hover:bg-orange-200"
+        {/* Subject Filter Tabs */}
+        <div className="flex gap-2 border-b border-gray-300 pb-2">
+          {sections.map(sec => {
+            const count = questions.filter(q => q.section === sec || (!sections.includes(q.section) && sec === 'Physics')).length;
+            const isActive = activeTab === sec;
+            return (
+              <button
+                key={sec}
+                onClick={() => setActiveTab(sec)}
+                className={`px-5 py-2.5 rounded-lg text-xs font-bold transition-all ${
+                  isActive
+                    ? 'bg-[#1b365d] text-white shadow-md'
+                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                }`}
               >
-                Challenge Question
+                {sec} ({count})
               </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
-      </div>
-      
-      {showChallenge && (
-        <ChallengeModal 
-          question={selectedQuestion} 
-          onClose={() => setShowChallenge(false)} 
-        />
-      )}
+
+        {/* Detailed Question-by-Question Response Sheet */}
+        <div className="space-y-6">
+          {filteredQuestions.map((q, idx) => {
+            const studentAns = answers[q.id];
+            const isCorrect = studentAns === q.correct_answer || studentAns === (q as any).correctAnswer;
+            const isUnattempted = !studentAns;
+
+            return (
+              <div key={q.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 space-y-4">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b pb-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-[#1b365d] uppercase tracking-wider">
+                      Question No. {q.question_number || idx + 1} ({q.section})
+                    </span>
+                  </div>
+
+                  {/* Result Status Badge */}
+                  {isUnattempted ? (
+                    <span className="px-3 py-1 bg-gray-100 text-gray-700 font-bold text-xs rounded-full border border-gray-300">
+                      Unattempted (0 Marks)
+                    </span>
+                  ) : isCorrect ? (
+                    <span className="px-3 py-1 bg-emerald-100 text-emerald-800 font-bold text-xs rounded-full border border-emerald-300 flex items-center gap-1">
+                      <CheckCircle2 size={14} /> Correct (+4 Marks)
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 bg-red-100 text-red-800 font-bold text-xs rounded-full border border-red-300 flex items-center gap-1">
+                      <XCircle size={14} /> Incorrect (-1 Mark)
+                    </span>
+                  )}
+                </div>
+
+                {/* Question Text */}
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 text-sm leading-relaxed text-gray-900 space-y-3">
+                  <div className="font-medium text-base">
+                    {(q as any).question_text || q.text}
+                  </div>
+
+                  {/* Question Diagram Image */}
+                  {(q.image_url || (q as any).imageUrl) && (
+                    <div className="p-3 bg-white border border-gray-300 rounded-lg text-center">
+                      <img
+                        src={formatImageUrl(q.image_url || (q as any).imageUrl || '')}
+                        alt="Question Diagram"
+                        className="max-h-80 mx-auto object-contain rounded"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Options List with Selection Highlights */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                  {((q.options && q.options.length === 4) ? q.options : ['Option A', 'Option B', 'Option C', 'Option D']).map((opt, optIdx) => {
+                    const optKey = ['A', 'B', 'C', 'D'][optIdx];
+                    const isChosen = studentAns === optKey;
+                    const isKey = (q.correct_answer || (q as any).correctAnswer) === optKey;
+
+                    let bgClass = 'bg-white border-gray-200 text-gray-800';
+                    let keyBadge = null;
+
+                    if (isKey) {
+                      bgClass = 'bg-emerald-50 border-emerald-400 text-emerald-950 font-semibold';
+                      keyBadge = <span className="text-[10px] bg-emerald-600 text-white font-bold px-2 py-0.5 rounded ml-auto">Official Key</span>;
+                    } else if (isChosen && !isCorrect) {
+                      bgClass = 'bg-red-50 border-red-400 text-red-950';
+                      keyBadge = <span className="text-[10px] bg-red-600 text-white font-bold px-2 py-0.5 rounded ml-auto">Your Answer (Wrong)</span>;
+                    }
+
+                    return (
+                      <div
+                        key={optKey}
+                        className={`p-3.5 rounded-xl border flex items-center gap-3 text-xs transition ${bgClass}`}
+                      >
+                        <span className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+                          isKey ? 'bg-emerald-600 text-white' : isChosen ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-700 border border-gray-300'
+                        }`}>
+                          {optKey}
+                        </span>
+                        <span className="font-medium">{opt}</span>
+                        {keyBadge}
+                      </div>
+                    );
+                  })}
+                </div>
+
+              </div>
+            );
+          })}
+        </div>
+
+      </main>
     </div>
   );
 };
