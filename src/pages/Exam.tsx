@@ -23,7 +23,7 @@ export default function Exam() {
   const testIdParam = searchParams.get('testId');
   const {
     questions, currentQuestionIndex, answers,
-    setAnswer, clearAnswer, markForReview, nextQuestion, prevQuestion,
+    setAnswer, clearAnswer, markForReview,
     goToQuestion, submitExam, isSubmitted, attemptId, timeRemaining, warningCount,
     incrementWarning, token, setQuestions, setTestMeta, candidateName, rollNumber, testTitle, examType,
     decrementTimer
@@ -93,7 +93,6 @@ export default function Exam() {
     } catch (e) {
       console.error(e);
     }
-    // Replace history entry so back button doesn't re-open exam
     navigate('/response-sheet' + window.location.search, { replace: true });
   }, [submitExam, attemptId, answers, token, navigate]);
 
@@ -173,9 +172,54 @@ export default function Exam() {
     return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Section specific question numbers
+  // Questions belonging strictly to the active section
   const sectionQuestions = questions.filter(q => q.section === activeSection || (!sections.includes(q.section) && activeSection === 'Physics'));
   const currentSectionQIndex = sectionQuestions.findIndex(q => q.id === currentQ?.id);
+
+  // Section-Bound Question Navigation (Save & Next / Previous)
+  const handleSaveAndNext = () => {
+    if (!currentQ) return;
+    const currentSecIdx = sectionQuestions.findIndex(q => q.id === currentQ.id);
+    if (currentSecIdx !== -1 && currentSecIdx < sectionQuestions.length - 1) {
+      // Move to next question within current section
+      const nextQ = sectionQuestions[currentSecIdx + 1];
+      const globalIdx = questions.findIndex(q => q.id === nextQ.id);
+      if (globalIdx !== -1) goToQuestion(globalIdx);
+    } else {
+      // Transition to next section if at end of section
+      const currentSecPos = sections.indexOf(activeSection);
+      if (currentSecPos !== -1 && currentSecPos < sections.length - 1) {
+        const nextSec = sections[currentSecPos + 1];
+        setActiveSection(nextSec);
+        const firstQInNextSec = questions.findIndex(q => q.section === nextSec);
+        if (firstQInNextSec !== -1) goToQuestion(firstQInNextSec);
+      }
+    }
+  };
+
+  const handlePrevious = () => {
+    if (!currentQ) return;
+    const currentSecIdx = sectionQuestions.findIndex(q => q.id === currentQ.id);
+    if (currentSecIdx > 0) {
+      // Move to previous question within current section
+      const prevQ = sectionQuestions[currentSecIdx - 1];
+      const globalIdx = questions.findIndex(q => q.id === prevQ.id);
+      if (globalIdx !== -1) goToQuestion(globalIdx);
+    } else {
+      // Transition to previous section if at start of section
+      const currentSecPos = sections.indexOf(activeSection);
+      if (currentSecPos > 0) {
+        const prevSec = sections[currentSecPos - 1];
+        setActiveSection(prevSec);
+        const secQuestionsPrev = questions.filter(q => q.section === prevSec);
+        const lastQInPrevSec = secQuestionsPrev[secQuestionsPrev.length - 1];
+        if (lastQInPrevSec) {
+          const globalIdx = questions.findIndex(q => q.id === lastQInPrevSec.id);
+          if (globalIdx !== -1) goToQuestion(globalIdx);
+        }
+      }
+    }
+  };
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-[#f4f6f9] font-sans text-gray-800 relative select-none">
@@ -286,7 +330,7 @@ export default function Exam() {
               {/* Question Number & Type Header */}
               <div className="flex items-center justify-between border-b pb-3">
                 <span className="text-sm font-bold text-[#1b365d] uppercase tracking-wider">
-                  Question No. {currentSectionQIndex + 1} of {sectionQuestions.length} ({activeSection})
+                  Question No. {currentSectionQIndex !== -1 ? currentSectionQIndex + 1 : 1} of {sectionQuestions.length} ({activeSection})
                 </span>
                 <span className="px-3 py-1 bg-blue-50 text-blue-800 border border-blue-200 font-bold text-xs rounded-full">
                   Marks: +4 | -1
@@ -344,20 +388,22 @@ export default function Exam() {
             <div className="text-center py-16 text-gray-500">No questions loaded.</div>
           )}
 
-          {/* Bottom Control Bar */}
+          {/* Bottom Control Bar (Section-Bound Next / Previous Navigation) */}
           <div className="border-t pt-4 mt-6 flex items-center justify-between bg-white max-w-4xl mx-auto w-full">
             <div className="flex gap-3">
               <button
                 onClick={() => {
-                  markForReview(currentQ.id);
-                  nextQuestion();
+                  if (currentQ) markForReview(currentQ.id);
+                  handleSaveAndNext();
                 }}
                 className="px-5 py-2.5 bg-[#6f42c1] hover:bg-[#5a32a3] text-white font-bold text-xs rounded-lg shadow transition"
               >
                 Mark for Review & Next
               </button>
               <button
-                onClick={() => clearAnswer(currentQ.id)}
+                onClick={() => {
+                  if (currentQ) clearAnswer(currentQ.id);
+                }}
                 className="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold text-xs rounded-lg transition"
               >
                 Clear Response
@@ -366,14 +412,13 @@ export default function Exam() {
 
             <div className="flex gap-3">
               <button
-                onClick={prevQuestion}
-                disabled={currentQuestionIndex === 0}
-                className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 font-bold text-xs rounded-lg disabled:opacity-40 transition"
+                onClick={handlePrevious}
+                className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 font-bold text-xs rounded-lg transition"
               >
                 ← Previous
               </button>
               <button
-                onClick={nextQuestion}
+                onClick={handleSaveAndNext}
                 className="px-6 py-2.5 bg-[#28a745] hover:bg-[#218838] text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow transition"
               >
                 Save & Next →
