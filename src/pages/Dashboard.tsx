@@ -238,6 +238,13 @@ export function Dashboard() {
             <p className="text-xs text-neutral-300 max-w-xl leading-relaxed">
               Select any scheduled IISER IAT, NISER NEST, or CMI test paper below. Paid tests require your 4-6 digit passcode on the scheduled date.
             </p>
+
+            {/* Locked Immutable Student Profile Badge */}
+            <div className="mt-3 flex items-center gap-2 text-[11px] text-neutral-400 bg-black/40 px-3 py-1.5 rounded-lg border border-amber-500/20 w-fit">
+              <ShieldCheck size={14} className="text-amber-400" />
+              <span>Official Student Identity: <strong className="text-white">{studentName}</strong> ({studentEmail})</span>
+              <span className="text-amber-400/80 ml-2 font-mono text-[10px] uppercase bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/30">🔒 Immutable (Admin Managed)</span>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-3">
