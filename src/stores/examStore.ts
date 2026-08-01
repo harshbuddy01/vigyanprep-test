@@ -3,14 +3,14 @@ import { persist } from 'zustand/middleware';
 
 export type Question = {
   id: string;
-  type: 'MCQ' | 'MSQ' | 'Numerical';
+  type: 'MCQ' | 'MSQ' | 'Numerical' | 'Descriptive';
   text: string;
   question_text?: string;
   question_number?: number;
-  correct_answer?: string;
-  correctAnswer?: string;
   image_url?: string;
   imageUrl?: string;
+  correct_answer?: string;
+  correctAnswer?: string;
   options?: string[];
   section: string;
 };
@@ -25,7 +25,7 @@ interface ExamState {
 
   testId: string | null;
   testTitle: string | null;
-  examType: 'NEST' | 'IAT' | 'CMI' | null;
+  examType: 'NEST' | 'IAT' | 'CMI' | 'ISI' | null;
   candidateName: string | null;
   rollNumber: string | null;
   attemptId: string | null;
@@ -57,7 +57,7 @@ export const useExamStore = create<ExamState>()(
       currentQuestionIndex: 0,
       answers: {},
       markedForReview: [],
-      timeRemaining: 3600, // Default 1 hr
+      timeRemaining: 10800, // 3 hours
       isSubmitted: false,
 
       testId: null,
@@ -113,7 +113,16 @@ export const useExamStore = create<ExamState>()(
       setAttemptId: (id) => set({ attemptId: id })
     }),
     {
-      name: 'vigyan_exam_v1',
+      name: 'vigyan_exam_v2',
+      // 🛡️ SECURITY: Only persist user's transient answers, attemptId, & timeRemaining. Never persist tokens or answers keys.
+      partialize: (state) => ({
+        answers: state.answers,
+        markedForReview: state.markedForReview,
+        attemptId: state.attemptId,
+        testId: state.testId,
+        timeRemaining: state.timeRemaining,
+        warningCount: state.warningCount
+      }),
     }
   )
 );
