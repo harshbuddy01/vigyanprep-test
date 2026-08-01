@@ -23,12 +23,14 @@ interface TestPaper {
   access_code?: string;
 }
 
+import { getCookie, deleteCookie } from '../lib/cookies';
+
 export function Dashboard() {
   const navigate = useNavigate();
   const [tests, setTests] = useState<TestPaper[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<'ALL' | 'IAT' | 'NEST' | 'CMI'>('ALL');
-  const [studentName, setStudentName] = useState('Science Aspirant');
+  const [studentName, setStudentName] = useState('Student');
   const [studentEmail, setStudentEmail] = useState('');
 
   // Passcode Modal States
@@ -38,11 +40,24 @@ export function Dashboard() {
   const [passcodeError, setPasscodeError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Read student auth info
-    const storedName = localStorage.getItem('student_name') || localStorage.getItem('full_name') || 'Science Aspirant';
-    const storedEmail = localStorage.getItem('student_email') || localStorage.getItem('email') || 'student@vigyanprep.com';
-    setStudentName(storedName);
-    setStudentEmail(storedEmail);
+    // 🛡️ Read shared subdomain cookie and sync to local storage
+    const token = getCookie('student_token') || localStorage.getItem('student_token');
+    const name = getCookie('student_name') || localStorage.getItem('student_name') || localStorage.getItem('full_name') || 'Student';
+    const email = getCookie('student_email') || localStorage.getItem('student_email') || localStorage.getItem('email') || '';
+
+    if (!token) {
+      // Direct unauthenticated student to Login Portal immediately
+      window.location.href = 'https://auth.vigyanprep.com';
+      return;
+    }
+
+    // Sync variables to local storage
+    localStorage.setItem('student_token', token);
+    localStorage.setItem('student_name', name);
+    localStorage.setItem('student_email', email);
+
+    setStudentName(name);
+    setStudentEmail(email);
 
     async function loadDashboardTests() {
       setLoading(true);
@@ -149,6 +164,9 @@ export function Dashboard() {
   };
 
   const handleLogout = () => {
+    deleteCookie('student_token');
+    deleteCookie('student_name');
+    deleteCookie('student_email');
     localStorage.removeItem('student_token');
     localStorage.removeItem('student_name');
     localStorage.removeItem('student_email');
