@@ -7,7 +7,12 @@ import {
   RefreshCw, HelpCircle, Download, ChevronRight
 } from 'lucide-react';
 import { getCookie, deleteCookie } from '../lib/cookies';
-import { StudentStudyingSketch } from '../components/StudentStudyingSketch';
+import {
+  RayOpticsSketch,
+  BenzeneOrbitalSketch,
+  CalculusIntegralSketch,
+  DNAHelixSketch
+} from '../components/ScienceSketches';
 
 interface TestPaper {
   id: string;
@@ -194,36 +199,35 @@ export function Dashboard() {
   });
 
   return (
-    <div className="min-h-screen bg-[#f4f3fb] text-[#1e1b4b] font-sans flex selection:bg-purple-500 selection:text-white relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#16120b] text-[#f2ead8] font-sans flex selection:bg-amber-500 selection:text-black relative overflow-x-hidden">
       
-      {/* Background Liquid Curve Accents (Yellow & Purple Corner Shapes matching reference image) */}
-      <div className="fixed -bottom-24 -left-24 w-96 h-96 rounded-full bg-amber-400/40 blur-3xl pointer-events-none z-0" />
-      <div className="fixed -bottom-32 -right-32 w-[500px] h-[500px] rounded-full bg-purple-600/30 blur-3xl pointer-events-none z-0" />
+      {/* Handcrafted Warm Blueprint Grid Accent */}
+      <div className="fixed inset-0 pointer-events-none opacity-10 bg-[radial-gradient(#fcd34d_1px,transparent_1px)] [background-size:28px_28px] z-0" />
 
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#1e1b4b] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-purple-400/30 text-xs font-semibold animate-bounce">
+        <div className="fixed bottom-6 right-6 z-50 bg-[#1e170d] text-amber-300 px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-amber-500/40 text-xs font-semibold animate-bounce">
           <Sparkles className="text-amber-400" size={16} />
           <span>{toastMessage}</span>
         </div>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          LEFT SIDEBAR NAVIGATION (Exact match to reference layout)
+          LEFT SIDEBAR NAVIGATION (Matching Warm Academic Brand Palette)
          ═══════════════════════════════════════════════════════════════════════ */}
-      <aside className="w-64 bg-white/80 backdrop-blur-xl border-r border-purple-100 flex flex-col justify-between p-6 z-20 shrink-0 min-h-screen shadow-sm">
+      <aside className="w-64 bg-[#1b150c]/90 backdrop-blur-xl border-r border-amber-500/20 flex flex-col justify-between p-6 z-20 shrink-0 min-h-screen shadow-xl">
         <div className="space-y-8">
           
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-purple-500/20">
-              ⚛
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center font-serif text-amber-300 font-bold text-xl shadow-lg shadow-amber-500/10">
+              V
             </div>
             <div>
-              <h1 className="font-serif italic font-bold text-lg text-[#1e1b4b]">
-                VIGYAN<span className="font-sans text-xs uppercase text-amber-500 font-bold ml-1">.prep</span>
+              <h1 className="font-serif italic font-bold text-lg text-white">
+                VIGYAN<span className="font-sans text-xs uppercase text-amber-400 font-semibold ml-1">.prep</span>
               </h1>
-              <p className="text-[9px] text-purple-600 font-extrabold tracking-widest uppercase">STUDENT TEST PORTAL</p>
+              <p className="text-[9px] text-amber-400/80 font-extrabold tracking-widest uppercase">STUDENT TEST PORTAL</p>
             </div>
           </div>
 
@@ -233,8 +237,8 @@ export function Dashboard() {
               onClick={() => { setActiveNav('dashboard'); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                 activeNav === 'dashboard'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/25'
-                  : 'text-neutral-500 hover:text-purple-600 hover:bg-purple-50'
+                  ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 font-bold shadow-lg shadow-amber-500/20'
+                  : 'text-neutral-400 hover:text-amber-300 hover:bg-white/5'
               }`}
             >
               <LayoutDashboard size={18} />
@@ -245,8 +249,8 @@ export function Dashboard() {
               onClick={() => { setActiveNav('test_series'); setActiveTab('TEST_SERIES'); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                 activeNav === 'test_series'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/25'
-                  : 'text-neutral-500 hover:text-purple-600 hover:bg-purple-50'
+                  ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 font-bold shadow-lg shadow-amber-500/20'
+                  : 'text-neutral-400 hover:text-amber-300 hover:bg-white/5'
               }`}
             >
               <FileText size={18} />
@@ -257,7 +261,7 @@ export function Dashboard() {
               href="https://vigyanprep.com/pyq"
               target="_blank"
               rel="noreferrer"
-              className="w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 text-neutral-500 hover:text-purple-600 hover:bg-purple-50 transition"
+              className="w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 text-neutral-400 hover:text-amber-300 hover:bg-white/5 transition"
             >
               <BookOpen size={18} />
               <span>PYQ Library</span>
@@ -267,8 +271,8 @@ export function Dashboard() {
               onClick={() => { setActiveNav('performance'); setShowPerformanceModal(true); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                 activeNav === 'performance'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/25'
-                  : 'text-neutral-500 hover:text-purple-600 hover:bg-purple-50'
+                  ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 font-bold shadow-lg shadow-amber-500/20'
+                  : 'text-neutral-400 hover:text-amber-300 hover:bg-white/5'
               }`}
             >
               <BarChart3 size={18} />
@@ -276,11 +280,11 @@ export function Dashboard() {
             </button>
 
             <button
-              onClick={() => { setActiveNav('bookmarks'); triggerToast('🔖 Bookmarks feature coming soon! You will be able to save questions for revision.'); }}
+              onClick={() => { setActiveNav('bookmarks'); triggerToast('🔖 Bookmarks feature coming soon! Save questions for revision.'); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                 activeNav === 'bookmarks'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/25'
-                  : 'text-neutral-500 hover:text-purple-600 hover:bg-purple-50'
+                  ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 font-bold shadow-lg shadow-amber-500/20'
+                  : 'text-neutral-400 hover:text-amber-300 hover:bg-white/5'
               }`}
             >
               <Bookmark size={18} />
@@ -288,11 +292,11 @@ export function Dashboard() {
             </button>
 
             <button
-              onClick={() => { setActiveNav('notes'); triggerToast('📋 Notes feature coming soon! You will be able to write revision notes during CBT tests.'); }}
+              onClick={() => { setActiveNav('notes'); triggerToast('📋 Notes feature coming soon! Write revision notes during CBT tests.'); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                 activeNav === 'notes'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/25'
-                  : 'text-neutral-500 hover:text-purple-600 hover:bg-purple-50'
+                  ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 font-bold shadow-lg shadow-amber-500/20'
+                  : 'text-neutral-400 hover:text-amber-300 hover:bg-white/5'
               }`}
             >
               <StickyNote size={18} />
@@ -300,11 +304,11 @@ export function Dashboard() {
             </button>
 
             <button
-              onClick={() => { setActiveNav('discussions'); triggerToast('💬 Student Discussion Forum coming soon! Connect with fellow IISER & NEST aspirants.'); }}
+              onClick={() => { setActiveNav('discussions'); triggerToast('💬 Student Discussion Forum coming soon!'); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                 activeNav === 'discussions'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/25'
-                  : 'text-neutral-500 hover:text-purple-600 hover:bg-purple-50'
+                  ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 font-bold shadow-lg shadow-amber-500/20'
+                  : 'text-neutral-400 hover:text-amber-300 hover:bg-white/5'
               }`}
             >
               <MessageSquare size={18} />
@@ -315,8 +319,8 @@ export function Dashboard() {
               onClick={() => { setActiveNav('settings'); setShowSettingsModal(true); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                 activeNav === 'settings'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/25'
-                  : 'text-neutral-500 hover:text-purple-600 hover:bg-purple-50'
+                  ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 font-bold shadow-lg shadow-amber-500/20'
+                  : 'text-neutral-400 hover:text-amber-300 hover:bg-white/5'
               }`}
             >
               <Settings size={18} />
@@ -326,11 +330,11 @@ export function Dashboard() {
         </div>
 
         {/* Footer Support Notice */}
-        <div className="pt-6 border-t border-purple-100 space-y-3 text-center">
+        <div className="pt-6 border-t border-white/10 space-y-3 text-center">
           <p className="text-[10px] text-neutral-400 font-medium">Need Assistance?</p>
           <a
             href="https://vigyanprep.com/about"
-            className="px-4 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold block transition"
+            className="px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold block hover:bg-amber-500/20 transition"
           >
             Contact Support
           </a>
@@ -343,7 +347,7 @@ export function Dashboard() {
       <div className="flex-1 flex flex-col min-w-0 z-10">
         
         {/* TOP HEADER BAR */}
-        <header className="px-8 py-5 flex items-center justify-between gap-6 bg-white/40 backdrop-blur-md border-b border-purple-100/60 sticky top-0 z-30">
+        <header className="px-8 py-5 flex items-center justify-between gap-6 bg-[#16120b]/90 backdrop-blur-md border-b border-amber-500/20 sticky top-0 z-30">
           
           {/* Search Box */}
           <div className="relative w-full max-w-md">
@@ -353,7 +357,7 @@ export function Dashboard() {
               placeholder="Search test series, subjects & more..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white/80 border border-purple-100 rounded-full pl-11 pr-4 py-2.5 text-xs text-[#1e1b4b] placeholder-neutral-400 focus:outline-none focus:border-purple-500 shadow-sm"
+              className="w-full bg-black/40 border border-amber-500/30 rounded-full pl-11 pr-4 py-2.5 text-xs text-white placeholder-neutral-400 focus:outline-none focus:border-amber-400 shadow-inner"
             />
           </div>
 
@@ -361,15 +365,15 @@ export function Dashboard() {
           <div className="flex items-center gap-4 shrink-0">
             
             {/* Active Pass Badge */}
-            <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-purple-100/70 border border-purple-200 text-purple-700 text-xs font-bold shadow-xs">
-              <Award size={15} className="text-purple-600" />
+            <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold shadow-xs">
+              <Award size={15} className="text-amber-400" />
               <span>IISER & NEST Subscription Active</span>
             </div>
 
             {/* Notification Bell */}
             <button
               onClick={() => triggerToast('🔔 No new test notifications. All papers up to date.')}
-              className="w-10 h-10 rounded-full bg-white border border-purple-100 flex items-center justify-center text-neutral-500 hover:text-purple-600 transition shadow-xs relative"
+              className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-300 hover:bg-amber-500/20 transition shadow-xs relative"
               title="Notifications"
             >
               <Bell size={18} />
@@ -378,11 +382,11 @@ export function Dashboard() {
 
             {/* Student Profile Pill */}
             <div className="flex items-center gap-3 pl-2 cursor-pointer" onClick={() => setShowSettingsModal(true)}>
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 text-white font-bold flex items-center justify-center text-sm shadow-md">
+              <div className="w-10 h-10 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-300 font-bold flex items-center justify-center text-sm shadow-md">
                 {studentName.charAt(0).toUpperCase()}
               </div>
               <div className="hidden md:block text-left">
-                <p className="text-xs font-extrabold text-[#1e1b4b]">{studentName}</p>
+                <p className="text-xs font-extrabold text-white">{studentName}</p>
                 <p className="text-[10px] text-neutral-400 font-medium">{studentEmail}</p>
               </div>
             </div>
@@ -392,37 +396,36 @@ export function Dashboard() {
         {/* DASHBOARD BODY CONTENT */}
         <main className="p-8 space-y-8 max-w-7xl mx-auto w-full">
           
-          {/* HERO WELCOME BANNER (Exact layout with scientific doodles & side cards) */}
-          <div className="relative overflow-hidden p-8 sm:p-10 rounded-3xl bg-white/90 border border-purple-100 shadow-xl shadow-purple-500/5 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          {/* HERO WELCOME BANNER (Warm Academic Theme) */}
+          <div className="relative overflow-hidden p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-[#1c150c] via-[#18120a] to-[#120e08] border border-amber-500/30 shadow-2xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             
-            {/* Hand-sketched Erlenmeyer flask, Saturn, Magnifying Glass Background Motif */}
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-15 pointer-events-none hidden md:block">
-              <svg width="400" height="200" viewBox="0 0 400 200" fill="none">
-                <path d="M 50,150 L 80,80 L 80,40 L 95,40 L 95,80 L 125,150 Z" stroke="#4c1d95" strokeWidth="2" />
-                <circle cx="200" cy="80" r="35" stroke="#4c1d95" strokeWidth="2" />
-                <ellipse cx="200" cy="80" rx="60" ry="12" stroke="#4c1d95" strokeWidth="2" />
-                <circle cx="320" cy="120" r="25" stroke="#4c1d95" strokeWidth="2.5" />
-                <line x1="338" y1="138" x2="365" y2="165" stroke="#4c1d95" strokeWidth="4" strokeLinecap="round" />
-              </svg>
+            {/* Handcrafted Technical Science Sketches Overlay */}
+            <div className="absolute right-4 top-4 opacity-15 pointer-events-none hidden lg:flex gap-6">
+              <RayOpticsSketch className="w-32 h-32 text-amber-400" />
+              <BenzeneOrbitalSketch className="w-32 h-32 text-orange-400" />
+              <CalculusIntegralSketch className="w-32 h-32 text-amber-300" />
+              <DNAHelixSketch className="w-32 h-32 text-emerald-400" />
             </div>
 
             {/* Left Welcome Copy */}
             <div className="lg:col-span-6 space-y-4 relative z-10">
-              <p className="text-xs font-bold uppercase tracking-widest text-purple-600">Welcome back,</p>
-              <h2 className="font-serif italic text-4xl sm:text-5xl font-extrabold text-[#1e1b4b]">
-                {studentName}!
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/10 text-amber-300 text-xs font-bold uppercase tracking-widest border border-amber-500/30">
+                <Sparkles size={13} /> Official Student Control Center
+              </div>
+              <h2 className="font-serif italic text-4xl sm:text-5xl font-extrabold text-white">
+                Welcome back, <span className="text-amber-300 font-sans not-italic">{studentName}!</span>
               </h2>
-              <p className="text-xs text-neutral-500 leading-relaxed font-medium max-w-md">
-                Your journey to IISER, NEST & CMI starts here. Practice. Analyze. Improve. <span className="text-purple-600 font-bold">Succeed!</span>
+              <p className="text-xs text-neutral-300 leading-relaxed font-light max-w-md">
+                Your journey to IISER, NEST & CMI starts here. Practice. Analyze. Improve. <span className="text-amber-300 font-bold">Succeed!</span>
               </p>
 
               {/* Immutable Identity Badges */}
               <div className="flex flex-wrap items-center gap-2 pt-2">
-                <div className="px-3.5 py-1.5 rounded-xl bg-purple-50 border border-purple-200 text-[#1e1b4b] text-[11px] font-semibold flex items-center gap-2">
-                  <ShieldCheck size={14} className="text-purple-600" />
-                  <span>Official Identity: <strong>{studentName}</strong> ({studentEmail})</span>
+                <div className="px-3.5 py-1.5 rounded-xl bg-black/40 border border-amber-500/25 text-neutral-300 text-[11px] font-semibold flex items-center gap-2">
+                  <ShieldCheck size={14} className="text-amber-400" />
+                  <span>Official Identity: <strong className="text-white">{studentName}</strong> ({studentEmail})</span>
                 </div>
-                <div className="px-3 py-1.5 rounded-xl bg-purple-100/70 border border-purple-200 text-purple-700 text-[10px] font-mono font-bold uppercase">
+                <div className="px-3 py-1.5 rounded-xl bg-amber-400/10 border border-amber-400/30 text-amber-300 text-[10px] font-mono font-bold uppercase">
                   🔒 Immutable Profile
                 </div>
               </div>
@@ -431,34 +434,34 @@ export function Dashboard() {
             {/* Right Banner Side Action Cards */}
             <div className="lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10">
               
-              {/* Purple Card: Explore Test Passes */}
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-700 via-purple-700 to-indigo-900 text-white space-y-4 shadow-lg shadow-purple-600/20 flex flex-col justify-between">
+              {/* Gold Accent Card: Explore Test Passes */}
+              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#2a1f10] via-[#1f170c] to-[#141009] border border-amber-500/40 text-white space-y-4 shadow-xl flex flex-col justify-between">
                 <div className="space-y-2">
-                  <h3 className="font-serif text-lg font-bold text-white">Explore Test Passes</h3>
-                  <p className="text-[11px] text-purple-100/80 leading-relaxed">
+                  <h3 className="font-serif text-lg font-bold text-amber-200">Explore Test Passes</h3>
+                  <p className="text-[11px] text-neutral-300 leading-relaxed">
                     Access all subscribed and available test series in one place.
                   </p>
                 </div>
                 <a
                   href="https://vigyanprep.com/tests"
-                  className="w-full py-2.5 px-4 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-md text-white font-bold text-xs flex items-center justify-center gap-2 transition"
+                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition hover:opacity-95 shadow-md shadow-amber-500/20"
                 >
                   <span>Explore All Passes</span>
                   <ArrowRight size={14} />
                 </a>
               </div>
 
-              {/* White Card: Browse PYQ Library */}
-              <div className="p-6 rounded-2xl bg-white border border-purple-100 space-y-4 shadow-md flex flex-col justify-between">
+              {/* Parchment Card: Browse PYQ Library */}
+              <div className="p-6 rounded-2xl bg-[#1b150c] border border-white/10 space-y-4 shadow-md flex flex-col justify-between">
                 <div className="space-y-2">
-                  <h3 className="font-serif text-lg font-bold text-[#1e1b4b]">Browse PYQ Library</h3>
+                  <h3 className="font-serif text-lg font-bold text-white">Browse PYQ Library</h3>
                   <p className="text-[11px] text-neutral-400 leading-relaxed">
                     Practice previous year questions with filters and smart analysis.
                   </p>
                 </div>
                 <a
                   href="https://vigyanprep.com/pyq"
-                  className="w-full py-2.5 px-4 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs flex items-center justify-center gap-2 transition"
+                  className="w-full py-2.5 px-4 rounded-xl bg-white/5 border border-white/15 text-amber-300 hover:text-white font-bold text-xs flex items-center justify-center gap-2 transition"
                 >
                   <span>Browse Now</span>
                   <ArrowRight size={14} />
@@ -468,8 +471,8 @@ export function Dashboard() {
             </div>
           </div>
 
-          {/* FILTER TABS ROW (Pill Buttons matching reference image) */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-purple-100 pb-4">
+          {/* FILTER TABS ROW (Pill Buttons) */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
             
             {/* Left Primary Switcher Pills */}
             <div className="flex items-center gap-2">
@@ -477,8 +480,8 @@ export function Dashboard() {
                 onClick={() => setActiveTab('TEST_SERIES')}
                 className={`px-5 py-2.5 rounded-full text-xs font-bold tracking-wider uppercase transition ${
                   activeTab === 'TEST_SERIES'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/20'
-                    : 'bg-white text-neutral-500 hover:text-purple-600 border border-purple-100'
+                    ? 'bg-amber-400 text-neutral-950 shadow-md shadow-amber-400/20'
+                    : 'bg-[#1b150c] text-neutral-400 hover:text-white border border-white/10'
                 }`}
               >
                 SUBSCRIBED TEST SERIES ({testSeriesPapers.length})
@@ -488,8 +491,8 @@ export function Dashboard() {
                 onClick={() => setActiveTab('PYQ')}
                 className={`px-5 py-2.5 rounded-full text-xs font-bold tracking-wider uppercase transition flex items-center gap-2 ${
                   activeTab === 'PYQ'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/20'
-                    : 'bg-white text-neutral-500 hover:text-purple-600 border border-purple-100'
+                    ? 'bg-amber-400 text-neutral-950 shadow-md shadow-amber-400/20'
+                    : 'bg-[#1b150c] text-neutral-400 hover:text-white border border-white/10'
                 }`}
               >
                 <BookOpen size={14} />
@@ -505,8 +508,8 @@ export function Dashboard() {
                   onClick={() => setActiveCategory(cat)}
                   className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${
                     activeCategory === cat
-                      ? 'bg-purple-600 text-white shadow-xs'
-                      : 'bg-white border border-purple-100 text-neutral-500 hover:text-purple-600'
+                      ? 'bg-amber-400/20 text-amber-300 border border-amber-400/50'
+                      : 'bg-[#1b150c] border border-white/10 text-neutral-400 hover:text-white'
                   }`}
                 >
                   {cat === 'ALL' ? 'All Exams' : cat}
@@ -517,53 +520,53 @@ export function Dashboard() {
 
           {/* 5 PERFORMANCE STAT CARDS ROW */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            <div className="p-4 rounded-2xl bg-white border border-purple-100/80 shadow-xs flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+            <div className="p-4 rounded-2xl bg-[#1b150c] border border-white/10 shadow-xs flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-400/10 text-amber-400 border border-amber-400/20 flex items-center justify-center">
                 <FileText size={20} />
               </div>
               <div>
                 <p className="text-[10px] font-bold text-neutral-400 uppercase">Tests Attempted</p>
-                <p className="text-lg font-bold text-[#1e1b4b]">0</p>
+                <p className="text-lg font-bold text-white">0</p>
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-white border border-purple-100/80 shadow-xs flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <div className="p-4 rounded-2xl bg-[#1b150c] border border-white/10 shadow-xs flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-400/10 text-emerald-400 border border-emerald-400/20 flex items-center justify-center">
                 <BarChart3 size={20} />
               </div>
               <div>
                 <p className="text-[10px] font-bold text-neutral-400 uppercase">Average Score</p>
-                <p className="text-lg font-bold text-[#1e1b4b]">0%</p>
+                <p className="text-lg font-bold text-white">0%</p>
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-white border border-purple-100/80 shadow-xs flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+            <div className="p-4 rounded-2xl bg-[#1b150c] border border-white/10 shadow-xs flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-400/10 text-amber-300 border border-amber-400/20 flex items-center justify-center">
                 <Award size={20} />
               </div>
               <div>
                 <p className="text-[10px] font-bold text-neutral-400 uppercase">Best Score</p>
-                <p className="text-lg font-bold text-[#1e1b4b]">0%</p>
+                <p className="text-lg font-bold text-white">0%</p>
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-white border border-purple-100/80 shadow-xs flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div className="p-4 rounded-2xl bg-[#1b150c] border border-white/10 shadow-xs flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-orange-400/10 text-orange-400 border border-orange-400/20 flex items-center justify-center">
                 <HelpCircle size={20} />
               </div>
               <div>
                 <p className="text-[10px] font-bold text-neutral-400 uppercase">Total Questions</p>
-                <p className="text-lg font-bold text-[#1e1b4b]">0</p>
+                <p className="text-lg font-bold text-white">0</p>
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-white border border-purple-100/80 shadow-xs flex items-center gap-3 col-span-2 sm:col-span-1">
-              <div className="w-10 h-10 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center">
+            <div className="p-4 rounded-2xl bg-[#1b150c] border border-white/10 shadow-xs flex items-center gap-3 col-span-2 sm:col-span-1">
+              <div className="w-10 h-10 rounded-xl bg-amber-400/10 text-amber-400 border border-amber-400/20 flex items-center justify-center">
                 <Sparkles size={20} />
               </div>
               <div>
                 <p className="text-[10px] font-bold text-neutral-400 uppercase">Accuracy</p>
-                <p className="text-lg font-bold text-[#1e1b4b]">0%</p>
+                <p className="text-lg font-bold text-white">0%</p>
               </div>
             </div>
           </div>
@@ -574,22 +577,28 @@ export function Dashboard() {
             {/* LEFT CONTENT AREA (9 Cols) */}
             <div className="lg:col-span-8 space-y-6">
               {loading ? (
-                <div className="p-16 rounded-3xl bg-white border border-purple-100 text-center space-y-3">
-                  <RefreshCw className="animate-spin text-purple-600 w-8 h-8 mx-auto" />
+                <div className="p-16 rounded-3xl bg-[#1b150c] border border-amber-500/20 text-center space-y-3">
+                  <RefreshCw className="animate-spin text-amber-400 w-8 h-8 mx-auto" />
                   <p className="text-xs text-neutral-400 font-mono">Loading Examination Papers...</p>
                 </div>
               ) : filteredTests.length === 0 ? (
-                /* EMPTY STATE FEATURING PENCIL SKETCH OF STUDENT STUDYING */
-                <div className="p-10 rounded-3xl bg-white border border-dashed border-purple-200 text-center space-y-6 shadow-sm flex flex-col items-center">
+                /* REALISTIC GRAPHITE PENCIL SKETCH ARTWORK OF STUDENT STUDYING */
+                <div className="p-8 sm:p-10 rounded-3xl bg-[#1b150c] border border-amber-500/20 text-center space-y-6 shadow-xl flex flex-col items-center">
                   
-                  {/* Real Pencil Sketch Artwork */}
-                  <StudentStudyingSketch className="w-80 h-56 text-[#1e1b4b]" />
+                  {/* High Resolution Realistic Graphite Sketch Image generated by Gemini */}
+                  <div className="w-full max-w-lg rounded-2xl overflow-hidden border border-amber-500/30 shadow-2xl">
+                    <img
+                      src="/images/student_studying_sketch.jpg"
+                      alt="Realistic Graphite Pencil Sketch of Student Studying Physics at Desk"
+                      className="w-full h-auto object-cover filter contrast-[1.05] brightness-[0.95]"
+                    />
+                  </div>
 
                   <div className="space-y-2 max-w-md">
-                    <h3 className="font-serif text-2xl font-extrabold text-[#1e1b4b]">
+                    <h3 className="font-serif text-2xl font-bold text-white">
                       {activeTab === 'TEST_SERIES' ? 'No Upcoming Test Series Scheduled' : 'No Free PYQ Papers Available'}
                     </h3>
-                    <p className="text-xs text-neutral-500 leading-relaxed">
+                    <p className="text-xs text-neutral-400 leading-relaxed font-light">
                       {activeTab === 'TEST_SERIES'
                         ? 'Your subscribed test series papers will appear here on their scheduled exam dates. You can also explore available passes on the website.'
                         : 'Check back soon for newly published past year question papers.'}
@@ -599,7 +608,7 @@ export function Dashboard() {
                   {activeTab === 'TEST_SERIES' && (
                     <a
                       href="https://vigyanprep.com/tests"
-                      className="px-6 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-xs uppercase tracking-wider hover:opacity-95 transition shadow-md shadow-purple-500/20 flex items-center gap-2"
+                      className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 font-bold text-xs uppercase tracking-wider hover:opacity-95 transition shadow-lg shadow-amber-500/20 flex items-center gap-2"
                     >
                       <span>Browse Test Series Passes</span>
                       <ArrowRight size={16} />
@@ -616,11 +625,11 @@ export function Dashboard() {
                     return (
                       <div
                         key={paper.id}
-                        className="rounded-3xl bg-white border border-purple-100 p-6 space-y-5 hover:shadow-xl transition-all duration-300 flex flex-col justify-between relative group"
+                        className="rounded-3xl bg-[#1b150c] border border-amber-500/20 hover:border-amber-400/50 p-6 space-y-5 hover:shadow-xl transition-all duration-300 flex flex-col justify-between relative group"
                       >
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
-                            <span className="px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-[10px] font-extrabold uppercase border border-purple-100">
+                            <span className="px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-300 text-[10px] font-bold uppercase tracking-wider">
                               {examCat}
                             </span>
                             <span className="font-serif italic text-xs text-neutral-400">
@@ -628,32 +637,32 @@ export function Dashboard() {
                             </span>
                           </div>
 
-                          <h4 className="font-serif text-xl font-bold text-[#1e1b4b] group-hover:text-purple-600 transition-colors line-clamp-2">
+                          <h4 className="font-serif text-xl font-bold text-white group-hover:text-amber-300 transition-colors line-clamp-2">
                             {paper.title}
                           </h4>
 
                           <div className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 border ${
                             status.color === 'emerald'
-                              ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
                               : status.color === 'amber'
-                              ? 'bg-amber-50 border-amber-200 text-amber-700'
-                              : 'bg-red-50 border-red-200 text-red-700'
+                              ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                              : 'bg-red-500/10 border-red-500/30 text-red-400'
                           }`}>
                             <span>{status.label}</span>
                           </div>
 
-                          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-purple-50 text-center text-xs">
-                            <div className="bg-purple-50/50 p-2 rounded-xl">
-                              <p className="text-[9px] text-neutral-400 font-bold uppercase">Questions</p>
-                              <p className="font-bold text-[#1e1b4b]">{paper.questions_count || 60} Qs</p>
+                          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/10 text-center text-xs">
+                            <div className="bg-black/30 p-2 rounded-xl border border-white/5">
+                              <p className="text-[9px] text-neutral-400 uppercase">Questions</p>
+                              <p className="font-bold text-white">{paper.questions_count || 60} Qs</p>
                             </div>
-                            <div className="bg-purple-50/50 p-2 rounded-xl">
-                              <p className="text-[9px] text-neutral-400 font-bold uppercase">Duration</p>
-                              <p className="font-bold text-[#1e1b4b]">{paper.duration_minutes || 180} Mins</p>
+                            <div className="bg-black/30 p-2 rounded-xl border border-white/5">
+                              <p className="text-[9px] text-neutral-400 uppercase">Duration</p>
+                              <p className="font-bold text-white">{paper.duration_minutes || 180} Mins</p>
                             </div>
-                            <div className="bg-purple-50/50 p-2 rounded-xl">
-                              <p className="text-[9px] text-neutral-400 font-bold uppercase">Marks</p>
-                              <p className="font-bold text-purple-600">{paper.total_marks || 240} M</p>
+                            <div className="bg-black/30 p-2 rounded-xl border border-white/5">
+                              <p className="text-[9px] text-neutral-400 uppercase">Marks</p>
+                              <p className="font-bold text-amber-300">{paper.total_marks || 240} M</p>
                             </div>
                           </div>
                         </div>
@@ -661,10 +670,10 @@ export function Dashboard() {
                         <button
                           onClick={() => handleTestClick(paper)}
                           disabled={!status.isLive}
-                          className={`w-full py-3 rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md ${
+                          className={`w-full py-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md ${
                             status.isLive
-                              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:opacity-95 shadow-purple-500/20 cursor-pointer'
-                              : 'bg-neutral-100 text-neutral-400 border border-neutral-200 cursor-not-allowed'
+                              ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 hover:opacity-95 shadow-amber-500/20 cursor-pointer'
+                              : 'bg-neutral-800 text-neutral-500 border border-white/10 cursor-not-allowed'
                           }`}
                         >
                           {status.isLive ? <PlayCircle size={16} /> : <Lock size={16} />}
@@ -681,23 +690,23 @@ export function Dashboard() {
             {/* RIGHT SIDEBAR (4 Cols): QUICK ACTIONS */}
             <div className="lg:col-span-4 space-y-6">
               
-              <div className="p-6 rounded-3xl bg-white border border-purple-100 shadow-md space-y-4">
-                <div className="flex items-center gap-2 font-serif text-lg font-extrabold text-[#1e1b4b]">
-                  <Sparkles size={18} className="text-purple-600" />
+              <div className="p-6 rounded-3xl bg-[#1b150c] border border-amber-500/20 shadow-md space-y-4">
+                <div className="flex items-center gap-2 font-serif text-lg font-bold text-white">
+                  <Sparkles size={18} className="text-amber-400" />
                   <span>Quick Actions</span>
                 </div>
 
                 <div className="space-y-2">
                   <button
                     onClick={() => setShowPerformanceModal(true)}
-                    className="w-full p-3.5 rounded-2xl bg-purple-50/50 hover:bg-purple-50 text-left flex items-center justify-between transition group"
+                    className="w-full p-3.5 rounded-2xl bg-black/30 hover:bg-black/50 border border-white/5 text-left flex items-center justify-between transition group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-xl bg-amber-400/10 text-amber-400 border border-amber-400/20 flex items-center justify-center">
                         <BarChart3 size={16} />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-[#1e1b4b]">Performance Analytics</p>
+                        <p className="text-xs font-bold text-white">Performance Analytics</p>
                         <p className="text-[10px] text-neutral-400">View detailed performance</p>
                       </div>
                     </div>
@@ -706,14 +715,14 @@ export function Dashboard() {
 
                   <button
                     onClick={() => triggerToast('🔖 Bookmarks feature coming soon!')}
-                    className="w-full p-3.5 rounded-2xl bg-purple-50/50 hover:bg-purple-50 text-left flex items-center justify-between transition group"
+                    className="w-full p-3.5 rounded-2xl bg-black/30 hover:bg-black/50 border border-white/5 text-left flex items-center justify-between transition group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-pink-100 text-pink-700 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-xl bg-amber-400/10 text-amber-400 border border-amber-400/20 flex items-center justify-center">
                         <Bookmark size={16} />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-[#1e1b4b]">Bookmark a Test</p>
+                        <p className="text-xs font-bold text-white">Bookmark a Test</p>
                         <p className="text-[10px] text-neutral-400">Save tests for later</p>
                       </div>
                     </div>
@@ -722,14 +731,14 @@ export function Dashboard() {
 
                   <button
                     onClick={() => triggerToast('📱 Vigyan.prep Mobile App launching soon on Play Store!')}
-                    className="w-full p-3.5 rounded-2xl bg-purple-50/50 hover:bg-purple-50 text-left flex items-center justify-between transition group"
+                    className="w-full p-3.5 rounded-2xl bg-black/30 hover:bg-black/50 border border-white/5 text-left flex items-center justify-between transition group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-xl bg-amber-400/10 text-amber-400 border border-amber-400/20 flex items-center justify-center">
                         <Download size={16} />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-[#1e1b4b]">Download Mobile App</p>
+                        <p className="text-xs font-bold text-white">Download Mobile App</p>
                         <p className="text-[10px] text-neutral-400">Practice on the go</p>
                       </div>
                     </div>
@@ -738,14 +747,14 @@ export function Dashboard() {
 
                   <button
                     onClick={() => triggerToast('💬 Student Discussion Forum coming soon!')}
-                    className="w-full p-3.5 rounded-2xl bg-purple-50/50 hover:bg-purple-50 text-left flex items-center justify-between transition group"
+                    className="w-full p-3.5 rounded-2xl bg-black/30 hover:bg-black/50 border border-white/5 text-left flex items-center justify-between transition group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-xl bg-amber-400/10 text-amber-400 border border-amber-400/20 flex items-center justify-center">
                         <MessageSquare size={16} />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-[#1e1b4b]">Join Discussion</p>
+                        <p className="text-xs font-bold text-white">Join Discussion</p>
                         <p className="text-[10px] text-neutral-400">Ask & help peers</p>
                       </div>
                     </div>
@@ -763,34 +772,34 @@ export function Dashboard() {
 
       {/* 4-6 DIGIT PASSCODE ENTRY MODAL */}
       {showPasscodeModal && selectedTestForPasscode && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-purple-100 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6 relative">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#18120a] border border-amber-500/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6 relative">
             <button
               onClick={() => setShowPasscodeModal(false)}
-              className="absolute top-5 right-5 text-neutral-400 hover:text-[#1e1b4b] p-2 rounded-full hover:bg-purple-50 transition"
+              className="absolute top-5 right-5 text-neutral-400 hover:text-white p-2 rounded-full hover:bg-white/10 transition"
             >
               <X size={20} />
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-2xl bg-purple-100 text-purple-700">
+              <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40">
                 <Key size={24} />
               </div>
               <div>
-                <h3 className="font-serif text-xl font-bold text-[#1e1b4b]">Enter Exam Passcode</h3>
+                <h3 className="font-serif text-xl font-bold text-white">Enter Exam Passcode</h3>
                 <p className="text-xs text-neutral-400">4-6 Digit Access Key Required</p>
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-purple-50 border border-purple-100 space-y-1">
-              <p className="text-xs text-purple-700 font-bold">{selectedTestForPasscode.title}</p>
-              <p className="text-[11px] text-neutral-500">
+            <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-1">
+              <p className="text-xs text-amber-300 font-bold">{selectedTestForPasscode.title}</p>
+              <p className="text-[11px] text-neutral-400">
                 Scheduled for {selectedTestForPasscode.duration_minutes || 180} Mins · {selectedTestForPasscode.questions_count || 60} Questions
               </p>
             </div>
 
             {passcodeError && (
-              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
                 <AlertCircle size={16} />
                 <span>{passcodeError}</span>
               </div>
@@ -798,7 +807,7 @@ export function Dashboard() {
 
             <form onSubmit={handlePasscodeSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-neutral-300 mb-2">
                   Exam Key / Passcode (4-6 Digits)
                 </label>
                 <input
@@ -807,7 +816,7 @@ export function Dashboard() {
                   value={inputPasscode}
                   onChange={(e) => setInputPasscode(e.target.value)}
                   placeholder="e.g. 8492"
-                  className="w-full bg-purple-50/50 border border-purple-200 rounded-2xl px-4 py-3 text-center text-2xl font-mono tracking-[0.5em] text-purple-900 focus:outline-none focus:border-purple-600 shadow-inner"
+                  className="w-full bg-black border border-amber-500/40 rounded-xl px-4 py-3 text-center text-2xl font-mono tracking-[0.5em] text-amber-300 focus:outline-none focus:border-amber-400 shadow-inner"
                   autoFocus
                   required
                 />
@@ -815,7 +824,7 @@ export function Dashboard() {
 
               <button
                 type="submit"
-                className="w-full py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-xs uppercase tracking-wider rounded-2xl hover:opacity-95 transition shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 font-bold text-xs uppercase tracking-wider rounded-xl hover:opacity-95 transition shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
               >
                 <CheckCircle2 size={16} />
                 <span>Verify Passcode & Enter Exam</span>
@@ -827,37 +836,37 @@ export function Dashboard() {
 
       {/* PERFORMANCE MODAL */}
       {showPerformanceModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-purple-100 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-6 relative">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#18120a] border border-amber-500/40 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-6 relative">
             <button
               onClick={() => setShowPerformanceModal(false)}
-              className="absolute top-5 right-5 text-neutral-400 hover:text-[#1e1b4b] p-2 rounded-full hover:bg-purple-50 transition"
+              className="absolute top-5 right-5 text-neutral-400 hover:text-white p-2 rounded-full hover:bg-white/10 transition"
             >
               <X size={20} />
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-2xl bg-purple-100 text-purple-700">
+              <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40">
                 <BarChart3 size={24} />
               </div>
               <div>
-                <h3 className="font-serif text-xl font-bold text-[#1e1b4b]">Performance Analytics</h3>
+                <h3 className="font-serif text-xl font-bold text-white">Performance Analytics</h3>
                 <p className="text-xs text-neutral-400">Student Progress & Attempt Overview</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-2xl bg-purple-50 border border-purple-100 space-y-1">
+              <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-1">
                 <p className="text-[10px] font-bold text-neutral-400 uppercase">Tests Completed</p>
-                <p className="text-2xl font-extrabold text-purple-700">0</p>
+                <p className="text-2xl font-extrabold text-amber-300">0</p>
               </div>
-              <div className="p-4 rounded-2xl bg-purple-50 border border-purple-100 space-y-1">
+              <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-1">
                 <p className="text-[10px] font-bold text-neutral-400 uppercase">Average Accuracy</p>
-                <p className="text-2xl font-extrabold text-purple-700">0%</p>
+                <p className="text-2xl font-extrabold text-amber-300">0%</p>
               </div>
             </div>
 
-            <p className="text-xs text-neutral-500 leading-relaxed text-center">
+            <p className="text-xs text-neutral-400 leading-relaxed text-center font-light">
               Complete your first scheduled CBT test series exam to view subject-wise performance graphs and All-India ranks!
             </p>
           </div>
@@ -866,35 +875,35 @@ export function Dashboard() {
 
       {/* SETTINGS MODAL */}
       {showSettingsModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-purple-100 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6 relative">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#18120a] border border-amber-500/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6 relative">
             <button
               onClick={() => setShowSettingsModal(false)}
-              className="absolute top-5 right-5 text-neutral-400 hover:text-[#1e1b4b] p-2 rounded-full hover:bg-purple-50 transition"
+              className="absolute top-5 right-5 text-neutral-400 hover:text-white p-2 rounded-full hover:bg-white/10 transition"
             >
               <X size={20} />
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-2xl bg-purple-100 text-purple-700">
+              <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40">
                 <Settings size={24} />
               </div>
               <div>
-                <h3 className="font-serif text-xl font-bold text-[#1e1b4b]">Student Settings</h3>
+                <h3 className="font-serif text-xl font-bold text-white">Student Settings</h3>
                 <p className="text-xs text-neutral-400">Manage Account & Profile</p>
               </div>
             </div>
 
-            <div className="space-y-3 text-xs text-neutral-600 bg-purple-50/50 p-4 rounded-2xl border border-purple-100">
-              <p><strong>Name:</strong> {studentName} (Immutable)</p>
-              <p><strong>Email:</strong> {studentEmail}</p>
-              <p><strong>Role:</strong> Student Aspirant</p>
-              <p><strong>Portal:</strong> IISER & NEST Test Center</p>
+            <div className="space-y-3 text-xs text-neutral-300 bg-black/40 p-4 rounded-2xl border border-white/10">
+              <p><strong className="text-white">Name:</strong> {studentName} (Immutable Profile)</p>
+              <p><strong className="text-white">Email:</strong> {studentEmail}</p>
+              <p><strong className="text-white">Role:</strong> Student Aspirant</p>
+              <p><strong className="text-white">Portal:</strong> IISER & NEST Test Center</p>
             </div>
 
             <button
               onClick={handleLogout}
-              className="w-full py-3 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 font-bold text-xs uppercase tracking-wider rounded-2xl transition"
+              className="w-full py-3 bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 font-bold text-xs uppercase tracking-wider rounded-xl transition"
             >
               Sign Out of Student Account
             </button>
