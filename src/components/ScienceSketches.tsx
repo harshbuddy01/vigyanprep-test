@@ -104,3 +104,94 @@ export function DNAHelixSketch({ className = "w-24 h-24 text-emerald-400/60" }: 
     </svg>
   );
 }
+
+/**
+ * 🏛️ Handcrafted Vector SVG Line Art of University Campus Arches, Clock Tower & Observatory Dome
+ * Matches Imagica Taj Mahal / Hawa Mahal Line Art Watermark Style
+ */
+export function UniversityCampusSketch({ className = "w-full h-full text-amber-900/20" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 1200 600" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      {/* University Library Main Facade with Arches */}
+      <rect x="50" y="240" width="380" height="260" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M 50,240 L 240,140 L 430,240 Z" stroke="currentColor" strokeWidth="2" fill="none" />
+      <rect x="210" y="160" width="60" height="40" stroke="currentColor" strokeWidth="1.5" />
+      
+      {/* Grand Arches */}
+      <path d="M 70,500 L 70,380 Q 115,330 160,380 L 160,500" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M 185,500 L 185,380 Q 230,330 275,380 L 275,500" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M 300,500 L 300,380 Q 345,330 390,380 L 390,500" stroke="currentColor" strokeWidth="1.8" />
+
+      {/* Arched Windows Upper Level */}
+      <path d="M 85,320 L 85,270 Q 110,250 135,270 L 135,320 Z" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M 165,320 L 165,270 Q 190,250 215,270 L 215,320 Z" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M 245,320 L 245,270 Q 270,250 295,270 L 295,320 Z" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M 325,320 L 325,270 Q 350,250 375,270 L 375,320 Z" stroke="currentColor" strokeWidth="1.2" />
+
+      {/* Science Center Clock Tower */}
+      <rect x="520" y="100" width="120" height="400" stroke="currentColor" strokeWidth="2" />
+      <path d="M 520,100 L 580,20 L 640,100 Z" stroke="currentColor" strokeWidth="2" fill="none" />
+      <circle cx="580" cy="180" r="30" stroke="currentColor" strokeWidth="2" />
+      <line x1="580" y1="180" x2="580" y2="162" stroke="currentColor" strokeWidth="2" />
+      <line x1="580" y1="180" x2="594" y2="180" stroke="currentColor" strokeWidth="2" />
+
+      {/* Astronomical Observatory Dome */}
+      <path d="M 850,500 L 850,300 C 850,180 1050,180 1050,300 L 1050,500" stroke="currentColor" strokeWidth="2" />
+      {/* Dome Slit */}
+      <line x1="950" y1="190" x2="950" y2="340" stroke="currentColor" strokeWidth="2.5" />
+      {/* Telescope Mounting */}
+      <line x1="950" y1="280" x2="1020" y2="230" stroke="currentColor" strokeWidth="3" />
+      <circle cx="1020" cy="230" r="8" stroke="currentColor" strokeWidth="2" />
+
+      {/* Science Equations & Constellation Overlay */}
+      <text x="470" y="260" fill="currentColor" fontSize="22" fontFamily="serif" fontStyle="italic" opacity="0.7">E = mc²</text>
+      <text x="690" y="220" fill="currentColor" fontSize="20" fontFamily="serif" fontStyle="italic" opacity="0.7">∫ f(x) dx</text>
+      <text x="710" y="380" fill="currentColor" fontSize="18" fontFamily="serif" fontStyle="italic" opacity="0.7">λ = h / mv</text>
+
+      {/* Chemical Molecular Ring Accent */}
+      <polygon points="760,420 790,440 790,470 760,490 730,470 730,440" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="760" cy="455" r="18" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" />
+
+      {/* Ground Line */}
+      <line x1="20" y1="500" x2="1180" y2="500" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
+/**
+ * ✏️ Handcrafted Pure Vector SVG Line Art of Student Studying at Desk
+ * No JPG/PNG images, no box borders, clean line drawing
+ */
+export function StudentDeskSketch({ className = "w-72 h-56 text-[#1c1815]" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      {/* Desk Lamp */}
+      <path d="M 320,230 L 310,140 Q 290,110 260,120 L 250,135" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
+      <path d="M 240,145 L 265,125 L 255,110 Z" stroke="currentColor" strokeWidth="1.5" fill="none" />
+      <circle cx="320" cy="230" r="10" stroke="currentColor" strokeWidth="1.5" />
+
+      {/* Stack of Textbooks on Desk */}
+      <rect x="280" y="218" width="70" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="275" y="206" width="75" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="282" y="194" width="65" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
+
+      {/* Open Science Textbook */}
+      <path d="M 120,225 Q 180,210 240,225 L 245,255 Q 180,240 115,255 Z" stroke="currentColor" strokeWidth="1.8" fill="none" />
+      <line x1="180" y1="217" x2="180" y2="247" stroke="currentColor" strokeWidth="1.5" />
+      <line x1="135" y1="229" x2="170" y2="225" stroke="currentColor" strokeWidth="1" opacity="0.6" />
+      <line x1="135" y1="237" x2="170" y2="233" stroke="currentColor" strokeWidth="1" opacity="0.6" />
+      <line x1="190" y1="225" x2="225" y2="229" stroke="currentColor" strokeWidth="1" opacity="0.6" />
+
+      {/* Student Head & Hair */}
+      <path d="M 160,110 C 145,110 135,125 135,145 C 135,160 145,175 165,175 C 185,175 195,160 195,145 C 195,125 180,110 160,110 Z" stroke="currentColor" strokeWidth="1.8" fill="none" />
+      <path d="M 140,135 Q 155,115 175,120 Q 190,130 192,145 Q 170,130 145,140 Z" stroke="currentColor" strokeWidth="1.2" opacity="0.4" />
+
+      {/* Shoulders & Torso */}
+      <path d="M 135,170 Q 110,210 90,240 L 250,240 Q 230,210 195,170 Z" stroke="currentColor" strokeWidth="1.8" fill="none" />
+      <path d="M 155,175 L 165,195 L 175,175" stroke="currentColor" strokeWidth="1.5" />
+
+      {/* Desk Edge */}
+      <line x1="40" y1="240" x2="360" y2="240" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}

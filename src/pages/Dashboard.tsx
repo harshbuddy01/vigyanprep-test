@@ -11,7 +11,8 @@ import {
   RayOpticsSketch,
   BenzeneOrbitalSketch,
   CalculusIntegralSketch,
-  DNAHelixSketch
+  DNAHelixSketch,
+  StudentDeskSketch
 } from '../components/ScienceSketches';
 
 interface TestPaper {
@@ -54,9 +55,16 @@ export function Dashboard() {
   const [showPerformanceModal, setShowPerformanceModal] = useState(false);
 
   useEffect(() => {
-    const token = getCookie('student_token') || localStorage.getItem('student_token');
-    const name = getCookie('student_name') || localStorage.getItem('student_name') || localStorage.getItem('full_name') || 'Student';
-    const email = getCookie('student_email') || localStorage.getItem('student_email') || localStorage.getItem('email') || '';
+    let token = getCookie('student_token') || localStorage.getItem('student_token');
+    let name = getCookie('student_name') || localStorage.getItem('student_name') || localStorage.getItem('full_name') || 'Student';
+    let email = getCookie('student_email') || localStorage.getItem('student_email') || localStorage.getItem('email') || '';
+
+    // Allow instant local preview on localhost
+    if (!token && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+      token = 'local_preview_token';
+      name = 'HARSH ANAND';
+      email = 'anandharsh437@gmail.com';
+    }
 
     if (!token) {
       window.location.href = 'https://auth.vigyanprep.com';
@@ -199,50 +207,46 @@ export function Dashboard() {
   });
 
   return (
-    <div className="min-h-screen bg-[#141009] text-[#f2ead8] font-sans flex selection:bg-amber-500 selection:text-black relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#faf5eb] text-[#1c1815] font-sans flex selection:bg-amber-400 selection:text-black relative overflow-x-hidden">
       
       {/* ═══════════════════════════════════════════════════════════════════════
-          ATMOSPHERIC BLURRED ACADEMIC WATERMARK BACKGROUND LAYER (Imagica Style)
+          FULL-CLARITY AERIAL DRONE VIEW SKETCH BACKGROUND (100% VISIBLE THROUGH GLASS)
          ═══════════════════════════════════════════════════════════════════════ */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        {/* Soft Blurred Vintage University Architectural Line Sketch Image */}
+        {/* Crisp Aerial Drone Sketch of University Campus */}
         <img
-          src="/images/academic_watermark_bg.jpg"
-          alt="Academic University Campus Watermark"
-          className="w-full h-full object-cover filter blur-[6px] opacity-20 scale-105"
+          src="/images/university_drone_view_sketch.jpg"
+          alt="Aerial Drone View University Campus Architectural Sketch Watermark"
+          className="w-full h-full object-cover opacity-[0.55] mix-blend-multiply filter contrast-130 sepia-[0.10]"
         />
-        {/* Light Overlay Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#18130c]/90 via-[#141009]/85 to-[#0e0b06]/95 mix-blend-multiply" />
-        {/* Soft Radial Ambient Lighting */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_20%,rgba(252,211,77,0.12)_0%,transparent_60%)]" />
-        {/* Subtle Constellation Grid */}
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fcd34d_1px,transparent_1px)] [background-size:32px_32px]" />
+        {/* Very Light Parchment Tint (Does Not Mask the Sketch) */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#faf5eb]/30 via-transparent to-[#f1e6d3]/40" />
       </div>
 
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#1e170d] text-amber-300 px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-amber-500/40 text-xs font-semibold animate-bounce">
+        <div className="fixed bottom-6 right-6 z-50 bg-[#1c1815] text-amber-200 px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-amber-500/30 text-xs font-semibold animate-bounce">
           <Sparkles className="text-amber-400" size={16} />
           <span>{toastMessage}</span>
         </div>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          LEFT SIDEBAR NAVIGATION (Matching Warm Academic Brand Palette)
+          LEFT SIDEBAR NAVIGATION (Ultra-Transparent Glass Frame with Defined Dark Border)
          ═══════════════════════════════════════════════════════════════════════ */}
-      <aside className="w-64 bg-[#1b150c]/90 backdrop-blur-2xl border-r border-amber-500/20 flex flex-col justify-between p-6 z-20 shrink-0 min-h-screen shadow-xl">
+      <aside className="w-64 bg-white/20 backdrop-blur-2xl border-r-2 border-amber-950/30 flex flex-col justify-between p-6 z-20 shrink-0 min-h-screen shadow-2xl shadow-amber-950/10">
         <div className="space-y-8">
           
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center font-serif text-amber-300 font-bold text-xl shadow-lg shadow-amber-500/10">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-600 to-amber-800 text-white font-serif font-bold text-xl flex items-center justify-center shadow-lg shadow-amber-950/20">
               V
             </div>
             <div>
-              <h1 className="font-serif italic font-bold text-lg text-white">
-                VIGYAN<span className="font-sans text-xs uppercase text-amber-400 font-semibold ml-1">.prep</span>
+              <h1 className="font-serif italic font-bold text-lg text-[#1c1815]">
+                VIGYAN<span className="font-sans text-xs uppercase text-amber-900 font-extrabold ml-1">.prep</span>
               </h1>
-              <p className="text-[9px] text-amber-400/80 font-extrabold tracking-widest uppercase">STUDENT TEST PORTAL</p>
+              <p className="text-[9px] text-amber-950 font-extrabold tracking-widest uppercase">STUDENT TEST PORTAL</p>
             </div>
           </div>
 
@@ -252,8 +256,8 @@ export function Dashboard() {
               onClick={() => { setActiveNav('dashboard'); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                 activeNav === 'dashboard'
-                  ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 font-bold shadow-lg shadow-amber-500/20'
-                  : 'text-neutral-400 hover:text-amber-300 hover:bg-white/5'
+                  ? 'bg-[#1c1815] text-amber-300 font-bold shadow-lg shadow-amber-950/30 border border-amber-500/30'
+                  : 'text-[#1c1815] hover:text-amber-950 hover:bg-white/40'
               }`}
             >
               <LayoutDashboard size={18} />
@@ -264,8 +268,8 @@ export function Dashboard() {
               onClick={() => { setActiveNav('test_series'); setActiveTab('TEST_SERIES'); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                 activeNav === 'test_series'
-                  ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 font-bold shadow-lg shadow-amber-500/20'
-                  : 'text-neutral-400 hover:text-amber-300 hover:bg-white/5'
+                  ? 'bg-[#1c1815] text-amber-300 font-bold shadow-lg shadow-amber-950/30 border border-amber-500/30'
+                  : 'text-[#1c1815] hover:text-amber-950 hover:bg-white/40'
               }`}
             >
               <FileText size={18} />
@@ -276,7 +280,7 @@ export function Dashboard() {
               href="https://vigyanprep.com/pyq"
               target="_blank"
               rel="noreferrer"
-              className="w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 text-neutral-400 hover:text-amber-300 hover:bg-white/5 transition"
+              className="w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 text-[#1c1815] hover:text-amber-950 hover:bg-white/40 transition"
             >
               <BookOpen size={18} />
               <span>PYQ Library</span>
@@ -286,8 +290,8 @@ export function Dashboard() {
               onClick={() => { setActiveNav('performance'); setShowPerformanceModal(true); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                 activeNav === 'performance'
-                  ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 font-bold shadow-lg shadow-amber-500/20'
-                  : 'text-neutral-400 hover:text-amber-300 hover:bg-white/5'
+                  ? 'bg-[#1c1815] text-amber-300 font-bold shadow-lg shadow-amber-950/30 border border-amber-500/30'
+                  : 'text-[#1c1815] hover:text-amber-950 hover:bg-white/40'
               }`}
             >
               <BarChart3 size={18} />
@@ -298,8 +302,8 @@ export function Dashboard() {
               onClick={() => { setActiveNav('bookmarks'); triggerToast('🔖 Bookmarks feature coming soon! Save questions for revision.'); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                 activeNav === 'bookmarks'
-                  ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 font-bold shadow-lg shadow-amber-500/20'
-                  : 'text-neutral-400 hover:text-amber-300 hover:bg-white/5'
+                  ? 'bg-[#1c1815] text-amber-300 font-bold shadow-lg shadow-amber-950/30 border border-amber-500/30'
+                  : 'text-[#1c1815] hover:text-amber-950 hover:bg-white/40'
               }`}
             >
               <Bookmark size={18} />
@@ -310,8 +314,8 @@ export function Dashboard() {
               onClick={() => { setActiveNav('notes'); triggerToast('📋 Notes feature coming soon! Write revision notes during CBT tests.'); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                 activeNav === 'notes'
-                  ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 font-bold shadow-lg shadow-amber-500/20'
-                  : 'text-neutral-400 hover:text-amber-300 hover:bg-white/5'
+                  ? 'bg-[#1c1815] text-amber-300 font-bold shadow-lg shadow-amber-950/30 border border-amber-500/30'
+                  : 'text-[#1c1815] hover:text-amber-950 hover:bg-white/40'
               }`}
             >
               <StickyNote size={18} />
@@ -322,8 +326,8 @@ export function Dashboard() {
               onClick={() => { setActiveNav('discussions'); triggerToast('💬 Student Discussion Forum coming soon!'); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                 activeNav === 'discussions'
-                  ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 font-bold shadow-lg shadow-amber-500/20'
-                  : 'text-neutral-400 hover:text-amber-300 hover:bg-white/5'
+                  ? 'bg-[#1c1815] text-amber-300 font-bold shadow-lg shadow-amber-950/30 border border-amber-500/30'
+                  : 'text-[#1c1815] hover:text-amber-950 hover:bg-white/40'
               }`}
             >
               <MessageSquare size={18} />
@@ -334,8 +338,8 @@ export function Dashboard() {
               onClick={() => { setActiveNav('settings'); setShowSettingsModal(true); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                 activeNav === 'settings'
-                  ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 font-bold shadow-lg shadow-amber-500/20'
-                  : 'text-neutral-400 hover:text-amber-300 hover:bg-white/5'
+                  ? 'bg-[#1c1815] text-amber-300 font-bold shadow-lg shadow-amber-950/30 border border-amber-500/30'
+                  : 'text-[#1c1815] hover:text-amber-950 hover:bg-white/40'
               }`}
             >
               <Settings size={18} />
@@ -345,11 +349,11 @@ export function Dashboard() {
         </div>
 
         {/* Footer Support Notice */}
-        <div className="pt-6 border-t border-white/10 space-y-3 text-center">
-          <p className="text-[10px] text-neutral-400 font-medium">Need Assistance?</p>
+        <div className="pt-6 border-t-2 border-amber-950/20 space-y-3 text-center">
+          <p className="text-[10px] text-[#1c1815] font-extrabold">Need Assistance?</p>
           <a
             href="https://vigyanprep.com/about"
-            className="px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold block hover:bg-amber-500/20 transition"
+            className="px-4 py-2 rounded-xl bg-white/30 border-2 border-amber-950/30 text-amber-950 text-xs font-bold block hover:bg-white/60 transition shadow-sm"
           >
             Contact Support
           </a>
@@ -361,18 +365,18 @@ export function Dashboard() {
          ═══════════════════════════════════════════════════════════════════════ */}
       <div className="flex-1 flex flex-col min-w-0 z-10">
         
-        {/* TOP HEADER BAR */}
-        <header className="px-8 py-5 flex items-center justify-between gap-6 bg-[#16120b]/80 backdrop-blur-md border-b border-amber-500/20 sticky top-0 z-30">
+        {/* TOP HEADER BAR (Ultra-Transparent Glass with Dark Defined Border) */}
+        <header className="px-8 py-5 flex items-center justify-between gap-6 bg-white/20 backdrop-blur-2xl border-b-2 border-amber-950/30 sticky top-0 z-30 shadow-md">
           
           {/* Search Box */}
           <div className="relative w-full max-w-md">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={16} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#1c1815]" size={16} />
             <input
               type="text"
               placeholder="Search test series, subjects & more..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-black/40 border border-amber-500/30 rounded-full pl-11 pr-4 py-2.5 text-xs text-white placeholder-neutral-400 focus:outline-none focus:border-amber-400 shadow-inner"
+              className="w-full bg-white/40 border-2 border-amber-950/30 rounded-full pl-11 pr-4 py-2.5 text-xs text-[#1c1815] placeholder-[#1c1815]/70 font-semibold focus:outline-none focus:border-amber-950 shadow-inner"
             />
           </div>
 
@@ -380,29 +384,29 @@ export function Dashboard() {
           <div className="flex items-center gap-4 shrink-0">
             
             {/* Active Pass Badge */}
-            <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold shadow-xs">
-              <Award size={15} className="text-amber-400" />
+            <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-white/40 border-2 border-amber-950/30 text-amber-950 text-xs font-extrabold shadow-sm">
+              <Award size={15} className="text-amber-800" />
               <span>IISER & NEST Subscription Active</span>
             </div>
 
             {/* Notification Bell */}
             <button
               onClick={() => triggerToast('🔔 No new test notifications. All papers up to date.')}
-              className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-300 hover:bg-amber-500/20 transition shadow-xs relative"
+              className="w-10 h-10 rounded-full bg-white/40 border-2 border-amber-950/30 flex items-center justify-center text-[#1c1815] hover:text-amber-950 transition shadow-sm relative"
               title="Notifications"
             >
               <Bell size={18} />
-              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-amber-600 animate-ping" />
             </button>
 
             {/* Student Profile Pill */}
             <div className="flex items-center gap-3 pl-2 cursor-pointer" onClick={() => setShowSettingsModal(true)}>
-              <div className="w-10 h-10 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-300 font-bold flex items-center justify-center text-sm shadow-md">
+              <div className="w-10 h-10 rounded-full bg-[#1c1815] text-amber-300 font-bold flex items-center justify-center text-sm shadow-md border border-amber-500/30">
                 {studentName.charAt(0).toUpperCase()}
               </div>
               <div className="hidden md:block text-left">
-                <p className="text-xs font-extrabold text-white">{studentName}</p>
-                <p className="text-[10px] text-neutral-400 font-medium">{studentEmail}</p>
+                <p className="text-xs font-extrabold text-[#1c1815]">{studentName}</p>
+                <p className="text-[10px] text-[#1c1815]/80 font-bold">{studentEmail}</p>
               </div>
             </div>
           </div>
@@ -411,36 +415,36 @@ export function Dashboard() {
         {/* DASHBOARD BODY CONTENT */}
         <main className="p-8 space-y-8 max-w-7xl mx-auto w-full">
           
-          {/* HERO WELCOME BANNER (Warm Academic Theme) */}
-          <div className="relative overflow-hidden p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-[#1c150c]/95 via-[#18120a]/90 to-[#120e08]/95 backdrop-blur-xl border border-amber-500/30 shadow-2xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          {/* HERO WELCOME BANNER (Ultra-Transparent Glass Frame - 100% Background Visibility) */}
+          <div className="relative overflow-hidden p-8 sm:p-10 rounded-3xl bg-white/15 backdrop-blur-2xl border-2 border-amber-950/35 shadow-2xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center shadow-[inset_0_1px_2px_0_rgba(255,255,255,0.6)]">
             
             {/* Handcrafted Technical Science Sketches Overlay */}
-            <div className="absolute right-4 top-4 opacity-15 pointer-events-none hidden lg:flex gap-6">
-              <RayOpticsSketch className="w-32 h-32 text-amber-400" />
-              <BenzeneOrbitalSketch className="w-32 h-32 text-orange-400" />
-              <CalculusIntegralSketch className="w-32 h-32 text-amber-300" />
-              <DNAHelixSketch className="w-32 h-32 text-emerald-400" />
+            <div className="absolute right-4 top-4 opacity-20 pointer-events-none hidden lg:flex gap-6">
+              <RayOpticsSketch className="w-32 h-32 text-amber-950" />
+              <BenzeneOrbitalSketch className="w-32 h-32 text-amber-900" />
+              <CalculusIntegralSketch className="w-32 h-32 text-amber-950" />
+              <DNAHelixSketch className="w-32 h-32 text-emerald-950" />
             </div>
 
             {/* Left Welcome Copy */}
             <div className="lg:col-span-6 space-y-4 relative z-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/10 text-amber-300 text-xs font-bold uppercase tracking-widest border border-amber-500/30">
-                <Sparkles size={13} /> Official Student Control Center
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/50 border-2 border-amber-950/30 text-amber-950 text-xs font-extrabold uppercase tracking-widest shadow-xs">
+                <Sparkles size={13} className="text-amber-800" /> Official Student Control Center
               </div>
-              <h2 className="font-serif italic text-4xl sm:text-5xl font-extrabold text-white">
-                Welcome back, <span className="text-amber-300 font-sans not-italic">{studentName}!</span>
+              <h2 className="font-serif italic text-4xl sm:text-5xl font-extrabold text-[#1c1815]">
+                Welcome back, <span className="text-amber-950 font-sans not-italic">{studentName}!</span>
               </h2>
-              <p className="text-xs text-neutral-300 leading-relaxed font-light max-w-md">
-                Your journey to IISER, NEST & CMI starts here. Practice. Analyze. Improve. <span className="text-amber-300 font-bold">Succeed!</span>
+              <p className="text-xs text-[#1c1815] leading-relaxed font-bold max-w-md">
+                Your journey to IISER, NEST & CMI starts here. Practice. Analyze. Improve. <span className="text-amber-950 font-extrabold">Succeed!</span>
               </p>
 
               {/* Immutable Identity Badges */}
               <div className="flex flex-wrap items-center gap-2 pt-2">
-                <div className="px-3.5 py-1.5 rounded-xl bg-black/40 border border-amber-500/25 text-neutral-300 text-[11px] font-semibold flex items-center gap-2">
-                  <ShieldCheck size={14} className="text-amber-400" />
-                  <span>Official Identity: <strong className="text-white">{studentName}</strong> ({studentEmail})</span>
+                <div className="px-3.5 py-1.5 rounded-xl bg-white/40 border-2 border-amber-950/30 text-[#1c1815] text-[11px] font-extrabold flex items-center gap-2 shadow-xs">
+                  <ShieldCheck size={14} className="text-amber-800" />
+                  <span>Official Identity: <strong className="text-[#1c1815]">{studentName}</strong> ({studentEmail})</span>
                 </div>
-                <div className="px-3 py-1.5 rounded-xl bg-amber-400/10 border border-amber-400/30 text-amber-300 text-[10px] font-mono font-bold uppercase">
+                <div className="px-3 py-1.5 rounded-xl bg-amber-950/15 border-2 border-amber-950/35 text-amber-950 text-[10px] font-mono font-extrabold uppercase shadow-xs">
                   🔒 Immutable Profile
                 </div>
               </div>
@@ -449,34 +453,34 @@ export function Dashboard() {
             {/* Right Banner Side Action Cards */}
             <div className="lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10">
               
-              {/* Gold Accent Card: Explore Test Passes */}
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-[#2a1f10] via-[#1f170c] to-[#141009] border border-amber-500/40 text-white space-y-4 shadow-xl flex flex-col justify-between">
+              {/* Dark Teak Card: Explore Test Passes */}
+              <div className="p-6 rounded-2xl bg-[#1c1815]/95 border-2 border-amber-500/40 text-white space-y-4 shadow-2xl flex flex-col justify-between">
                 <div className="space-y-2">
                   <h3 className="font-serif text-lg font-bold text-amber-200">Explore Test Passes</h3>
-                  <p className="text-[11px] text-neutral-300 leading-relaxed">
+                  <p className="text-[11px] text-neutral-300 leading-relaxed font-medium">
                     Access all subscribed and available test series in one place.
                   </p>
                 </div>
                 <a
                   href="https://vigyanprep.com/tests"
-                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition hover:opacity-95 shadow-md shadow-amber-500/20"
+                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition hover:opacity-95 shadow-md shadow-amber-500/20"
                 >
                   <span>Explore All Passes</span>
                   <ArrowRight size={14} />
                 </a>
               </div>
 
-              {/* Parchment Card: Browse PYQ Library */}
-              <div className="p-6 rounded-2xl bg-[#1b150c] border border-white/10 space-y-4 shadow-md flex flex-col justify-between">
+              {/* Glassy Parchment Card: Browse PYQ Library */}
+              <div className="p-6 rounded-2xl bg-white/30 backdrop-blur-xl border-2 border-amber-950/30 space-y-4 shadow-md flex flex-col justify-between">
                 <div className="space-y-2">
-                  <h3 className="font-serif text-lg font-bold text-white">Browse PYQ Library</h3>
-                  <p className="text-[11px] text-neutral-400 leading-relaxed">
+                  <h3 className="font-serif text-lg font-bold text-[#1c1815]">Browse PYQ Library</h3>
+                  <p className="text-[11px] text-[#1c1815] leading-relaxed font-bold">
                     Practice previous year questions with filters and smart analysis.
                   </p>
                 </div>
                 <a
                   href="https://vigyanprep.com/pyq"
-                  className="w-full py-2.5 px-4 rounded-xl bg-white/5 border border-white/15 text-amber-300 hover:text-white font-bold text-xs flex items-center justify-center gap-2 transition"
+                  className="w-full py-2.5 px-4 rounded-xl bg-white/50 hover:bg-white/80 text-amber-950 font-extrabold text-xs flex items-center justify-center gap-2 transition border-2 border-amber-950/30 shadow-xs"
                 >
                   <span>Browse Now</span>
                   <ArrowRight size={14} />
@@ -487,16 +491,16 @@ export function Dashboard() {
           </div>
 
           {/* FILTER TABS ROW (Pill Buttons) */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-amber-950/25 pb-4">
             
             {/* Left Primary Switcher Pills */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setActiveTab('TEST_SERIES')}
-                className={`px-5 py-2.5 rounded-full text-xs font-bold tracking-wider uppercase transition ${
+                className={`px-5 py-2.5 rounded-full text-xs font-extrabold tracking-wider uppercase transition ${
                   activeTab === 'TEST_SERIES'
-                    ? 'bg-amber-400 text-neutral-950 shadow-md shadow-amber-400/20'
-                    : 'bg-[#1b150c] text-neutral-400 hover:text-white border border-white/10'
+                    ? 'bg-[#1c1815] text-amber-300 shadow-xl shadow-amber-950/30 border border-amber-500/30'
+                    : 'bg-white/30 backdrop-blur-xl text-[#1c1815] hover:text-amber-950 border-2 border-amber-950/30 shadow-xs'
                 }`}
               >
                 SUBSCRIBED TEST SERIES ({testSeriesPapers.length})
@@ -504,10 +508,10 @@ export function Dashboard() {
 
               <button
                 onClick={() => setActiveTab('PYQ')}
-                className={`px-5 py-2.5 rounded-full text-xs font-bold tracking-wider uppercase transition flex items-center gap-2 ${
+                className={`px-5 py-2.5 rounded-full text-xs font-extrabold tracking-wider uppercase transition flex items-center gap-2 ${
                   activeTab === 'PYQ'
-                    ? 'bg-amber-400 text-neutral-950 shadow-md shadow-amber-400/20'
-                    : 'bg-[#1b150c] text-neutral-400 hover:text-white border border-white/10'
+                    ? 'bg-[#1c1815] text-amber-300 shadow-xl shadow-amber-950/30 border border-amber-500/30'
+                    : 'bg-white/30 backdrop-blur-xl text-[#1c1815] hover:text-amber-950 border-2 border-amber-950/30 shadow-xs'
                 }`}
               >
                 <BookOpen size={14} />
@@ -523,8 +527,8 @@ export function Dashboard() {
                   onClick={() => setActiveCategory(cat)}
                   className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${
                     activeCategory === cat
-                      ? 'bg-amber-400/20 text-amber-300 border border-amber-400/50'
-                      : 'bg-[#1b150c] border border-white/10 text-neutral-400 hover:text-white'
+                      ? 'bg-amber-950/25 text-amber-950 border-2 border-amber-950/45 font-extrabold shadow-xs'
+                      : 'bg-white/30 backdrop-blur-xl border-2 border-amber-950/30 text-[#1c1815] hover:text-amber-950 shadow-xs'
                   }`}
                 >
                   {cat === 'ALL' ? 'All Exams' : cat}
@@ -533,55 +537,55 @@ export function Dashboard() {
             </div>
           </div>
 
-          {/* 5 PERFORMANCE STAT CARDS ROW */}
+          {/* 5 PERFORMANCE STAT CARDS ROW (Ultra-Transparent Glass Frame) */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            <div className="p-4 rounded-2xl bg-[#1b150c]/90 backdrop-blur-md border border-white/10 shadow-xs flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-400/10 text-amber-400 border border-amber-400/20 flex items-center justify-center">
+            <div className="p-4 rounded-2xl bg-white/20 backdrop-blur-xl border-2 border-amber-950/30 shadow-md flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-950/15 text-amber-950 border border-amber-950/30 flex items-center justify-center">
                 <FileText size={20} />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-neutral-400 uppercase">Tests Attempted</p>
-                <p className="text-lg font-bold text-white">0</p>
+                <p className="text-[10px] font-extrabold text-[#1c1815] uppercase">Tests Attempted</p>
+                <p className="text-lg font-extrabold text-[#1c1815]">0</p>
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#1b150c]/90 backdrop-blur-md border border-white/10 shadow-xs flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-400/10 text-emerald-400 border border-emerald-400/20 flex items-center justify-center">
+            <div className="p-4 rounded-2xl bg-white/20 backdrop-blur-xl border-2 border-amber-950/30 shadow-md flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-200/60 text-emerald-950 border border-emerald-400 flex items-center justify-center">
                 <BarChart3 size={20} />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-neutral-400 uppercase">Average Score</p>
-                <p className="text-lg font-bold text-white">0%</p>
+                <p className="text-[10px] font-extrabold text-[#1c1815] uppercase">Average Score</p>
+                <p className="text-lg font-extrabold text-[#1c1815]">0%</p>
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#1b150c]/90 backdrop-blur-md border border-white/10 shadow-xs flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-400/10 text-amber-300 border border-amber-400/20 flex items-center justify-center">
+            <div className="p-4 rounded-2xl bg-white/20 backdrop-blur-xl border-2 border-amber-950/30 shadow-md flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-200/60 text-amber-950 border border-amber-400 flex items-center justify-center">
                 <Award size={20} />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-neutral-400 uppercase">Best Score</p>
-                <p className="text-lg font-bold text-white">0%</p>
+                <p className="text-[10px] font-extrabold text-[#1c1815] uppercase">Best Score</p>
+                <p className="text-lg font-extrabold text-[#1c1815]">0%</p>
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#1b150c]/90 backdrop-blur-md border border-white/10 shadow-xs flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-orange-400/10 text-orange-400 border border-orange-400/20 flex items-center justify-center">
+            <div className="p-4 rounded-2xl bg-white/20 backdrop-blur-xl border-2 border-amber-950/30 shadow-md flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-orange-200/60 text-orange-950 border border-orange-400 flex items-center justify-center">
                 <HelpCircle size={20} />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-neutral-400 uppercase">Total Questions</p>
-                <p className="text-lg font-bold text-white">0</p>
+                <p className="text-[10px] font-extrabold text-[#1c1815] uppercase">Total Questions</p>
+                <p className="text-lg font-extrabold text-[#1c1815]">0</p>
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#1b150c]/90 backdrop-blur-md border border-white/10 shadow-xs flex items-center gap-3 col-span-2 sm:col-span-1">
-              <div className="w-10 h-10 rounded-xl bg-amber-400/10 text-amber-400 border border-amber-400/20 flex items-center justify-center">
+            <div className="p-4 rounded-2xl bg-white/20 backdrop-blur-xl border-2 border-amber-950/30 shadow-md flex items-center gap-3 col-span-2 sm:col-span-1">
+              <div className="w-10 h-10 rounded-xl bg-pink-200/60 text-pink-950 border border-pink-400 flex items-center justify-center">
                 <Sparkles size={20} />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-neutral-400 uppercase">Accuracy</p>
-                <p className="text-lg font-bold text-white">0%</p>
+                <p className="text-[10px] font-extrabold text-[#1c1815] uppercase">Accuracy</p>
+                <p className="text-lg font-extrabold text-[#1c1815]">0%</p>
               </div>
             </div>
           </div>
@@ -592,28 +596,22 @@ export function Dashboard() {
             {/* LEFT CONTENT AREA (9 Cols) */}
             <div className="lg:col-span-8 space-y-6">
               {loading ? (
-                <div className="p-16 rounded-3xl bg-[#1b150c] border border-amber-500/20 text-center space-y-3">
-                  <RefreshCw className="animate-spin text-amber-400 w-8 h-8 mx-auto" />
-                  <p className="text-xs text-neutral-400 font-mono">Loading Examination Papers...</p>
+                <div className="p-16 rounded-3xl bg-white/20 backdrop-blur-2xl border-2 border-amber-950/30 text-center space-y-3 shadow-2xl">
+                  <RefreshCw className="animate-spin text-amber-950 w-8 h-8 mx-auto" />
+                  <p className="text-xs text-[#1c1815] font-mono font-bold">Loading Examination Papers...</p>
                 </div>
               ) : filteredTests.length === 0 ? (
-                /* REALISTIC GRAPHITE PENCIL SKETCH ARTWORK OF STUDENT STUDYING */
-                <div className="p-8 sm:p-10 rounded-3xl bg-[#1b150c]/90 backdrop-blur-xl border border-amber-500/20 text-center space-y-6 shadow-xl flex flex-col items-center">
+                /* ULTRA-TRANSPARENT GLASS MAIN PANEL WITH HANDCRAFTED STUDENT STUDYING SKETCH */
+                <div className="p-8 sm:p-10 rounded-3xl bg-white/15 backdrop-blur-2xl border-2 border-amber-950/35 text-center space-y-6 shadow-2xl flex flex-col items-center shadow-[inset_0_1px_2px_0_rgba(255,255,255,0.6)]">
                   
-                  {/* High Resolution Realistic Graphite Sketch Image generated by Gemini */}
-                  <div className="w-full max-w-lg rounded-2xl overflow-hidden border border-amber-500/30 shadow-2xl">
-                    <img
-                      src="/images/student_studying_sketch.jpg"
-                      alt="Realistic Graphite Pencil Sketch of Student Studying Physics at Desk"
-                      className="w-full h-auto object-cover filter contrast-[1.05] brightness-[0.95]"
-                    />
-                  </div>
+                  {/* Pure Handcrafted SVG Line Art Component */}
+                  <StudentDeskSketch className="w-80 h-56 text-[#1c1815]" />
 
                   <div className="space-y-2 max-w-md">
-                    <h3 className="font-serif text-2xl font-bold text-white">
+                    <h3 className="font-serif text-2xl font-bold text-[#1c1815]">
                       {activeTab === 'TEST_SERIES' ? 'No Upcoming Test Series Scheduled' : 'No Free PYQ Papers Available'}
                     </h3>
-                    <p className="text-xs text-neutral-400 leading-relaxed font-light">
+                    <p className="text-xs text-[#1c1815] leading-relaxed font-extrabold">
                       {activeTab === 'TEST_SERIES'
                         ? 'Your subscribed test series papers will appear here on their scheduled exam dates. You can also explore available passes on the website.'
                         : 'Check back soon for newly published past year question papers.'}
@@ -623,7 +621,7 @@ export function Dashboard() {
                   {activeTab === 'TEST_SERIES' && (
                     <a
                       href="https://vigyanprep.com/tests"
-                      className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 font-bold text-xs uppercase tracking-wider hover:opacity-95 transition shadow-lg shadow-amber-500/20 flex items-center gap-2"
+                      className="px-6 py-3 rounded-xl bg-[#1c1815] text-amber-300 font-bold text-xs uppercase tracking-wider hover:bg-black transition shadow-xl shadow-amber-950/30 border border-amber-500/30 flex items-center gap-2"
                     >
                       <span>Browse Test Series Passes</span>
                       <ArrowRight size={16} />
@@ -631,7 +629,7 @@ export function Dashboard() {
                   )}
                 </div>
               ) : (
-                /* TEST CARDS GRID */
+                /* TEST CARDS GRID (Ultra-Transparent Glass with Dark Defined Borders) */
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {filteredTests.map((paper) => {
                     const status = getWindowStatus(paper);
@@ -640,44 +638,44 @@ export function Dashboard() {
                     return (
                       <div
                         key={paper.id}
-                        className="rounded-3xl bg-[#1b150c]/90 backdrop-blur-md border border-amber-500/20 hover:border-amber-400/50 p-6 space-y-5 hover:shadow-xl transition-all duration-300 flex flex-col justify-between relative group"
+                        className="rounded-3xl bg-white/20 backdrop-blur-2xl border-2 border-amber-950/35 hover:border-amber-950/60 p-6 space-y-5 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between relative group shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.6)]"
                       >
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
-                            <span className="px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-300 text-[10px] font-bold uppercase tracking-wider">
+                            <span className="px-3 py-1 rounded-full bg-amber-950/15 border border-amber-950/30 text-amber-950 text-[10px] font-extrabold uppercase tracking-wider">
                               {examCat}
                             </span>
-                            <span className="font-serif italic text-xs text-neutral-400">
+                            <span className="font-serif italic text-xs text-[#1c1815] font-extrabold">
                               {paper.pyq_year || paper.year || '2025'}
                             </span>
                           </div>
 
-                          <h4 className="font-serif text-xl font-bold text-white group-hover:text-amber-300 transition-colors line-clamp-2">
+                          <h4 className="font-serif text-xl font-bold text-[#1c1815] group-hover:text-amber-950 transition-colors line-clamp-2">
                             {paper.title}
                           </h4>
 
-                          <div className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 border ${
+                          <div className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 border-2 ${
                             status.color === 'emerald'
-                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                              ? 'bg-emerald-200/60 border-emerald-400 text-emerald-950'
                               : status.color === 'amber'
-                              ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-                              : 'bg-red-500/10 border-red-500/30 text-red-400'
+                              ? 'bg-amber-200/60 border-amber-400 text-amber-950'
+                              : 'bg-red-200/60 border-red-400 text-red-950'
                           }`}>
                             <span>{status.label}</span>
                           </div>
 
-                          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/10 text-center text-xs">
-                            <div className="bg-black/30 p-2 rounded-xl border border-white/5">
-                              <p className="text-[9px] text-neutral-400 uppercase">Questions</p>
-                              <p className="font-bold text-white">{paper.questions_count || 60} Qs</p>
+                          <div className="grid grid-cols-3 gap-2 pt-2 border-t-2 border-amber-950/25 text-center text-xs">
+                            <div className="bg-white/40 p-2 rounded-xl border border-amber-950/25">
+                              <p className="text-[9px] text-[#1c1815] uppercase font-extrabold">Questions</p>
+                              <p className="font-extrabold text-[#1c1815]">{paper.questions_count || 60} Qs</p>
                             </div>
-                            <div className="bg-black/30 p-2 rounded-xl border border-white/5">
-                              <p className="text-[9px] text-neutral-400 uppercase">Duration</p>
-                              <p className="font-bold text-white">{paper.duration_minutes || 180} Mins</p>
+                            <div className="bg-white/40 p-2 rounded-xl border border-amber-950/25">
+                              <p className="text-[9px] text-[#1c1815] uppercase font-extrabold">Duration</p>
+                              <p className="font-extrabold text-[#1c1815]">{paper.duration_minutes || 180} Mins</p>
                             </div>
-                            <div className="bg-black/30 p-2 rounded-xl border border-white/5">
-                              <p className="text-[9px] text-neutral-400 uppercase">Marks</p>
-                              <p className="font-bold text-amber-300">{paper.total_marks || 240} M</p>
+                            <div className="bg-white/40 p-2 rounded-xl border border-amber-950/25">
+                              <p className="text-[9px] text-[#1c1815] uppercase font-extrabold">Marks</p>
+                              <p className="font-extrabold text-amber-950">{paper.total_marks || 240} M</p>
                             </div>
                           </div>
                         </div>
@@ -685,10 +683,10 @@ export function Dashboard() {
                         <button
                           onClick={() => handleTestClick(paper)}
                           disabled={!status.isLive}
-                          className={`w-full py-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md ${
+                          className={`w-full py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md ${
                             status.isLive
-                              ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 hover:opacity-95 shadow-amber-500/20 cursor-pointer'
-                              : 'bg-neutral-800 text-neutral-500 border border-white/10 cursor-not-allowed'
+                              ? 'bg-[#1c1815] text-amber-300 hover:bg-black shadow-amber-950/30 cursor-pointer border border-amber-500/30'
+                              : 'bg-neutral-300/60 text-neutral-600 border border-neutral-400 cursor-not-allowed'
                           }`}
                         >
                           {status.isLive ? <PlayCircle size={16} /> : <Lock size={16} />}
@@ -702,78 +700,78 @@ export function Dashboard() {
               )}
             </div>
 
-            {/* RIGHT SIDEBAR (4 Cols): QUICK ACTIONS */}
+            {/* RIGHT SIDEBAR (4 Cols): QUICK ACTIONS (Ultra-Transparent Glass Frame with Dark Defined Border) */}
             <div className="lg:col-span-4 space-y-6">
               
-              <div className="p-6 rounded-3xl bg-[#1b150c]/90 backdrop-blur-xl border border-amber-500/20 shadow-md space-y-4">
-                <div className="flex items-center gap-2 font-serif text-lg font-bold text-white">
-                  <Sparkles size={18} className="text-amber-400" />
+              <div className="p-6 rounded-3xl bg-white/15 backdrop-blur-2xl border-2 border-amber-950/35 shadow-2xl space-y-4 shadow-[inset_0_1px_2px_0_rgba(255,255,255,0.6)]">
+                <div className="flex items-center gap-2 font-serif text-lg font-bold text-[#1c1815]">
+                  <Sparkles size={18} className="text-amber-900" />
                   <span>Quick Actions</span>
                 </div>
 
                 <div className="space-y-2">
                   <button
                     onClick={() => setShowPerformanceModal(true)}
-                    className="w-full p-3.5 rounded-2xl bg-black/30 hover:bg-black/50 border border-white/5 text-left flex items-center justify-between transition group"
+                    className="w-full p-3.5 rounded-2xl bg-white/40 hover:bg-white/70 border-2 border-amber-950/25 text-left flex items-center justify-between transition group shadow-xs"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-amber-400/10 text-amber-400 border border-amber-400/20 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-xl bg-amber-950/15 text-amber-950 flex items-center justify-center border border-amber-950/20">
                         <BarChart3 size={16} />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-white">Performance Analytics</p>
-                        <p className="text-[10px] text-neutral-400">View detailed performance</p>
+                        <p className="text-xs font-extrabold text-[#1c1815]">Performance Analytics</p>
+                        <p className="text-[10px] text-[#1c1815]/80 font-bold">View detailed performance</p>
                       </div>
                     </div>
-                    <ChevronRight size={16} className="text-neutral-400 group-hover:translate-x-1 transition" />
+                    <ChevronRight size={16} className="text-[#1c1815] group-hover:translate-x-1 transition" />
                   </button>
 
                   <button
                     onClick={() => triggerToast('🔖 Bookmarks feature coming soon!')}
-                    className="w-full p-3.5 rounded-2xl bg-black/30 hover:bg-black/50 border border-white/5 text-left flex items-center justify-between transition group"
+                    className="w-full p-3.5 rounded-2xl bg-white/40 hover:bg-white/70 border-2 border-amber-950/25 text-left flex items-center justify-between transition group shadow-xs"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-amber-400/10 text-amber-400 border border-amber-400/20 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-xl bg-amber-950/15 text-amber-950 flex items-center justify-center border border-amber-950/20">
                         <Bookmark size={16} />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-white">Bookmark a Test</p>
-                        <p className="text-[10px] text-neutral-400">Save tests for later</p>
+                        <p className="text-xs font-extrabold text-[#1c1815]">Bookmark a Test</p>
+                        <p className="text-[10px] text-[#1c1815]/80 font-bold">Save tests for later</p>
                       </div>
                     </div>
-                    <ChevronRight size={16} className="text-neutral-400 group-hover:translate-x-1 transition" />
+                    <ChevronRight size={16} className="text-[#1c1815] group-hover:translate-x-1 transition" />
                   </button>
 
                   <button
                     onClick={() => triggerToast('📱 Vigyan.prep Mobile App launching soon on Play Store!')}
-                    className="w-full p-3.5 rounded-2xl bg-black/30 hover:bg-black/50 border border-white/5 text-left flex items-center justify-between transition group"
+                    className="w-full p-3.5 rounded-2xl bg-white/40 hover:bg-white/70 border-2 border-amber-950/25 text-left flex items-center justify-between transition group shadow-xs"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-amber-400/10 text-amber-400 border border-amber-400/20 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-xl bg-amber-950/15 text-amber-950 flex items-center justify-center border border-amber-950/20">
                         <Download size={16} />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-white">Download Mobile App</p>
-                        <p className="text-[10px] text-neutral-400">Practice on the go</p>
+                        <p className="text-xs font-extrabold text-[#1c1815]">Download Mobile App</p>
+                        <p className="text-[10px] text-[#1c1815]/80 font-bold">Practice on the go</p>
                       </div>
                     </div>
-                    <ChevronRight size={16} className="text-neutral-400 group-hover:translate-x-1 transition" />
+                    <ChevronRight size={16} className="text-[#1c1815] group-hover:translate-x-1 transition" />
                   </button>
 
                   <button
                     onClick={() => triggerToast('💬 Student Discussion Forum coming soon!')}
-                    className="w-full p-3.5 rounded-2xl bg-black/30 hover:bg-black/50 border border-white/5 text-left flex items-center justify-between transition group"
+                    className="w-full p-3.5 rounded-2xl bg-white/40 hover:bg-white/70 border-2 border-amber-950/25 text-left flex items-center justify-between transition group shadow-xs"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-amber-400/10 text-amber-400 border border-amber-400/20 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-xl bg-amber-950/15 text-amber-950 flex items-center justify-center border border-amber-950/20">
                         <MessageSquare size={16} />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-white">Join Discussion</p>
-                        <p className="text-[10px] text-neutral-400">Ask & help peers</p>
+                        <p className="text-xs font-extrabold text-[#1c1815]">Join Discussion</p>
+                        <p className="text-[10px] text-[#1c1815]/80 font-bold">Ask & help peers</p>
                       </div>
                     </div>
-                    <ChevronRight size={16} className="text-neutral-400 group-hover:translate-x-1 transition" />
+                    <ChevronRight size={16} className="text-[#1c1815] group-hover:translate-x-1 transition" />
                   </button>
                 </div>
               </div>
@@ -787,34 +785,34 @@ export function Dashboard() {
 
       {/* 4-6 DIGIT PASSCODE ENTRY MODAL */}
       {showPasscodeModal && selectedTestForPasscode && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#18120a] border border-amber-500/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6 relative">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#fcfbfa] border-2 border-amber-950/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6 relative">
             <button
               onClick={() => setShowPasscodeModal(false)}
-              className="absolute top-5 right-5 text-neutral-400 hover:text-white p-2 rounded-full hover:bg-white/10 transition"
+              className="absolute top-5 right-5 text-neutral-600 hover:text-[#1c1815] p-2 rounded-full hover:bg-amber-950/10 transition"
             >
               <X size={20} />
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40">
+              <div className="p-3 rounded-2xl bg-amber-950/15 text-amber-950 border border-amber-950/25">
                 <Key size={24} />
               </div>
               <div>
-                <h3 className="font-serif text-xl font-bold text-white">Enter Exam Passcode</h3>
-                <p className="text-xs text-neutral-400">4-6 Digit Access Key Required</p>
+                <h3 className="font-serif text-xl font-bold text-[#1c1815]">Enter Exam Passcode</h3>
+                <p className="text-xs text-neutral-600 font-semibold">4-6 Digit Access Key Required</p>
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-1">
-              <p className="text-xs text-amber-300 font-bold">{selectedTestForPasscode.title}</p>
-              <p className="text-[11px] text-neutral-400">
+            <div className="p-4 rounded-xl bg-amber-950/10 border border-amber-950/20 space-y-1">
+              <p className="text-xs text-amber-950 font-bold">{selectedTestForPasscode.title}</p>
+              <p className="text-[11px] text-neutral-700 font-medium">
                 Scheduled for {selectedTestForPasscode.duration_minutes || 180} Mins · {selectedTestForPasscode.questions_count || 60} Questions
               </p>
             </div>
 
             {passcodeError && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
                 <AlertCircle size={16} />
                 <span>{passcodeError}</span>
               </div>
@@ -822,7 +820,7 @@ export function Dashboard() {
 
             <form onSubmit={handlePasscodeSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-neutral-300 mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-2">
                   Exam Key / Passcode (4-6 Digits)
                 </label>
                 <input
@@ -831,7 +829,7 @@ export function Dashboard() {
                   value={inputPasscode}
                   onChange={(e) => setInputPasscode(e.target.value)}
                   placeholder="e.g. 8492"
-                  className="w-full bg-black border border-amber-500/40 rounded-xl px-4 py-3 text-center text-2xl font-mono tracking-[0.5em] text-amber-300 focus:outline-none focus:border-amber-400 shadow-inner"
+                  className="w-full bg-white border-2 border-amber-950/30 rounded-xl px-4 py-3 text-center text-2xl font-mono tracking-[0.5em] text-[#1c1815] focus:outline-none focus:border-amber-950 shadow-inner"
                   autoFocus
                   required
                 />
@@ -839,7 +837,7 @@ export function Dashboard() {
 
               <button
                 type="submit"
-                className="w-full py-3.5 bg-gradient-to-r from-amber-400 to-orange-500 text-neutral-950 font-bold text-xs uppercase tracking-wider rounded-xl hover:opacity-95 transition shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-[#1c1815] text-amber-300 font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-black transition shadow-xl shadow-amber-950/30 border border-amber-500/30 flex items-center justify-center gap-2"
               >
                 <CheckCircle2 size={16} />
                 <span>Verify Passcode & Enter Exam</span>
@@ -851,37 +849,37 @@ export function Dashboard() {
 
       {/* PERFORMANCE MODAL */}
       {showPerformanceModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#18120a] border border-amber-500/40 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-6 relative">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#fcfbfa] border-2 border-amber-950/40 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-6 relative">
             <button
               onClick={() => setShowPerformanceModal(false)}
-              className="absolute top-5 right-5 text-neutral-400 hover:text-white p-2 rounded-full hover:bg-white/10 transition"
+              className="absolute top-5 right-5 text-neutral-600 hover:text-[#1c1815] p-2 rounded-full hover:bg-amber-950/10 transition"
             >
               <X size={20} />
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40">
+              <div className="p-3 rounded-2xl bg-amber-950/15 text-amber-950 border border-amber-950/25">
                 <BarChart3 size={24} />
               </div>
               <div>
-                <h3 className="font-serif text-xl font-bold text-white">Performance Analytics</h3>
-                <p className="text-xs text-neutral-400">Student Progress & Attempt Overview</p>
+                <h3 className="font-serif text-xl font-bold text-[#1c1815]">Performance Analytics</h3>
+                <p className="text-xs text-neutral-600 font-semibold">Student Progress & Attempt Overview</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-1">
-                <p className="text-[10px] font-bold text-neutral-400 uppercase">Tests Completed</p>
-                <p className="text-2xl font-extrabold text-amber-300">0</p>
+              <div className="p-4 rounded-2xl bg-amber-950/10 border border-amber-950/20 space-y-1">
+                <p className="text-[10px] font-extrabold text-neutral-600 uppercase">Tests Completed</p>
+                <p className="text-2xl font-extrabold text-amber-950">0</p>
               </div>
-              <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-1">
-                <p className="text-[10px] font-bold text-neutral-400 uppercase">Average Accuracy</p>
-                <p className="text-2xl font-extrabold text-amber-300">0%</p>
+              <div className="p-4 rounded-2xl bg-amber-950/10 border border-amber-950/20 space-y-1">
+                <p className="text-[10px] font-extrabold text-neutral-600 uppercase">Average Accuracy</p>
+                <p className="text-2xl font-extrabold text-amber-950">0%</p>
               </div>
             </div>
 
-            <p className="text-xs text-neutral-400 leading-relaxed text-center font-light">
+            <p className="text-xs text-neutral-700 leading-relaxed text-center font-bold">
               Complete your first scheduled CBT test series exam to view subject-wise performance graphs and All-India ranks!
             </p>
           </div>
@@ -890,35 +888,35 @@ export function Dashboard() {
 
       {/* SETTINGS MODAL */}
       {showSettingsModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#18120a] border border-amber-500/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6 relative">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#fcfbfa] border-2 border-amber-950/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6 relative">
             <button
               onClick={() => setShowSettingsModal(false)}
-              className="absolute top-5 right-5 text-neutral-400 hover:text-white p-2 rounded-full hover:bg-white/10 transition"
+              className="absolute top-5 right-5 text-neutral-600 hover:text-[#1c1815] p-2 rounded-full hover:bg-amber-950/10 transition"
             >
               <X size={20} />
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40">
+              <div className="p-3 rounded-2xl bg-amber-950/15 text-amber-950 border border-amber-950/25">
                 <Settings size={24} />
               </div>
               <div>
-                <h3 className="font-serif text-xl font-bold text-white">Student Settings</h3>
-                <p className="text-xs text-neutral-400">Manage Account & Profile</p>
+                <h3 className="font-serif text-xl font-bold text-[#1c1815]">Student Settings</h3>
+                <p className="text-xs text-neutral-600 font-semibold">Manage Account & Profile</p>
               </div>
             </div>
 
-            <div className="space-y-3 text-xs text-neutral-300 bg-black/40 p-4 rounded-2xl border border-white/10">
-              <p><strong className="text-white">Name:</strong> {studentName} (Immutable Profile)</p>
-              <p><strong className="text-white">Email:</strong> {studentEmail}</p>
-              <p><strong className="text-white">Role:</strong> Student Aspirant</p>
-              <p><strong className="text-white">Portal:</strong> IISER & NEST Test Center</p>
+            <div className="space-y-3 text-xs text-neutral-800 bg-amber-950/10 p-4 rounded-2xl border border-amber-950/20 font-medium">
+              <p><strong className="text-[#1c1815]">Name:</strong> {studentName} (Immutable Profile)</p>
+              <p><strong className="text-[#1c1815]">Email:</strong> {studentEmail}</p>
+              <p><strong className="text-[#1c1815]">Role:</strong> Student Aspirant</p>
+              <p><strong className="text-[#1c1815]">Portal:</strong> IISER & NEST Test Center</p>
             </div>
 
             <button
               onClick={handleLogout}
-              className="w-full py-3 bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 font-bold text-xs uppercase tracking-wider rounded-xl transition"
+              className="w-full py-3 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 font-bold text-xs uppercase tracking-wider rounded-xl transition"
             >
               Sign Out of Student Account
             </button>
