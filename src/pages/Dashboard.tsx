@@ -199,10 +199,25 @@ export function Dashboard() {
   });
 
   return (
-    <div className="min-h-screen bg-[#16120b] text-[#f2ead8] font-sans flex selection:bg-amber-500 selection:text-black relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#141009] text-[#f2ead8] font-sans flex selection:bg-amber-500 selection:text-black relative overflow-x-hidden">
       
-      {/* Handcrafted Warm Blueprint Grid Accent */}
-      <div className="fixed inset-0 pointer-events-none opacity-10 bg-[radial-gradient(#fcd34d_1px,transparent_1px)] [background-size:28px_28px] z-0" />
+      {/* ═══════════════════════════════════════════════════════════════════════
+          ATMOSPHERIC BLURRED ACADEMIC WATERMARK BACKGROUND LAYER (Imagica Style)
+         ═══════════════════════════════════════════════════════════════════════ */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        {/* Soft Blurred Vintage University Architectural Line Sketch Image */}
+        <img
+          src="/images/academic_watermark_bg.jpg"
+          alt="Academic University Campus Watermark"
+          className="w-full h-full object-cover filter blur-[6px] opacity-20 scale-105"
+        />
+        {/* Light Overlay Gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#18130c]/90 via-[#141009]/85 to-[#0e0b06]/95 mix-blend-multiply" />
+        {/* Soft Radial Ambient Lighting */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_20%,rgba(252,211,77,0.12)_0%,transparent_60%)]" />
+        {/* Subtle Constellation Grid */}
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fcd34d_1px,transparent_1px)] [background-size:32px_32px]" />
+      </div>
 
       {/* Toast Notification */}
       {toastMessage && (
@@ -215,7 +230,7 @@ export function Dashboard() {
       {/* ═══════════════════════════════════════════════════════════════════════
           LEFT SIDEBAR NAVIGATION (Matching Warm Academic Brand Palette)
          ═══════════════════════════════════════════════════════════════════════ */}
-      <aside className="w-64 bg-[#1b150c]/90 backdrop-blur-xl border-r border-amber-500/20 flex flex-col justify-between p-6 z-20 shrink-0 min-h-screen shadow-xl">
+      <aside className="w-64 bg-[#1b150c]/90 backdrop-blur-2xl border-r border-amber-500/20 flex flex-col justify-between p-6 z-20 shrink-0 min-h-screen shadow-xl">
         <div className="space-y-8">
           
           {/* Logo */}
@@ -347,7 +362,7 @@ export function Dashboard() {
       <div className="flex-1 flex flex-col min-w-0 z-10">
         
         {/* TOP HEADER BAR */}
-        <header className="px-8 py-5 flex items-center justify-between gap-6 bg-[#16120b]/90 backdrop-blur-md border-b border-amber-500/20 sticky top-0 z-30">
+        <header className="px-8 py-5 flex items-center justify-between gap-6 bg-[#16120b]/80 backdrop-blur-md border-b border-amber-500/20 sticky top-0 z-30">
           
           {/* Search Box */}
           <div className="relative w-full max-w-md">
@@ -397,7 +412,7 @@ export function Dashboard() {
         <main className="p-8 space-y-8 max-w-7xl mx-auto w-full">
           
           {/* HERO WELCOME BANNER (Warm Academic Theme) */}
-          <div className="relative overflow-hidden p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-[#1c150c] via-[#18120a] to-[#120e08] border border-amber-500/30 shadow-2xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div className="relative overflow-hidden p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-[#1c150c]/95 via-[#18120a]/90 to-[#120e08]/95 backdrop-blur-xl border border-amber-500/30 shadow-2xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             
             {/* Handcrafted Technical Science Sketches Overlay */}
             <div className="absolute right-4 top-4 opacity-15 pointer-events-none hidden lg:flex gap-6">
@@ -520,7 +535,7 @@ export function Dashboard() {
 
           {/* 5 PERFORMANCE STAT CARDS ROW */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            <div className="p-4 rounded-2xl bg-[#1b150c] border border-white/10 shadow-xs flex items-center gap-3">
+            <div className="p-4 rounded-2xl bg-[#1b150c]/90 backdrop-blur-md border border-white/10 shadow-xs flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-amber-400/10 text-amber-400 border border-amber-400/20 flex items-center justify-center">
                 <FileText size={20} />
               </div>
@@ -530,7 +545,7 @@ export function Dashboard() {
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#1b150c] border border-white/10 shadow-xs flex items-center gap-3">
+            <div className="p-4 rounded-2xl bg-[#1b150c]/90 backdrop-blur-md border border-white/10 shadow-xs flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-emerald-400/10 text-emerald-400 border border-emerald-400/20 flex items-center justify-center">
                 <BarChart3 size={20} />
               </div>
@@ -540,7 +555,7 @@ export function Dashboard() {
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#1b150c] border border-white/10 shadow-xs flex items-center gap-3">
+            <div className="p-4 rounded-2xl bg-[#1b150c]/90 backdrop-blur-md border border-white/10 shadow-xs flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-amber-400/10 text-amber-300 border border-amber-400/20 flex items-center justify-center">
                 <Award size={20} />
               </div>
@@ -550,7 +565,7 @@ export function Dashboard() {
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#1b150c] border border-white/10 shadow-xs flex items-center gap-3">
+            <div className="p-4 rounded-2xl bg-[#1b150c]/90 backdrop-blur-md border border-white/10 shadow-xs flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-orange-400/10 text-orange-400 border border-orange-400/20 flex items-center justify-center">
                 <HelpCircle size={20} />
               </div>
@@ -560,7 +575,7 @@ export function Dashboard() {
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#1b150c] border border-white/10 shadow-xs flex items-center gap-3 col-span-2 sm:col-span-1">
+            <div className="p-4 rounded-2xl bg-[#1b150c]/90 backdrop-blur-md border border-white/10 shadow-xs flex items-center gap-3 col-span-2 sm:col-span-1">
               <div className="w-10 h-10 rounded-xl bg-amber-400/10 text-amber-400 border border-amber-400/20 flex items-center justify-center">
                 <Sparkles size={20} />
               </div>
@@ -583,7 +598,7 @@ export function Dashboard() {
                 </div>
               ) : filteredTests.length === 0 ? (
                 /* REALISTIC GRAPHITE PENCIL SKETCH ARTWORK OF STUDENT STUDYING */
-                <div className="p-8 sm:p-10 rounded-3xl bg-[#1b150c] border border-amber-500/20 text-center space-y-6 shadow-xl flex flex-col items-center">
+                <div className="p-8 sm:p-10 rounded-3xl bg-[#1b150c]/90 backdrop-blur-xl border border-amber-500/20 text-center space-y-6 shadow-xl flex flex-col items-center">
                   
                   {/* High Resolution Realistic Graphite Sketch Image generated by Gemini */}
                   <div className="w-full max-w-lg rounded-2xl overflow-hidden border border-amber-500/30 shadow-2xl">
@@ -625,7 +640,7 @@ export function Dashboard() {
                     return (
                       <div
                         key={paper.id}
-                        className="rounded-3xl bg-[#1b150c] border border-amber-500/20 hover:border-amber-400/50 p-6 space-y-5 hover:shadow-xl transition-all duration-300 flex flex-col justify-between relative group"
+                        className="rounded-3xl bg-[#1b150c]/90 backdrop-blur-md border border-amber-500/20 hover:border-amber-400/50 p-6 space-y-5 hover:shadow-xl transition-all duration-300 flex flex-col justify-between relative group"
                       >
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
@@ -690,7 +705,7 @@ export function Dashboard() {
             {/* RIGHT SIDEBAR (4 Cols): QUICK ACTIONS */}
             <div className="lg:col-span-4 space-y-6">
               
-              <div className="p-6 rounded-3xl bg-[#1b150c] border border-amber-500/20 shadow-md space-y-4">
+              <div className="p-6 rounded-3xl bg-[#1b150c]/90 backdrop-blur-xl border border-amber-500/20 shadow-md space-y-4">
                 <div className="flex items-center gap-2 font-serif text-lg font-bold text-white">
                   <Sparkles size={18} className="text-amber-400" />
                   <span>Quick Actions</span>
