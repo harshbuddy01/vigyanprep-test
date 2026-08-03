@@ -33,6 +33,22 @@ interface TestPaper {
   access_code?: string;
 }
 
+interface Subscription {
+  id: string;
+  plan_id: string;
+  student_email: string;
+  student_name: string;
+  starts_at: string;
+  expires_at: string;
+  status: string;
+  amount_paid: number;
+  plan: {
+    name: string;
+    exam_type: string;
+    duration_days: number;
+  };
+}
+
 export function Dashboard() {
   const navigate = useNavigate();
   const [tests, setTests] = useState<TestPaper[]>([]);
@@ -44,6 +60,8 @@ export function Dashboard() {
   
   const [studentName, setStudentName] = useState('Student');
   const [studentEmail, setStudentEmail] = useState('');
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [subsLoading, setSubsLoading] = useState(true);
 
   // Modals & Toasts
   const [showPasscodeModal, setShowPasscodeModal] = useState(false);
@@ -111,7 +129,32 @@ export function Dashboard() {
       }
     }
 
+    async function loadSubscriptions(authToken: string) {
+      setSubsLoading(true);
+      try {
+        const res = await fetch('https://api.vigyanprep.com/api/student/subscriptions', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.subscriptions) {
+            setSubscriptions(data.subscriptions);
+          } else {
+            setSubscriptions([]);
+          }
+        } else {
+          setSubscriptions([]);
+        }
+      } catch (err) {
+        console.error('Failed to load subscriptions:', err);
+        setSubscriptions([]);
+      } finally {
+        setSubsLoading(false);
+      }
+    }
+
     loadDashboardTests();
+    loadSubscriptions(token);
   }, []);
 
   const triggerToast = (msg: string) => {
@@ -383,10 +426,30 @@ export function Dashboard() {
           {/* Right Header Status */}
           <div className="flex items-center gap-4 shrink-0">
             
-            {/* Active Pass Badge */}
-            <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-white/40 border-2 border-amber-950/30 text-amber-950 text-xs font-extrabold shadow-sm">
-              <Award size={15} className="text-amber-800" />
-              <span>IISER & NEST Subscription Active</span>
+            {/* Active Pass Badge / My Subscriptions */}
+            <div className="hidden sm:flex flex-col items-end gap-2">
+              {subsLoading ? (
+                <div className="text-xs font-bold text-neutral-500 bg-white/40 px-3 py-1.5 rounded-full border border-amber-950/20">Subscription data loading...</div>
+              ) : subscriptions.length > 0 ? (
+                <div className="flex flex-wrap justify-end gap-2 max-w-[600px]">
+                  {subscriptions.map(sub => {
+                    const daysRemaining = Math.max(0, Math.ceil((new Date(sub.expires_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
+                    return (
+                      <div key={sub.id} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/40 border-2 border-amber-950/30 text-amber-950 text-xs font-extrabold shadow-sm">
+                        <Award size={15} className="text-amber-800" />
+                        <span>{sub.plan.name}</span>
+                        <span className="px-1.5 py-0.5 rounded bg-amber-950/15 border border-amber-950/20 text-[9px] uppercase">{sub.plan.exam_type}</span>
+                        <span className="text-amber-900 border-l border-amber-950/20 pl-2">{daysRemaining} days left</span>
+                        <span className="text-[10px] text-emerald-700 capitalize border-l border-amber-950/20 pl-2">{sub.status}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <a href="https://vigyanprep.com/tests" className="text-xs font-bold text-amber-900 hover:underline bg-white/40 px-3 py-1.5 rounded-full border border-amber-950/20 shadow-sm">
+                  No Active Subscriptions — Browse test series packages on vigyanprep.com/tests
+                </a>
+              )}
             </div>
 
             {/* Notification Bell */}
@@ -629,9 +692,100 @@ export function Dashboard() {
                   )}
                 </div>
               ) : (
-                /* TEST CARDS GRID (Ultra-Transparent Glass with Dark Defined Borders) */
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {filteredTests.map((paper) => {
+                /* TEST CARDS GRID */
+                <div className="space-y-8">
+                  {/* UPCOMING TESTS (Subscribed) */}
+                  {(() => {
+                    const subscribedExamTypes = new Set(subscriptions.map(s => (s.plan.exam_type || '').toUpperCase()));
+                    const upcomingTests = filteredTests.filter(t => {
+                      const examCat = (t.exam_type || t.examType || '').toUpperCase();
+                      if (!subscribedExamTypes.has(examCat)) return false;
+                      if (!t.window_start) return false;
+                      return new Date(t.window_start) > new Date();
+                    });
+
+                    if (upcomingTests.length === 0) return null;
+
+                    return (
+                      <div className="space-y-4">
+                        <h3 className="font-serif text-2xl font-bold text-[#1c1815] flex items-center gap-2">
+                          <Sparkles size={24} className="text-amber-600" />
+                          Upcoming Tests (Your Subscriptions)
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {upcomingTests.map((paper) => {
+                            const status = getWindowStatus(paper);
+                            const examCat = (paper.exam_type || paper.examType || 'IAT').toUpperCase();
+
+                            return (
+                              <div
+                                key={`upcoming-${paper.id}`}
+                                className="rounded-3xl bg-amber-100/40 backdrop-blur-2xl border-2 border-amber-500/50 hover:border-amber-600 p-6 space-y-5 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between relative group shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.6)]"
+                              >
+                                <div className="space-y-4">
+                                  <div className="flex items-center justify-between">
+                                    <span className="px-3 py-1 rounded-full bg-amber-950/15 border border-amber-950/30 text-amber-950 text-[10px] font-extrabold uppercase tracking-wider">
+                                      {examCat}
+                                    </span>
+                                    <span className="font-serif italic text-xs text-[#1c1815] font-extrabold">
+                                      {paper.pyq_year || paper.year || '2025'}
+                                    </span>
+                                  </div>
+
+                                  <h4 className="font-serif text-xl font-bold text-[#1c1815] group-hover:text-amber-950 transition-colors line-clamp-2">
+                                    {paper.title}
+                                  </h4>
+
+                                  <div className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 border-2 ${
+                                    status.color === 'emerald'
+                                      ? 'bg-emerald-200/60 border-emerald-400 text-emerald-950'
+                                      : status.color === 'amber'
+                                      ? 'bg-amber-200/60 border-amber-400 text-amber-950'
+                                      : 'bg-red-200/60 border-red-400 text-red-950'
+                                  }`}>
+                                    <span>{status.label}</span>
+                                  </div>
+
+                                  <div className="grid grid-cols-3 gap-2 pt-2 border-t-2 border-amber-950/25 text-center text-xs">
+                                    <div className="bg-white/40 p-2 rounded-xl border border-amber-950/25">
+                                      <p className="text-[9px] text-[#1c1815] uppercase font-extrabold">Questions</p>
+                                      <p className="font-extrabold text-[#1c1815]">{paper.questions_count || 60} Qs</p>
+                                    </div>
+                                    <div className="bg-white/40 p-2 rounded-xl border border-amber-950/25">
+                                      <p className="text-[9px] text-[#1c1815] uppercase font-extrabold">Duration</p>
+                                      <p className="font-extrabold text-[#1c1815]">{paper.duration_minutes || 180} Mins</p>
+                                    </div>
+                                    <div className="bg-white/40 p-2 rounded-xl border border-amber-950/25">
+                                      <p className="text-[9px] text-[#1c1815] uppercase font-extrabold">Marks</p>
+                                      <p className="font-extrabold text-amber-950">{paper.total_marks || 240} M</p>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <button
+                                  onClick={() => handleTestClick(paper)}
+                                  disabled={!status.isLive}
+                                  className={`w-full py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md ${
+                                    status.isLive
+                                      ? 'bg-[#1c1815] text-amber-300 hover:bg-black shadow-amber-950/30 cursor-pointer border border-amber-500/30'
+                                      : 'bg-neutral-300/60 text-neutral-600 border border-neutral-400 cursor-not-allowed'
+                                  }`}
+                                >
+                                  {status.isLive ? <PlayCircle size={16} /> : <Lock size={16} />}
+                                  <span>{status.isLive ? 'Start CBT Exam' : 'Test Window Closed'}</span>
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <div className="space-y-4">
+                    <h3 className="font-serif text-xl font-bold text-[#1c1815]">All Available Papers</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {filteredTests.map((paper) => {
                     const status = getWindowStatus(paper);
                     const examCat = (paper.exam_type || paper.examType || 'IAT').toUpperCase();
 
@@ -696,6 +850,8 @@ export function Dashboard() {
                       </div>
                     );
                   })}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
