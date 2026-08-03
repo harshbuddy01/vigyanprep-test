@@ -33,6 +33,19 @@ interface TestPaper {
   access_code?: string;
 }
 
+interface HallTicket {
+  id: string;
+  test_id: string;
+  unique_exam_id: string;
+  issued_at: string;
+  test: {
+    title: string;
+    exam_type: string;
+    window_start: string;
+    window_end: string;
+  };
+}
+
 interface Subscription {
   id: string;
   plan_id: string;
@@ -62,6 +75,7 @@ export function Dashboard() {
   const [studentEmail, setStudentEmail] = useState('');
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [subsLoading, setSubsLoading] = useState(true);
+  const [hallTickets, setHallTickets] = useState<HallTicket[]>([]);
 
   // Modals & Toasts
   const [showPasscodeModal, setShowPasscodeModal] = useState(false);
@@ -129,6 +143,27 @@ export function Dashboard() {
       }
     }
 
+    async function loadHallTickets(authToken: string) {
+      try {
+        const res = await fetch('https://api.vigyanprep.com/api/student/hall-tickets', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.hallTickets) {
+            setHallTickets(data.hallTickets);
+          } else {
+            setHallTickets([]);
+          }
+        } else {
+          setHallTickets([]);
+        }
+      } catch (err) {
+        console.error('Failed to load hall tickets:', err);
+        setHallTickets([]);
+      }
+    }
+
     async function loadSubscriptions(authToken: string) {
       setSubsLoading(true);
       try {
@@ -155,6 +190,7 @@ export function Dashboard() {
 
     loadDashboardTests();
     loadSubscriptions(token);
+    loadHallTickets(token);
   }, []);
 
   const triggerToast = (msg: string) => {
@@ -194,6 +230,12 @@ export function Dashboard() {
     const status = getWindowStatus(paper);
     if (!status.isLive) {
       alert(`⚠️ This test paper is not currently open.\n\nStatus: ${status.label}`);
+      return;
+    }
+
+    const myHallTicket = hallTickets.find(h => h.test_id === paper.id);
+    if (myHallTicket) {
+      navigate(`/system-check?testId=${paper.id}`);
       return;
     }
 
@@ -716,6 +758,9 @@ export function Dashboard() {
                           {upcomingTests.map((paper) => {
                             const status = getWindowStatus(paper);
                             const examCat = (paper.exam_type || paper.examType || 'IAT').toUpperCase();
+                            const myHallTicket = hallTickets.find(h => h.test_id === paper.id);
+                            
+                            const isUpcomingWithHallTicket = myHallTicket && !status.isLive && paper.window_start && new Date(paper.window_start) > new Date();
 
                             return (
                               <div
@@ -760,6 +805,25 @@ export function Dashboard() {
                                       <p className="font-extrabold text-amber-950">{paper.total_marks || 240} M</p>
                                     </div>
                                   </div>
+                                  
+                                  {myHallTicket && (
+                                    <div className="mt-2 p-3 rounded-xl bg-gradient-to-r from-amber-200 to-amber-400 border border-amber-500 shadow-inner flex flex-col gap-2">
+                                      <div className="flex items-start gap-3">
+                                        <div className="bg-amber-900/10 p-2 rounded-lg text-amber-950">
+                                          <Key size={18} />
+                                        </div>
+                                        <div>
+                                          <p className="text-[10px] uppercase font-extrabold text-amber-900 tracking-wider">Your Exam Pass</p>
+                                          <p className="font-mono text-sm font-bold text-amber-950">{myHallTicket.unique_exam_id}</p>
+                                        </div>
+                                      </div>
+                                      {isUpcomingWithHallTicket && (
+                                        <p className="text-[10px] text-amber-950 font-bold border-t border-amber-500/30 pt-2 mt-1">
+                                          Exam on {new Date(paper.window_start!).toLocaleDateString()} at {new Date(paper.window_start!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
 
                                 <button
@@ -767,12 +831,12 @@ export function Dashboard() {
                                   disabled={!status.isLive}
                                   className={`w-full py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md ${
                                     status.isLive
-                                      ? 'bg-[#1c1815] text-amber-300 hover:bg-black shadow-amber-950/30 cursor-pointer border border-amber-500/30'
+                                      ? (myHallTicket ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-900/30 border border-emerald-500 cursor-pointer' : 'bg-[#1c1815] text-amber-300 hover:bg-black shadow-amber-950/30 cursor-pointer border border-amber-500/30')
                                       : 'bg-neutral-300/60 text-neutral-600 border border-neutral-400 cursor-not-allowed'
                                   }`}
                                 >
                                   {status.isLive ? <PlayCircle size={16} /> : <Lock size={16} />}
-                                  <span>{status.isLive ? 'Start CBT Exam' : 'Test Window Closed'}</span>
+                                  <span>{status.isLive ? (myHallTicket ? 'Enter Exam' : 'Start CBT Exam') : 'Test Window Closed'}</span>
                                 </button>
                               </div>
                             );
@@ -788,6 +852,9 @@ export function Dashboard() {
                       {filteredTests.map((paper) => {
                     const status = getWindowStatus(paper);
                     const examCat = (paper.exam_type || paper.examType || 'IAT').toUpperCase();
+                    const myHallTicket = hallTickets.find(h => h.test_id === paper.id);
+                    
+                    const isUpcomingWithHallTicket = myHallTicket && !status.isLive && paper.window_start && new Date(paper.window_start) > new Date();
 
                     return (
                       <div
@@ -832,6 +899,25 @@ export function Dashboard() {
                               <p className="font-extrabold text-amber-950">{paper.total_marks || 240} M</p>
                             </div>
                           </div>
+
+                          {myHallTicket && (
+                            <div className="mt-2 p-3 rounded-xl bg-gradient-to-r from-amber-200 to-amber-400 border border-amber-500 shadow-inner flex flex-col gap-2">
+                              <div className="flex items-start gap-3">
+                                <div className="bg-amber-900/10 p-2 rounded-lg text-amber-950">
+                                  <Key size={18} />
+                                </div>
+                                <div>
+                                  <p className="text-[10px] uppercase font-extrabold text-amber-900 tracking-wider">Your Exam Pass</p>
+                                  <p className="font-mono text-sm font-bold text-amber-950">{myHallTicket.unique_exam_id}</p>
+                                </div>
+                              </div>
+                              {isUpcomingWithHallTicket && (
+                                <p className="text-[10px] text-amber-950 font-bold border-t border-amber-500/30 pt-2 mt-1">
+                                  Exam on {new Date(paper.window_start!).toLocaleDateString()} at {new Date(paper.window_start!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
 
                         <button
@@ -839,12 +925,12 @@ export function Dashboard() {
                           disabled={!status.isLive}
                           className={`w-full py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md ${
                             status.isLive
-                              ? 'bg-[#1c1815] text-amber-300 hover:bg-black shadow-amber-950/30 cursor-pointer border border-amber-500/30'
+                              ? (myHallTicket ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-900/30 border border-emerald-500 cursor-pointer' : 'bg-[#1c1815] text-amber-300 hover:bg-black shadow-amber-950/30 cursor-pointer border border-amber-500/30')
                               : 'bg-neutral-300/60 text-neutral-600 border border-neutral-400 cursor-not-allowed'
                           }`}
                         >
                           {status.isLive ? <PlayCircle size={16} /> : <Lock size={16} />}
-                          <span>{status.isLive ? 'Start CBT Exam' : 'Test Window Closed'}</span>
+                          <span>{status.isLive ? (myHallTicket ? 'Enter Exam' : 'Start CBT Exam') : 'Test Window Closed'}</span>
                         </button>
 
                       </div>
