@@ -91,9 +91,29 @@ export function Dashboard() {
     let name = getCookie('student_name') || localStorage.getItem('student_name') || localStorage.getItem('full_name') || 'Student';
     let email = getCookie('student_email') || localStorage.getItem('student_email') || localStorage.getItem('email') || '';
 
-    // Previously had localhost bypass - removed for security
+    // Check token exists
     if (!token) {
       console.warn('No auth token found. Redirecting to login.');
+      window.location.href = 'https://auth.vigyanprep.com';
+      return;
+    }
+
+    // Validate JWT expiry — force re-login if expired
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload.exp && payload.exp * 1000 < Date.now()) {
+        console.warn('⚠️ Student token expired. Clearing session.');
+        localStorage.removeItem('student_token');
+        localStorage.removeItem('student_name');
+        localStorage.removeItem('student_email');
+        deleteCookie('student_token');
+        window.location.href = 'https://auth.vigyanprep.com';
+        return;
+      }
+    } catch {
+      // Invalid token format — force re-login
+      localStorage.removeItem('student_token');
+      deleteCookie('student_token');
       window.location.href = 'https://auth.vigyanprep.com';
       return;
     }
