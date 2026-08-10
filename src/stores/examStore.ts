@@ -20,6 +20,7 @@ interface ExamState {
   currentQuestionIndex: number;
   answers: Record<string, any>;
   markedForReview: string[];
+  visitedQuestions: string[];
   timeRemaining: number;
   isSubmitted: boolean;
 
@@ -36,6 +37,7 @@ interface ExamState {
   setQuestions: (q: Question[]) => void;
   setAnswer: (questionId: string, answer: any) => void;
   markForReview: (questionId: string) => void;
+  markVisited: (questionId: string) => void;
   clearAnswer: (questionId: string) => void;
   nextQuestion: () => void;
   prevQuestion: () => void;
@@ -57,6 +59,7 @@ export const useExamStore = create<ExamState>()(
       currentQuestionIndex: 0,
       answers: {},
       markedForReview: [],
+      visitedQuestions: [],
       timeRemaining: 10800, // 3 hours
       isSubmitted: false,
 
@@ -80,6 +83,12 @@ export const useExamStore = create<ExamState>()(
         markedForReview: state.markedForReview.includes(questionId) 
           ? state.markedForReview.filter(id => id !== questionId)
           : [...state.markedForReview, questionId]
+      })),
+      
+      markVisited: (questionId) => set((state) => ({
+        visitedQuestions: state.visitedQuestions.includes(questionId) 
+          ? state.visitedQuestions 
+          : [...state.visitedQuestions, questionId]
       })),
       
       clearAnswer: (questionId) => set((state) => {
@@ -118,6 +127,7 @@ export const useExamStore = create<ExamState>()(
       partialize: (state) => ({
         answers: state.answers,
         markedForReview: state.markedForReview,
+        visitedQuestions: state.visitedQuestions,
         attemptId: state.attemptId,
         testId: state.testId,
         timeRemaining: state.timeRemaining,

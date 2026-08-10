@@ -26,7 +26,7 @@ export default function Exam() {
     setAnswer, clearAnswer, markForReview,
     goToQuestion, submitExam, isSubmitted, attemptId, timeRemaining, warningCount,
     incrementWarning, token, setQuestions, setTestMeta, candidateName, rollNumber, testTitle, examType,
-    decrementTimer
+    decrementTimer, markVisited
   } = useExamStore();
 
   const [activeSection, setActiveSection] = useState('Physics');
@@ -39,10 +39,25 @@ export default function Exam() {
   const sections = ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
   const submittingRef = useRef(false);
 
-  // SESSION LOCK: If exam is submitted, prevent re-entry and replace history
+  // SESSION LOCK: If exam is submitted, save to server then navigate
   useEffect(() => {
     if (isSubmitted) {
-      navigate('/response-sheet' + window.location.search, { replace: true });
+      const submitToServer = async () => {
+        try {
+          const state = useExamStore.getState();
+          const t = state.token || localStorage.getItem('exam_token');
+          const aId = state.attemptId;
+          const ans = state.answers;
+          if (aId && t) {
+            await apiSubmitExam(aId, ans, t);
+          }
+        } catch (err) {
+          console.error('Failed to submit to server:', err);
+        } finally {
+          navigate('/response-sheet' + window.location.search, { replace: true });
+        }
+      };
+      submitToServer();
     }
   }, [isSubmitted, navigate]);
 
@@ -136,10 +151,22 @@ export default function Exam() {
         e.preventDefault();
       }
     };
+    // I10: Fullscreen escape detection
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && !useExamStore.getState().isSubmitted) {
+        useExamStore.getState().incrementWarning?.();
+        setShowTabWarning(true);
+        setTimeout(() => setShowTabWarning(false), 4000);
+        // Try to re-enter fullscreen
+        document.documentElement.requestFullscreen?.().catch(() => {});
+      }
+    };
+
     document.addEventListener('contextmenu', preventDefault);
     document.addEventListener('copy', preventDefault);
     document.addEventListener('paste', preventDefault);
     document.addEventListener('keydown', preventKeys);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
 
     if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
@@ -150,11 +177,46 @@ export default function Exam() {
       document.removeEventListener('copy', preventDefault);
       document.removeEventListener('paste', preventDefault);
       document.removeEventListener('keydown', preventKeys);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
+  }, []);
+
+  // C4: Server heartbeat — sync answers every 15 seconds
+  useEffect(() => {
+    const heartbeatInterval = setInterval(async () => {
+      try {
+        const state = useExamStore.getState();
+        const t = state.token || localStorage.getItem('exam_token');
+        const aId = state.attemptId;
+        if (!aId || !t || state.isSubmitted) return;
+
+        const apiBase = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
+        await fetch(`${apiBase}/api/exam/heartbeat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` },
+          body: JSON.stringify({
+            attempt_id: aId,
+            time_remaining: state.timeRemaining,
+            answers_json: state.answers,
+            warning_count: state.warningCount || 0
+          })
+        });
+      } catch (err) {
+        console.warn('Heartbeat sync failed:', err);
+      }
+    }, 15000);
+    return () => clearInterval(heartbeatInterval);
   }, []);
 
   const currentQ = questions[currentQuestionIndex];
   const currentAnswer = currentQ ? answers[currentQ.id] : undefined;
+
+  // I5: Mark question as visited when navigated to
+  useEffect(() => {
+    if (currentQ?.id && markVisited) {
+      markVisited(currentQ.id);
+    }
+  }, [currentQ?.id, markVisited]);
 
   // Sync active section when question changes via next/prev
   useEffect(() => {

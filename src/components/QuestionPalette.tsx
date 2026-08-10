@@ -38,27 +38,31 @@ export const QuestionPalette: React.FC<Props> = (props) => {
     }
   };
 
+  const visitedQuestions = store.visitedQuestions || [];
+
   return (
     <div className="grid grid-cols-5 gap-2 p-1">
       {filteredQuestions.map((q, idx) => {
         const isAnswered = answers[q.id] !== undefined;
         const isMarked = markedForReview.includes(q.id);
         const isCurrent = q.id === currentId;
+        const isVisited = visitedQuestions.includes(q.id);
 
-        // Official NTA CBT Question Status Colors
-        let bg = '#e9ecef'; // Not Visited (Light Grey)
+        // Official NTA CBT 5-Color Question Status
+        let bg = '#e9ecef'; // 1. Not Visited (Light Grey)
         let color = '#495057';
         let shapeClass = 'rounded';
 
         if (isAnswered && isMarked) {
-          bg = '#6f42c1'; color = '#fff'; shapeClass = 'rounded-full border-2 border-emerald-400';
+          bg = '#6f42c1'; color = '#fff'; shapeClass = 'rounded-full border-2 border-emerald-400'; // 5. Answered + Marked
         } else if (isMarked) {
-          bg = '#6f42c1'; color = '#fff'; shapeClass = 'rounded-full'; // Purple Circle
+          bg = '#6f42c1'; color = '#fff'; shapeClass = 'rounded-full'; // 4. Marked for Review (Purple)
         } else if (isAnswered) {
-          bg = '#28a745'; color = '#fff'; shapeClass = 'rounded-tl-lg rounded-br-lg'; // NTA Polygon Green
-        } else {
-          bg = '#dc3545'; color = '#fff'; shapeClass = 'rounded-tr-lg rounded-bl-lg'; // NTA Polygon Red
+          bg = '#28a745'; color = '#fff'; shapeClass = 'rounded-tl-lg rounded-br-lg'; // 3. Answered (Green)
+        } else if (isVisited) {
+          bg = '#dc3545'; color = '#fff'; shapeClass = 'rounded-tr-lg rounded-bl-lg'; // 2. Not Answered but Visited (Red)
         }
+        // else: Not Visited stays grey (default)
 
         return (
           <button

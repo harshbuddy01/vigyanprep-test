@@ -91,14 +91,9 @@ export function Dashboard() {
     let name = getCookie('student_name') || localStorage.getItem('student_name') || localStorage.getItem('full_name') || 'Student';
     let email = getCookie('student_email') || localStorage.getItem('student_email') || localStorage.getItem('email') || '';
 
-    // Allow instant local preview on localhost
-    if (!token && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-      token = 'local_preview_token';
-      name = 'HARSH ANAND';
-      email = 'anandharsh437@gmail.com';
-    }
-
+    // Previously had localhost bypass - removed for security
     if (!token) {
+      console.warn('No auth token found. Redirecting to login.');
       window.location.href = 'https://auth.vigyanprep.com';
       return;
     }
@@ -250,25 +245,36 @@ export function Dashboard() {
     }
   };
 
-  const handlePasscodeSubmit = (e: React.FormEvent) => {
+  const handlePasscodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTestForPasscode) return;
 
-    const expectedCode = selectedTestForPasscode.passcode || selectedTestForPasscode.access_code;
     const entered = inputPasscode.trim();
-
-    if (expectedCode && entered !== expectedCode) {
-      setPasscodeError('Invalid 4-6 Digit Exam Passcode. Please check your hall ticket or subscription pass.');
-      return;
-    }
-
     if (entered.length < 4) {
-      setPasscodeError('Passcode must be at least 4 to 6 characters/digits long.');
+      setPasscodeError('Passcode must be at least 4 characters long.');
       return;
     }
 
-    setShowPasscodeModal(false);
-    navigate(`/system-check?testId=${selectedTestForPasscode.id}`);
+    try {
+      const res = await fetch('https://api.vigyanprep.com/api/exam/validate-passcode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          testId: selectedTestForPasscode.id,
+          passcode: entered
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setShowPasscodeModal(false);
+        navigate(`/system-check?testId=${selectedTestForPasscode.id}`);
+      } else {
+        setPasscodeError(data.error || 'Invalid passcode.');
+      }
+    } catch (err) {
+      setPasscodeError('Error validating passcode. Please try again.');
+    }
   };
 
   const handleLogout = () => {
