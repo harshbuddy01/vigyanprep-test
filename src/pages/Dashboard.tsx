@@ -160,7 +160,7 @@ export function Dashboard() {
 
     async function loadHallTickets(authToken: string) {
       try {
-        const res = await fetch('https://api.vigyanprep.com/api/student/hall-tickets', {
+        const res = await fetch(`https://api.vigyanprep.com/api/student/hall-tickets?cb=${Date.now()}`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         });
         if (res.ok) {
@@ -182,7 +182,7 @@ export function Dashboard() {
     async function loadSubscriptions(authToken: string) {
       setSubsLoading(true);
       try {
-        const res = await fetch('https://api.vigyanprep.com/api/student/subscriptions', {
+        const res = await fetch(`https://api.vigyanprep.com/api/student/subscriptions?cb=${Date.now()}`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         });
         if (res.ok) {
