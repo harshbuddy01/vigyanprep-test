@@ -364,6 +364,7 @@ export function Dashboard() {
           {/* Navigation Links */}
           <nav className="space-y-1.5">
             <button
+              type="button"
               onClick={() => { setActiveNav('dashboard'); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                 activeNav === 'dashboard'
@@ -376,6 +377,7 @@ export function Dashboard() {
             </button>
 
             <button
+              type="button"
               onClick={() => { setActiveNav('test_series'); setActiveTab('TEST_SERIES'); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                 activeNav === 'test_series'
@@ -398,6 +400,7 @@ export function Dashboard() {
             </a>
 
             <button
+              type="button"
               onClick={() => { setActiveNav('performance'); setShowPerformanceModal(true); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                 activeNav === 'performance'
@@ -410,6 +413,7 @@ export function Dashboard() {
             </button>
 
             <button
+              type="button"
               onClick={() => { setActiveNav('bookmarks'); triggerToast('🔖 Bookmarks feature coming soon! Save questions for revision.'); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                 activeNav === 'bookmarks'
@@ -422,6 +426,7 @@ export function Dashboard() {
             </button>
 
             <button
+              type="button"
               onClick={() => { setActiveNav('notes'); triggerToast('📋 Notes feature coming soon! Write revision notes during CBT tests.'); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                 activeNav === 'notes'
@@ -434,6 +439,7 @@ export function Dashboard() {
             </button>
 
             <button
+              type="button"
               onClick={() => { setActiveNav('discussions'); triggerToast('💬 Student Discussion Forum coming soon!'); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                 activeNav === 'discussions'
@@ -446,6 +452,7 @@ export function Dashboard() {
             </button>
 
             <button
+              type="button"
               onClick={() => { setActiveNav('settings'); setShowSettingsModal(true); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                 activeNav === 'settings'
