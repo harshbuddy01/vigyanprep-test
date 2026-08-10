@@ -181,22 +181,28 @@ export function Dashboard() {
 
     async function loadSubscriptions(authToken: string) {
       setSubsLoading(true);
+      console.log('📡 [loadSubscriptions] Fetching subscriptions with token:', authToken);
       try {
         const res = await fetch(`https://api.vigyanprep.com/api/student/subscriptions?cb=${Date.now()}`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         });
+        console.log('📡 [loadSubscriptions] Response Status:', res.status, res.statusText);
         if (res.ok) {
           const data = await res.json();
+          console.log('📡 [loadSubscriptions] Parsed JSON Response:', data);
           if (data.success && data.subscriptions) {
+            console.log('📡 [loadSubscriptions] Setting subscriptions state:', data.subscriptions);
             setSubscriptions(data.subscriptions);
           } else {
+            console.warn('⚠️ [loadSubscriptions] Success or subscriptions missing, setting empty array');
             setSubscriptions([]);
           }
         } else {
+          console.warn('⚠️ [loadSubscriptions] Response not OK, setting empty array');
           setSubscriptions([]);
         }
       } catch (err) {
-        console.error('Failed to load subscriptions:', err);
+        console.error('❌ [loadSubscriptions] Caught error during fetch:', err);
         setSubscriptions([]);
       } finally {
         setSubsLoading(false);
