@@ -8,7 +8,7 @@ export const Instructions: React.FC = () => {
   const [searchParams] = useSearchParams();
   const testId = searchParams.get('testId');
   const code = searchParams.get('code');
-  const { setTestMeta, examType, candidateName, rollNumber, setQuestions } = useExamStore();
+  const { setTestMeta, testTitle, examType, durationMinutes, questionsCount, totalMarks, pyqYear, candidateName, rollNumber, setQuestions, questions } = useExamStore();
 
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -37,12 +37,21 @@ export const Instructions: React.FC = () => {
           const data = await res.json();
 
           if (data.success && data.test) {
+            const qCount = data.questions && Array.isArray(data.questions) ? data.questions.length : (data.test.questions_count || 60);
+            const totalMks = data.test.total_marks || (qCount * 4);
+            const durMins = data.test.duration_minutes || 180;
+            const pYear = data.test.pyq_year || data.test.year || new Date().getFullYear();
+
             setTestMeta({
               testTitle: data.test.title || 'IISER IAT Official Question Paper',
               examType: data.test.exam_type || data.test.test_type || 'IAT',
+              durationMinutes: durMins,
+              questionsCount: qCount,
+              totalMarks: totalMks,
+              pyqYear: pYear,
               testId,
-              candidateName: candidateName || 'Candidate',
-              rollNumber: rollNumber || 'VP-2024-890',
+              candidateName: candidateName || 'Student Candidate',
+              rollNumber: rollNumber || 'VP-2026-STUDENT',
               token: examToken
             });
             if (data.questions && Array.isArray(data.questions)) {
@@ -116,7 +125,7 @@ export const Instructions: React.FC = () => {
           <section className="space-y-3">
             <h3 className="font-bold text-gray-900 text-base">1. General Guidelines & Timing</h3>
             <ul className="list-disc pl-5 space-y-2 text-gray-700 leading-relaxed">
-              <li>The total duration of the examination is <strong>180 minutes (3 Hours)</strong>.</li>
+              <li>The total duration of the examination is <strong>{durationMinutes || 180} minutes ({((durationMinutes || 180) / 60).toFixed(1)} Hours)</strong>.</li>
               <li>The clock will be set at the server. The countdown timer in the top right corner will display the remaining time available for you to complete the exam.</li>
               <li>When the timer reaches zero, the examination will end automatically. You do not need to click submit.</li>
               <li>The Question Palette displayed on the right side of screen shows the status of each question using one of the following symbols:</li>
@@ -204,27 +213,27 @@ export const Instructions: React.FC = () => {
               <User size={48} />
             </div>
             <div>
-              <h3 className="font-bold text-[#1b365d] text-base">{candidateName || 'Candidate Name'}</h3>
-              <p className="text-xs text-gray-500">Roll No: {rollNumber || 'VP-2024-890'}</p>
+              <h3 className="font-bold text-[#1b365d] text-base">{candidateName || 'Student Candidate'}</h3>
+              <p className="text-xs text-gray-500 font-bold">Roll No: {rollNumber || 'VP-2026-STUDENT'}</p>
             </div>
           </div>
 
           <div className="space-y-2 text-xs">
             <div className="flex justify-between py-1 border-b text-gray-600">
               <span>Exam Paper:</span>
-              <strong className="text-gray-900">{examType || 'IAT'} 2024</strong>
+              <strong className="text-gray-900">{testTitle || `${examType || 'IAT'} ${pyqYear || 2026}`}</strong>
             </div>
             <div className="flex justify-between py-1 border-b text-gray-600">
               <span>Duration:</span>
-              <strong className="text-gray-900">180 Minutes</strong>
+              <strong className="text-gray-900">{durationMinutes || 180} Minutes</strong>
             </div>
             <div className="flex justify-between py-1 border-b text-gray-600">
               <span>Total Questions:</span>
-              <strong className="text-gray-900">60 Questions</strong>
+              <strong className="text-gray-900">{questionsCount || (questions ? questions.length : 60)} Questions</strong>
             </div>
             <div className="flex justify-between py-1 text-gray-600">
               <span>Maximum Marks:</span>
-              <strong className="text-gray-900">240 Marks</strong>
+              <strong className="text-gray-900">{totalMarks || ((questionsCount || (questions ? questions.length : 60)) * 4)} Marks</strong>
             </div>
           </div>
         </div>

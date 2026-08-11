@@ -26,9 +26,13 @@ interface ExamState {
 
   testId: string | null;
   testTitle: string | null;
-  examType: 'NEST' | 'IAT' | 'CMI' | 'ISI' | null;
+  examType: 'NEST' | 'IAT' | 'CMI' | 'ISI' | string | null;
   candidateName: string | null;
   rollNumber: string | null;
+  durationMinutes?: number | null;
+  questionsCount?: number | null;
+  totalMarks?: number | null;
+  pyqYear?: number | string | null;
   attemptId: string | null;
   token: string | null;
   warningCount: number;
@@ -136,3 +140,15 @@ export const useExamStore = create<ExamState>()(
     }
   )
 );
+
+export function generateRollNumber(email?: string | null, name?: string | null): string {
+  if (email && email.includes('@')) {
+    const prefix = email.split('@')[0].toUpperCase();
+    return `VP-2026-${prefix}`;
+  }
+  if (name) {
+    const cleanName = name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    return `VP-2026-${cleanName}`;
+  }
+  return `VP-2026-STUDENT`;
+}

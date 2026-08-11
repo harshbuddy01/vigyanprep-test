@@ -499,8 +499,8 @@ export default function Exam() {
                 <User size={28} />
               </div>
               <div className="overflow-hidden">
-                <p className="text-xs font-bold text-[#1b365d] truncate">{candidateName || 'Candidate Name'}</p>
-                <p className="text-[11px] text-gray-500 truncate">Roll: {rollNumber || 'VP-2024-890'}</p>
+                <p className="text-xs font-bold text-[#1b365d] truncate">{candidateName || 'Student Candidate'}</p>
+                <p className="text-[11px] text-gray-500 font-bold truncate">Roll: {rollNumber || 'VP-2026-STUDENT'}</p>
                 <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-0.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Live Online
                 </p>

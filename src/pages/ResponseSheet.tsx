@@ -106,7 +106,7 @@ export const ResponseSheet: React.FC = () => {
           <div className="space-y-2 border-r border-gray-100 pr-4">
             <span className="text-[10px] font-bold uppercase tracking-widest text-[#1b365d]">Candidate Profile</span>
             <h2 className="text-xl font-extrabold text-gray-900">{candidateName || 'Student Name'}</h2>
-            <p className="text-xs text-gray-500">Roll No: <strong>{rollNumber || 'VP-2024-890'}</strong></p>
+            <p className="text-xs text-gray-500">Roll No: <strong>{rollNumber || 'VP-2026-STUDENT'}</strong></p>
             <p className="text-xs text-gray-500">Exam Category: <strong>{examType || 'IAT'}</strong></p>
           </div>
 

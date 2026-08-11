@@ -7,6 +7,7 @@ import {
   RefreshCw, HelpCircle, Download, ChevronRight
 } from 'lucide-react';
 import { getCookie, deleteCookie } from '../lib/cookies';
+import { useExamStore, generateRollNumber } from '../stores/examStore';
 import {
   RayOpticsSketch,
   BenzeneOrbitalSketch,
@@ -263,6 +264,17 @@ export function Dashboard() {
       alert(`⚠️ This test paper is not currently open.\n\nStatus: ${status.label}`);
       return;
     }
+
+    useExamStore.getState().setTestMeta({
+      candidateName: studentName || 'Student Candidate',
+      rollNumber: generateRollNumber(studentEmail, studentName),
+      testTitle: paper.title,
+      examType: paper.exam_type || paper.examType || 'IAT',
+      durationMinutes: paper.duration_minutes || 180,
+      questionsCount: paper.questions_count || 60,
+      totalMarks: paper.total_marks || 240,
+      pyqYear: paper.pyq_year || paper.year || new Date().getFullYear()
+    });
 
     const myHallTicket = hallTickets.find(h => h.test_id === paper.id);
     if (myHallTicket) {
