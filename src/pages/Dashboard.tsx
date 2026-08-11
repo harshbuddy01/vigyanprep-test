@@ -313,8 +313,18 @@ export function Dashboard() {
     window.location.href = 'https://auth.vigyanprep.com';
   };
 
-  const testSeriesPapers = tests.filter(t => t.content_type === 'test_series' || t.content_type !== 'pyq');
+  const allTestSeriesPapers = tests.filter(t => t.content_type === 'test_series');
   const pyqPapers = tests.filter(t => t.content_type === 'pyq');
+
+  // For TEST_SERIES tab: only show tests the user is subscribed to
+  const subscribedExamTypes = new Set(subscriptions.map(s => (s.plan?.exam_type || '').toUpperCase()));
+  const testSeriesPapers = subscriptions.length > 0
+    ? allTestSeriesPapers.filter(t => {
+        const examCat = (t.exam_type || t.examType || '').toUpperCase();
+        return subscribedExamTypes.has(examCat);
+      })
+    : []; // Unpaid users see no test series
+
   const activePapersList = activeTab === 'TEST_SERIES' ? testSeriesPapers : pyqPapers;
 
   const filteredTests = activePapersList.filter(t => {
@@ -647,7 +657,7 @@ export function Dashboard() {
                     : 'bg-white/30 backdrop-blur-xl text-[#1c1815] hover:text-amber-950 border-2 border-amber-950/30 shadow-xs'
                 }`}
               >
-                SUBSCRIBED TEST SERIES ({testSeriesPapers.length})
+                {subscriptions.length > 0 ? `MY TEST SERIES (${testSeriesPapers.length})` : 'TEST SERIES (0)'}
               </button>
 
               <button
