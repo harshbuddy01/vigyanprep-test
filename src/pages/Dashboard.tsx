@@ -55,10 +55,16 @@ interface Subscription {
   expires_at: string;
   status: string;
   amount_paid: number;
+  exam_type?: string;
+  plan_name?: string;
+  name?: string;
+  bundle_includes?: string[];
   plan: {
+    id?: string;
     name: string;
     exam_type: string;
     duration_days: number;
+    bundle_includes?: string[];
   };
 }
 
@@ -337,8 +343,9 @@ export function Dashboard() {
   });
 
   // Category filter pills: only show categories user is subscribed to on Test Series tab
-  const availableCategoryPills = activeTab === 'TEST_SERIES' && subscriptions.length > 0
-    ? ['ALL', ...(['IAT', 'NEST', 'CMI'].filter(cat => subscribedExamTypes.has(cat)))]
+  type CategoryType = 'ALL' | 'IAT' | 'NEST' | 'CMI';
+  const availableCategoryPills: CategoryType[] = activeTab === 'TEST_SERIES' && subscriptions.length > 0
+    ? ['ALL', ...((['IAT', 'NEST', 'CMI'] as CategoryType[]).filter(cat => subscribedExamTypes.has(cat)))]
     : ['ALL', 'IAT', 'NEST', 'CMI'];
 
   // For TEST_SERIES tab: only show tests matching the user's subscribed exam types
