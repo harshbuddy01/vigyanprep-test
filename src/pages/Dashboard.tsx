@@ -395,18 +395,21 @@ export function Dashboard() {
       <aside className="w-64 bg-white/20 backdrop-blur-2xl border-r-2 border-amber-950/30 flex flex-col justify-between p-6 z-20 shrink-0 min-h-screen shadow-2xl shadow-amber-950/10">
         <div className="space-y-8">
           
-          {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-600 to-amber-800 text-white font-serif font-bold text-xl flex items-center justify-center shadow-lg shadow-amber-950/20">
-              V
-            </div>
-            <div>
-              <h1 className="font-serif italic font-bold text-lg text-[#1c1815]">
-                VIGYAN<span className="font-sans text-xs uppercase text-amber-900 font-extrabold ml-1">.prep</span>
-              </h1>
-              <p className="text-[9px] text-amber-950 font-extrabold tracking-widest uppercase">STUDENT TEST PORTAL</p>
-            </div>
-          </div>
+          {/* Official Logo — Clicking redirects directly to homepage */}
+          <a
+            href="https://vigyanprep.com/"
+            className="flex flex-col items-start gap-1.5 group cursor-pointer"
+            title="Go to VigyanPrep Homepage"
+          >
+            <img
+              src="/vigyan-logo.png"
+              alt="VigyanPrep Official Logo"
+              className="h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+            />
+            <span className="text-[9px] text-amber-950 font-extrabold tracking-widest uppercase border-t border-amber-950/20 pt-1.5 w-full text-left">
+              STUDENT TEST PORTAL
+            </span>
+          </a>
 
           {/* Navigation Links */}
           <nav className="space-y-1.5">
