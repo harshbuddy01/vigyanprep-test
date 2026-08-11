@@ -22,6 +22,7 @@ interface TestPaper {
   examType?: string;
   pyq_year?: number;
   year?: string;
+  exam_year?: number | string;
   duration_minutes?: number;
   questions_count?: number;
   total_marks?: number;
