@@ -73,9 +73,28 @@ interface Subscription {
 export function Dashboard() {
   const navigate = useNavigate();
   const [tests, setTests] = useState<TestPaper[]>([]);
-  const [isMaintenanceActive] = useState<boolean>(() => {
+  const [isMaintenanceActive, setIsMaintenanceActive] = useState<boolean>(() => {
+    const fromCookie = getCookie('maintenance_mode');
+    if (fromCookie !== null && fromCookie !== undefined) return fromCookie === 'true';
     return localStorage.getItem('maintenance_mode') === 'true';
   });
+
+  useEffect(() => {
+    async function checkLiveMaintenance() {
+      try {
+        const res = await fetch('https://api.vigyanprep.com/api/public/settings');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.settings?.maintenanceMode !== undefined) {
+            setIsMaintenanceActive(!!data.settings.maintenanceMode);
+          }
+        }
+      } catch (err) {
+        console.warn('Maintenance check error:', err);
+      }
+    }
+    checkLiveMaintenance();
+  }, []);
 
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'TEST_SERIES' | 'PYQ'>('TEST_SERIES');
