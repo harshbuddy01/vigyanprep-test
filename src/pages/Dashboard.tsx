@@ -73,6 +73,10 @@ interface Subscription {
 export function Dashboard() {
   const navigate = useNavigate();
   const [tests, setTests] = useState<TestPaper[]>([]);
+  const [isMaintenanceActive] = useState<boolean>(() => {
+    return localStorage.getItem('maintenance_mode') === 'true';
+  });
+
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'TEST_SERIES' | 'PYQ'>('TEST_SERIES');
   const [activeCategory, setActiveCategory] = useState<'ALL' | 'IAT' | 'NEST' | 'CMI'>('ALL');
@@ -616,6 +620,26 @@ export function Dashboard() {
         {/* DASHBOARD BODY CONTENT */}
         <main className="p-8 space-y-8 max-w-7xl mx-auto w-full">
           
+          {/* MAINTENANCE ALERT BANNER */}
+          {isMaintenanceActive && (
+            <div className="p-5 rounded-3xl bg-amber-500/20 border-2 border-amber-600/50 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl backdrop-blur-md mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-2xl bg-amber-600/30 text-amber-950 shrink-0">
+                  <AlertCircle size={24} className="animate-pulse" />
+                </div>
+                <div>
+                  <h4 className="font-serif font-bold text-base text-[#1c1815]">⚠️ Scheduled Platform Maintenance Active</h4>
+                  <p className="text-xs font-semibold text-neutral-800 leading-relaxed">
+                    VigyanPrep system updates are currently in progress. Exam servers and live results are operating in protected read-only mode.
+                  </p>
+                </div>
+              </div>
+              <span className="px-4 py-1.5 rounded-full bg-[#1c1815] text-amber-300 font-extrabold text-[10px] uppercase tracking-widest shrink-0 border border-amber-500/30">
+                Maintenance Mode
+              </span>
+            </div>
+          )}
+
           {/* HERO WELCOME BANNER (Ultra-Transparent Glass Frame - 100% Background Visibility) */}
           <div className="relative overflow-hidden p-8 sm:p-10 rounded-3xl bg-white/15 backdrop-blur-2xl border-2 border-amber-950/35 shadow-2xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center shadow-[inset_0_1px_2px_0_rgba(255,255,255,0.6)]">
             
