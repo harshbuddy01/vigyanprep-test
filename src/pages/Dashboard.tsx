@@ -404,7 +404,7 @@ export function Dashboard() {
             <img
               src="/vigyan-logo.png"
               alt="VigyanPrep Official Logo"
-              className="h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+              className="h-16 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
             />
             <span className="text-[9px] text-amber-950 font-extrabold tracking-widest uppercase border-t border-amber-950/20 pt-1.5 w-full text-left">
               STUDENT TEST PORTAL
