@@ -1,18 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertCircle, User } from 'lucide-react';
-import { useExamStore } from '../stores/examStore';
+import { useExamStore, generateRollNumber } from '../stores/examStore';
+import { getCookie } from '../lib/cookies';
 
 export const Instructions: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const testId = searchParams.get('testId');
   const code = searchParams.get('code');
-  const { setTestMeta, testTitle, examType, durationMinutes, questionsCount, totalMarks, pyqYear, candidateName, rollNumber, setQuestions, questions } = useExamStore();
+  const { setTestMeta, testTitle, durationMinutes, questionsCount, totalMarks, candidateName, rollNumber, setQuestions, questions } = useExamStore();
 
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Local state for fetched test paper metadata to guarantee React re-render
+  const [meta, setMeta] = useState<{
+    title?: string;
+    examType?: string;
+    durationMinutes?: number;
+    questionsCount?: number;
+    totalMarks?: number;
+    pyqYear?: number | string;
+  } | null>(null);
+
+  // Student Identity Fallbacks from Cookies & LocalStorage
+  const studentName = (typeof window !== 'undefined' ? (getCookie('student_name') || localStorage.getItem('student_name')) : null) || candidateName || 'HARSH ANAND';
+  const studentEmail = (typeof window !== 'undefined' ? (getCookie('student_email') || localStorage.getItem('student_email')) : null) || 'anandharsh437@gmail.com';
+  const studentRoll = rollNumber || generateRollNumber(studentEmail, studentName);
 
   useEffect(() => {
     const fetchMeta = async () => {
@@ -41,19 +57,31 @@ export const Instructions: React.FC = () => {
             const totalMks = data.test.total_marks || (qCount * 4);
             const durMins = data.test.duration_minutes || 180;
             const pYear = data.test.pyq_year || data.test.year || new Date().getFullYear();
+            const pTitle = data.test.title || 'IISER IAT Official Question Paper';
+            const eType = data.test.exam_type || data.test.examType || 'IAT';
+
+            setMeta({
+              title: pTitle,
+              examType: eType,
+              durationMinutes: durMins,
+              questionsCount: qCount,
+              totalMarks: totalMks,
+              pyqYear: pYear
+            });
 
             setTestMeta({
-              testTitle: data.test.title || 'IISER IAT Official Question Paper',
-              examType: data.test.exam_type || data.test.test_type || 'IAT',
+              testTitle: pTitle,
+              examType: eType,
               durationMinutes: durMins,
               questionsCount: qCount,
               totalMarks: totalMks,
               pyqYear: pYear,
               testId,
-              candidateName: candidateName || 'Student Candidate',
-              rollNumber: rollNumber || 'VP-2026-STUDENT',
+              candidateName: studentName,
+              rollNumber: studentRoll,
               token: examToken
             });
+
             if (data.questions && Array.isArray(data.questions)) {
               setQuestions(data.questions);
             }
@@ -66,7 +94,7 @@ export const Instructions: React.FC = () => {
       setLoading(false);
     };
     fetchMeta();
-  }, [testId, code, setTestMeta, setQuestions]);
+  }, [testId, code, setTestMeta, setQuestions, studentName, studentRoll]);
 
   const handleStartExam = () => {
     if (document.documentElement.requestFullscreen) {
@@ -74,6 +102,11 @@ export const Instructions: React.FC = () => {
     }
     navigate('/exam' + window.location.search);
   };
+
+  const displayTitle = meta?.title || testTitle || 'IISER IAT Official Question Paper';
+  const displayDuration = meta?.durationMinutes || durationMinutes || 180;
+  const displayQuestionsCount = meta?.questionsCount || questionsCount || (questions ? questions.length : 60);
+  const displayTotalMarks = meta?.totalMarks || totalMarks || (displayQuestionsCount * 4);
 
   if (loading) {
     return (
@@ -125,7 +158,7 @@ export const Instructions: React.FC = () => {
           <section className="space-y-3">
             <h3 className="font-bold text-gray-900 text-base">1. General Guidelines & Timing</h3>
             <ul className="list-disc pl-5 space-y-2 text-gray-700 leading-relaxed">
-              <li>The total duration of the examination is <strong>{durationMinutes || 180} minutes ({((durationMinutes || 180) / 60).toFixed(1)} Hours)</strong>.</li>
+              <li>The total duration of the examination is <strong>{displayDuration} minutes ({(displayDuration / 60).toFixed(1)} Hours)</strong>.</li>
               <li>The clock will be set at the server. The countdown timer in the top right corner will display the remaining time available for you to complete the exam.</li>
               <li>When the timer reaches zero, the examination will end automatically. You do not need to click submit.</li>
               <li>The Question Palette displayed on the right side of screen shows the status of each question using one of the following symbols:</li>
@@ -213,27 +246,27 @@ export const Instructions: React.FC = () => {
               <User size={48} />
             </div>
             <div>
-              <h3 className="font-bold text-[#1b365d] text-base">{candidateName || 'Student Candidate'}</h3>
-              <p className="text-xs text-gray-500 font-bold">Roll No: {rollNumber || 'VP-2026-STUDENT'}</p>
+              <h3 className="font-bold text-[#1b365d] text-base">{studentName}</h3>
+              <p className="text-xs text-gray-500 font-bold">Roll No: {studentRoll}</p>
             </div>
           </div>
 
           <div className="space-y-2 text-xs">
             <div className="flex justify-between py-1 border-b text-gray-600">
               <span>Exam Paper:</span>
-              <strong className="text-gray-900">{testTitle || `${examType || 'IAT'} ${pyqYear || 2026}`}</strong>
+              <strong className="text-gray-900">{displayTitle}</strong>
             </div>
             <div className="flex justify-between py-1 border-b text-gray-600">
               <span>Duration:</span>
-              <strong className="text-gray-900">{durationMinutes || 180} Minutes</strong>
+              <strong className="text-gray-900">{displayDuration} Minutes</strong>
             </div>
             <div className="flex justify-between py-1 border-b text-gray-600">
               <span>Total Questions:</span>
-              <strong className="text-gray-900">{questionsCount || (questions ? questions.length : 60)} Questions</strong>
+              <strong className="text-gray-900">{displayQuestionsCount} Questions</strong>
             </div>
             <div className="flex justify-between py-1 text-gray-600">
               <span>Maximum Marks:</span>
-              <strong className="text-gray-900">{totalMarks || ((questionsCount || (questions ? questions.length : 60)) * 4)} Marks</strong>
+              <strong className="text-gray-900">{displayTotalMarks} Marks</strong>
             </div>
           </div>
         </div>
