@@ -404,7 +404,7 @@ export function Dashboard() {
             <img
               src="/vigyan-logo.png"
               alt="VigyanPrep Official Logo"
-              className="h-16 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+              className="h-20 sm:h-24 w-auto max-w-[200px] object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-105"
             />
             <span className="text-[9px] text-amber-950 font-extrabold tracking-widest uppercase border-t border-amber-950/20 pt-1.5 w-full text-left">
               STUDENT TEST PORTAL
@@ -557,15 +557,15 @@ export function Dashboard() {
                 <div className="text-xs font-bold text-neutral-500 bg-white/40 px-3 py-1.5 rounded-full border border-amber-950/20">Subscription data loading...</div>
               ) : subscriptions.length > 0 ? (
                 <div className="flex flex-wrap justify-end gap-2 max-w-[600px]">
-                  {subscriptions.map(sub => {
+                  {Array.from(new Map(subscriptions.map(s => [s.plan?.id || s.id, s])).values()).map(sub => {
                     const daysRemaining = Math.max(0, Math.ceil((new Date(sub.expires_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
                     return (
-                      <div key={sub.id} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/40 border-2 border-amber-950/30 text-amber-950 text-xs font-extrabold shadow-sm">
-                        <Award size={15} className="text-amber-800" />
-                        <span>{sub.plan.name}</span>
-                        <span className="px-1.5 py-0.5 rounded bg-amber-950/15 border border-amber-950/20 text-[9px] uppercase">{sub.plan.exam_type}</span>
-                        <span className="text-amber-900 border-l border-amber-950/20 pl-2">{daysRemaining} days left</span>
-                        <span className="text-[10px] text-emerald-700 capitalize border-l border-amber-950/20 pl-2">{sub.status}</span>
+                      <div key={sub.id} className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500/20 via-amber-400/25 to-amber-500/20 backdrop-blur-xl border-2 border-amber-600/40 text-amber-950 text-xs font-bold shadow-md">
+                        <Award size={16} className="text-amber-800 shrink-0" />
+                        <span className="font-serif font-extrabold tracking-wide">{sub.plan.name}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 text-[9px] font-mono font-extrabold uppercase tracking-wider">{sub.plan.exam_type}</span>
+                        <span className="text-amber-900 font-extrabold border-l-2 border-amber-950/20 pl-2">{daysRemaining} days left</span>
+                        <span className="text-[10px] text-emerald-800 font-extrabold capitalize border-l-2 border-amber-950/20 pl-2">Active Pass</span>
                       </div>
                     )
                   })}
@@ -619,8 +619,8 @@ export function Dashboard() {
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/50 border-2 border-amber-950/30 text-amber-950 text-xs font-extrabold uppercase tracking-widest shadow-xs">
                 <Sparkles size={13} className="text-amber-800" /> Official Student Control Center
               </div>
-              <h2 className="font-serif italic text-4xl sm:text-5xl font-extrabold text-[#1c1815]">
-                Welcome back, <span className="text-amber-950 font-sans not-italic">{studentName}!</span>
+              <h2 className="font-serif text-4xl sm:text-5xl font-bold tracking-tight text-[#1c1815]">
+                Welcome back, <span className="italic font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-900 via-amber-800 to-amber-950 font-serif tracking-wide">{studentName}!</span>
               </h2>
               <p className="text-xs text-[#1c1815] leading-relaxed font-bold max-w-md">
                 Your journey to IISER, NEST & CMI starts here. Practice. Analyze. Improve. <span className="text-amber-950 font-extrabold">Succeed!</span>
@@ -856,7 +856,7 @@ export function Dashboard() {
                                       {examCat}
                                     </span>
                                     <span className="font-serif italic text-xs text-[#1c1815] font-extrabold">
-                                      {paper.pyq_year || paper.year || '2025'}
+                                      {paper.exam_year || paper.year || paper.pyq_year || new Date().getFullYear()}
                                     </span>
                                   </div>
 
@@ -950,7 +950,7 @@ export function Dashboard() {
                               {examCat}
                             </span>
                             <span className="font-serif italic text-xs text-[#1c1815] font-extrabold">
-                              {paper.pyq_year || paper.year || '2025'}
+                              {paper.exam_year || paper.year || paper.pyq_year || new Date().getFullYear()}
                             </span>
                           </div>
 
