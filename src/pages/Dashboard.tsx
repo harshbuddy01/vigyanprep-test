@@ -316,8 +316,21 @@ export function Dashboard() {
   const allTestSeriesPapers = tests.filter(t => t.content_type === 'test_series');
   const pyqPapers = tests.filter(t => t.content_type === 'pyq');
 
-  // For TEST_SERIES tab: only show tests the user is subscribed to
-  const subscribedExamTypes = new Set(subscriptions.map(s => (s.plan?.exam_type || '').toUpperCase()));
+  // Collect ALL exam types the user is subscribed to (including bundle_includes)
+  const subscribedExamTypes = new Set<string>();
+  subscriptions.forEach(s => {
+    const planType = (s.plan?.exam_type || s.exam_type || '').toUpperCase();
+    if (planType && planType !== 'BUNDLE') {
+      subscribedExamTypes.add(planType);
+    }
+    // Bundle plans: include all exam types from bundle_includes
+    const bundleIncludes = s.plan?.bundle_includes || s.bundle_includes || [];
+    if (Array.isArray(bundleIncludes)) {
+      bundleIncludes.forEach((bt: string) => subscribedExamTypes.add(bt.toUpperCase()));
+    }
+  });
+
+  // For TEST_SERIES tab: only show tests matching the user's subscribed exam types
   const testSeriesPapers = subscriptions.length > 0
     ? allTestSeriesPapers.filter(t => {
         const examCat = (t.exam_type || t.examType || '').toUpperCase();
@@ -787,7 +800,7 @@ export function Dashboard() {
                 <div className="space-y-8">
                   {/* UPCOMING TESTS (Subscribed) */}
                   {(() => {
-                    const subscribedExamTypes = new Set(subscriptions.map(s => (s.plan.exam_type || '').toUpperCase()));
+                    // subscribedExamTypes is already computed above (includes bundle_includes)
                     const upcomingTests = filteredTests.filter(t => {
                       const examCat = (t.exam_type || t.examType || '').toUpperCase();
                       if (!subscribedExamTypes.has(examCat)) return false;
