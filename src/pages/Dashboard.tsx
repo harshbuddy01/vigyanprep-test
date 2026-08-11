@@ -228,6 +228,7 @@ export function Dashboard() {
     const start = paper.window_start ? new Date(paper.window_start) : null;
     const end = paper.window_end ? new Date(paper.window_end) : null;
 
+    // Future scheduled test
     if (start && now < start) {
       return {
         isLive: false,
@@ -236,15 +237,17 @@ export function Dashboard() {
       };
     }
 
-    if (end && now > end) {
-      return {
-        isLive: false,
-        label: `⌛ Window Closed on ${end.toLocaleDateString()}`,
-        color: 'red'
-      };
+    // Live test window right now
+    if (start && end && now >= start && now <= end) {
+      return { isLive: true, label: '🟢 LIVE NOW', color: 'emerald' };
     }
 
-    return { isLive: true, label: '🟢 LIVE NOW', color: 'emerald' };
+    // Past test paper — Subscribed students CAN attempt past tests anytime!
+    return {
+      isLive: true,
+      label: `📜 Past Test Paper (Available)`,
+      color: 'emerald'
+    };
   };
 
   const handleTestClick = (paper: TestPaper) => {
@@ -316,19 +319,27 @@ export function Dashboard() {
   const allTestSeriesPapers = tests.filter(t => t.content_type === 'test_series');
   const pyqPapers = tests.filter(t => t.content_type === 'pyq');
 
-  // Collect ALL exam types the user is subscribed to (including bundle_includes)
+  // Collect ALL exam types the user is subscribed to (including bundle_includes & plan name matching)
   const subscribedExamTypes = new Set<string>();
   subscriptions.forEach(s => {
-    const planType = (s.plan?.exam_type || s.exam_type || '').toUpperCase();
-    if (planType && planType !== 'BUNDLE') {
-      subscribedExamTypes.add(planType);
+    const rawType = (s.plan?.exam_type || s.exam_type || '').toUpperCase();
+    if (rawType && rawType !== 'BUNDLE') {
+      subscribedExamTypes.add(rawType);
     }
-    // Bundle plans: include all exam types from bundle_includes
     const bundleIncludes = s.plan?.bundle_includes || s.bundle_includes || [];
     if (Array.isArray(bundleIncludes)) {
-      bundleIncludes.forEach((bt: string) => subscribedExamTypes.add(bt.toUpperCase()));
+      bundleIncludes.forEach((bt: string) => subscribedExamTypes.add(String(bt).toUpperCase()));
     }
+    const planName = (s.plan?.name || s.plan_name || s.name || '').toUpperCase();
+    if (planName.includes('IAT') || planName.includes('IISER')) subscribedExamTypes.add('IAT');
+    if (planName.includes('NEST') || planName.includes('NISER')) subscribedExamTypes.add('NEST');
+    if (planName.includes('CMI')) subscribedExamTypes.add('CMI');
   });
+
+  // Category filter pills: only show categories user is subscribed to on Test Series tab
+  const availableCategoryPills = activeTab === 'TEST_SERIES' && subscriptions.length > 0
+    ? ['ALL', ...(['IAT', 'NEST', 'CMI'].filter(cat => subscribedExamTypes.has(cat)))]
+    : ['ALL', 'IAT', 'NEST', 'CMI'];
 
   // For TEST_SERIES tab: only show tests matching the user's subscribed exam types
   const testSeriesPapers = subscriptions.length > 0
@@ -688,7 +699,7 @@ export function Dashboard() {
 
             {/* Right Category Filter Pills */}
             <div className="flex gap-2">
-              {(['ALL', 'IAT', 'NEST', 'CMI'] as const).map(cat => (
+              {availableCategoryPills.map(cat => (
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
