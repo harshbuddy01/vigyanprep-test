@@ -270,7 +270,7 @@ export function Dashboard() {
     }
 
     const requiredCode = paper.passcode || paper.access_code;
-    if (requiredCode || paper.content_type === 'test_series') {
+    if (requiredCode) {
       setSelectedTestForPasscode(paper);
       setInputPasscode('');
       setPasscodeError(null);
