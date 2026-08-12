@@ -7,68 +7,106 @@ interface Props {
   className?: string;
 }
 
+function formatImageUrl(url: string): string {
+  if (!url) return '';
+  const trimmed = url.trim();
+  const driveMatch = trimmed.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (driveMatch && driveMatch[1]) {
+    return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+  }
+  return trimmed;
+}
+
 export const MathText: React.FC<Props> = ({ text, className = '' }) => {
   if (!text) return null;
 
-  // Clean common PDF encoding artifacts (e.g. 5Õ -> 5', 3Õ -> 3')
+  // Clean common PDF encoding artifacts
   const sanitized = text
     .replace(/5Õ|5Ö|5Ô/g, "5'")
     .replace(/3Õ|3Ö|3Ô/g, "3'")
     .replace(/Õ|Ö|Ô/g, "'");
 
-  // Check if text contains LaTeX math delimiters
-  const hasLatex = /\$|\\[(\[]/.test(sanitized);
-
-  if (!hasLatex) {
-    return <span className={className}>{sanitized}</span>;
-  }
-
-  // Parse inline and display math
-  const parts = sanitized.split(/(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\])/gs);
+  // First split by inline markdown images: ![alt](url) or [img:url] or {{url}}
+  const imageRegex = /(!\[.*?\]\(.*?\)|\[img:.*?\]|\{\{https?:\/\/.*?\}\})/gs;
+  const blocks = sanitized.split(imageRegex);
 
   return (
-    <span className={className}>
-      {parts.map((part, index) => {
-        if (!part) return null;
-        let isMath = false;
-        let isDisplay = false;
-        let mathContent = part;
+    <span className={`inline-wrap ${className}`}>
+      {blocks.map((block, bIdx) => {
+        if (!block) return null;
 
-        if (part.startsWith('$$') && part.endsWith('$$')) {
-          isMath = true;
-          isDisplay = true;
-          mathContent = part.slice(2, -2);
-        } else if (part.startsWith('$') && part.endsWith('$')) {
-          isMath = true;
-          mathContent = part.slice(1, -1);
-        } else if (part.startsWith('\\(') && part.endsWith('\\)')) {
-          isMath = true;
-          mathContent = part.slice(2, -2);
-        } else if (part.startsWith('\\[') && part.endsWith('\\]')) {
-          isMath = true;
-          isDisplay = true;
-          mathContent = part.slice(2, -2);
-        }
+        const mdMatch = block.match(/^!\[(.*?)\]\((.*?)\)$/);
+        const imgTagMatch = block.match(/^\[img:(.*?)\]$/);
+        const curlyMatch = block.match(/^\{\{(https?:\/\/.*?)\}\}$/);
 
-        if (isMath) {
-          try {
-            const html = katex.renderToString(mathContent, {
-              displayMode: isDisplay,
-              throwOnError: false
-            });
-            return (
-              <span
-                key={index}
-                dangerouslySetInnerHTML={{ __html: html }}
-                className="inline-block px-0.5"
+        const imgUrl = mdMatch ? mdMatch[2] : imgTagMatch ? imgTagMatch[1] : curlyMatch ? curlyMatch[1] : null;
+        const altText = mdMatch ? mdMatch[1] : 'Diagram';
+
+        if (imgUrl) {
+          const formattedUrl = formatImageUrl(imgUrl);
+          return (
+            <span key={bIdx} className="block my-3 text-center">
+              <img
+                src={formattedUrl}
+                alt={altText}
+                className="max-h-80 mx-auto object-contain rounded-xl border-2 border-amber-950/20 shadow-md bg-white p-1.5"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
               />
-            );
-          } catch {
-            return <span key={index}>{part}</span>;
-          }
+            </span>
+          );
         }
 
-        return <span key={index}>{part}</span>;
+        // Parse inline and display math
+        const parts = block.split(/(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\])/gs);
+
+        return (
+          <React.Fragment key={bIdx}>
+            {parts.map((part, index) => {
+              if (!part) return null;
+              let isMath = false;
+              let isDisplay = false;
+              let mathContent = part;
+
+              if (part.startsWith('$$') && part.endsWith('$$')) {
+                isMath = true;
+                isDisplay = true;
+                mathContent = part.slice(2, -2);
+              } else if (part.startsWith('$') && part.endsWith('$')) {
+                isMath = true;
+                mathContent = part.slice(1, -1);
+              } else if (part.startsWith('\\(') && part.endsWith('\\)')) {
+                isMath = true;
+                mathContent = part.slice(2, -2);
+              } else if (part.startsWith('\\[') && part.endsWith('\\]')) {
+                isMath = true;
+                isDisplay = true;
+                mathContent = part.slice(2, -2);
+              }
+
+              if (isMath) {
+                try {
+                  const html = katex.renderToString(mathContent, {
+                    displayMode: isDisplay,
+                    throwOnError: false
+                  });
+                  return (
+                    <span
+                      key={index}
+                      dangerouslySetInnerHTML={{ __html: html }}
+                      className="inline-block px-0.5"
+                    />
+                  );
+                } catch {
+                  return <span key={index}>{part}</span>;
+                }
+              }
+
+              return <span key={index}>{part}</span>;
+            })}
+          </React.Fragment>
+        );
       })}
     </span>
   );

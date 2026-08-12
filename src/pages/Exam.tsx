@@ -379,8 +379,17 @@ export default function Exam() {
       {/* Main Workspace Area */}
       <div className="flex flex-1 overflow-hidden relative">
 
+        {/* REPEATING WATERMARK OVERLAY FOR SECURITY & BRAND IDENTITY */}
+        <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden select-none opacity-[0.05] flex flex-wrap content-start justify-center gap-20 p-8 transform -rotate-12 scale-125">
+          {Array.from({ length: 30 }).map((_, i) => (
+            <div key={i} className="text-xl font-serif font-black tracking-widest text-[#1b365d] uppercase whitespace-nowrap">
+              VIGYAN PREP · CANDIDATE: {candidateName || 'HARSH ANAND'} ({rollNumber || 'VP-2026-ANANDHARSH437'})
+            </div>
+          ))}
+        </div>
+
         {/* Left Side: Question Panel */}
-        <div className="flex-1 flex flex-col justify-between overflow-y-auto p-6 bg-white border-r">
+        <div className="flex-1 flex flex-col justify-between overflow-y-auto p-6 bg-white border-r relative z-20">
           {loadingQuestions ? (
             <div className="flex flex-col items-center justify-center h-full space-y-3 text-gray-500">
               <div className="w-8 h-8 border-4 border-[#1b365d] border-t-transparent rounded-full animate-spin"></div>
