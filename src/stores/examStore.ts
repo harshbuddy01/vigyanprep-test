@@ -47,6 +47,7 @@ interface ExamState {
   prevQuestion: () => void;
   goToQuestion: (index: number) => void;
   submitExam: () => void;
+  resetExamState: (newTestId?: string | null) => void;
   decrementTimer: () => void;
   setTimeRemaining: (time: number) => void;
 
@@ -78,6 +79,24 @@ export const useExamStore = create<ExamState>()(
       isOnline: true,
       
       setQuestions: (questions) => set({ questions, isSubmitted: false, warningCount: 0, currentQuestionIndex: 0 }),
+
+      resetExamState: (newTestId) => {
+        try {
+          localStorage.removeItem('vigyan_exam_v2');
+        } catch (e) {}
+        set({
+          questions: [],
+          currentQuestionIndex: 0,
+          answers: {},
+          markedForReview: [],
+          visitedQuestions: [],
+          timeRemaining: 10800,
+          isSubmitted: false,
+          warningCount: 0,
+          attemptId: null,
+          testId: newTestId || null
+        });
+      },
       
       setAnswer: (questionId, answer) => set((state) => ({
         answers: { ...state.answers, [questionId]: answer }

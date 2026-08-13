@@ -26,7 +26,7 @@ export default function Exam() {
     setAnswer, clearAnswer, markForReview,
     goToQuestion, submitExam, isSubmitted, attemptId, timeRemaining, warningCount,
     incrementWarning, token, setQuestions, setTestMeta, candidateName, rollNumber, testTitle, examType,
-    decrementTimer, markVisited
+    decrementTimer, markVisited, resetExamState, testId
   } = useExamStore();
 
   const [activeSection, setActiveSection] = useState('Physics');
@@ -39,56 +39,40 @@ export default function Exam() {
   const sections = ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
   const submittingRef = useRef(false);
 
-  // SESSION LOCK: If exam is submitted, save to server then navigate
-  useEffect(() => {
-    if (isSubmitted) {
-      const submitToServer = async () => {
-        try {
-          const state = useExamStore.getState();
-          const t = state.token || localStorage.getItem('exam_token');
-          const aId = state.attemptId;
-          const ans = state.answers;
-          if (aId && t) {
-            await apiSubmitExam(aId, ans, t);
-          }
-        } catch (err) {
-          console.error('Failed to submit to server:', err);
-        } finally {
-          navigate('/response-sheet' + window.location.search, { replace: true });
-        }
-      };
-      submitToServer();
-    }
-  }, [isSubmitted, navigate]);
-
-  // Auto-fetch questions if state is empty and testId is present in URL
+  // Auto-fetch questions if state is empty OR if starting a new test session
   useEffect(() => {
     const autoFetchQuestions = async () => {
-      if (questions.length === 0 && testIdParam) {
-        setLoadingQuestions(true);
-        try {
-          const apiBase = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
-          const res = await fetch(`${apiBase}/api/public/tests/${testIdParam}`);
-          const data = await res.json();
-          if (data.questions && Array.isArray(data.questions) && data.questions.length > 0) {
-            setQuestions(data.questions);
-            if (data.test) {
-              setTestMeta({
-                testTitle: data.test.title,
-                examType: data.test.exam_type || data.test.test_type || 'IAT',
-                testId: testIdParam
-              });
-            }
+      if (!testIdParam) return;
+
+      // If testId changed or previous exam was submitted, reset local answers completely
+      if (testIdParam !== testId || isSubmitted) {
+        resetExamState(testIdParam);
+      }
+
+      setLoadingQuestions(true);
+      try {
+        const apiBase = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
+        const res = await fetch(`${apiBase}/api/public/tests/${testIdParam}`);
+        const data = await res.json();
+        if (data.questions && Array.isArray(data.questions) && data.questions.length > 0) {
+          setQuestions(data.questions);
+          if (data.test) {
+            setTestMeta({
+              testTitle: data.test.title,
+              examType: data.test.exam_type || data.test.test_type || 'IAT',
+              testId: testIdParam
+            });
           }
-        } catch (e) {
-          console.error('Failed to auto-fetch test questions:', e);
-        } finally {
-          setLoadingQuestions(false);
         }
+      } catch (e) {
+        console.error('Failed to auto-fetch test questions:', e);
+      } finally {
+        setLoadingQuestions(false);
       }
     };
+
     autoFetchQuestions();
-  }, [questions.length, testIdParam, setQuestions, setTestMeta]);
+  }, [testIdParam, testId, isSubmitted, resetExamState, setQuestions, setTestMeta]);
 
   // Working Live 1-Second Timer Interval
   useEffect(() => {

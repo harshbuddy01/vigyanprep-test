@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useExamStore } from '../stores/examStore';
 import { MathText } from '../components/MathText';
-import { CheckCircle2, XCircle, Download, Home, BookOpen } from 'lucide-react';
+import { CheckCircle2, XCircle, Download, Home, BookOpen, RotateCcw } from 'lucide-react';
 
 function formatImageUrl(url: string): string {
   if (!url) return '';
@@ -14,7 +15,8 @@ function formatImageUrl(url: string): string {
 }
 
 export const ResponseSheet: React.FC = () => {
-  const { questions, answers, testTitle, candidateName, rollNumber, examType } = useExamStore();
+  const navigate = useNavigate();
+  const { questions, answers, testTitle, candidateName, rollNumber, examType, testId, resetExamState } = useExamStore();
   const [activeTab, setActiveTab] = useState('Physics');
 
   // Calculate Scores & Breakdown
@@ -23,22 +25,24 @@ export const ResponseSheet: React.FC = () => {
   let unattemptedCount = 0;
   let totalScore = 0;
 
-  const sectionScores: Record<string, { correct: number; incorrect: number; score: number }> = {
-    Physics: { correct: 0, incorrect: 0, score: 0 },
-    Chemistry: { correct: 0, incorrect: 0, score: 0 },
-    Mathematics: { correct: 0, incorrect: 0, score: 0 },
-    Biology: { correct: 0, incorrect: 0, score: 0 },
+  const sections = ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
+  const sectionScores: Record<string, { correct: number; incorrect: number; unattempted: number; score: number }> = {
+    Physics: { correct: 0, incorrect: 0, unattempted: 0, score: 0 },
+    Chemistry: { correct: 0, incorrect: 0, unattempted: 0, score: 0 },
+    Mathematics: { correct: 0, incorrect: 0, unattempted: 0, score: 0 },
+    Biology: { correct: 0, incorrect: 0, unattempted: 0, score: 0 },
   };
 
   questions.forEach(q => {
     const studentAns = answers[q.id];
-    const sec = q.section || 'Physics';
-    if (!sectionScores[sec]) sectionScores[sec] = { correct: 0, incorrect: 0, score: 0 };
+    const sec = q.section && sections.includes(q.section) ? q.section : 'Physics';
+    if (!sectionScores[sec]) sectionScores[sec] = { correct: 0, incorrect: 0, unattempted: 0, score: 0 };
 
     const correctKey = q.correct_answer || q.correctAnswer;
 
     if (!studentAns) {
       unattemptedCount++;
+      sectionScores[sec].unattempted++;
     } else if (studentAns === correctKey) {
       correctCount++;
       totalScore += 4;
@@ -57,52 +61,76 @@ export const ResponseSheet: React.FC = () => {
     ? Math.round((correctCount / (correctCount + incorrectCount)) * 100)
     : 0;
 
-  const sections = ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
   const filteredQuestions = questions.filter(q => q.section === activeTab || (!sections.includes(q.section) && activeTab === 'Physics'));
+
+  const handleReattempt = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetTestId = urlParams.get('testId') || testId;
+    if (targetTestId) {
+      resetExamState(targetTestId);
+      navigate(`/exam?testId=${targetTestId}`);
+    } else {
+      navigate('/pyq');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f4f6f9] text-gray-800 font-sans pb-16">
+      {/* Print CSS Rules */}
+      <style>{`
+        @media print {
+          .no-print { display: none !important; }
+          .print-only { display: block !important; }
+          body, page, div { background: white !important; color: black !important; }
+          .print-card { break-inside: avoid !important; page-break-inside: avoid !important; border: 1px solid #ccc !important; margin-bottom: 16px !important; padding: 12px !important; }
+          @page { size: A4 portrait; margin: 12mm; }
+        }
+        @media screen {
+          .print-only { display: none !important; }
+        }
+      `}</style>
 
-      {/* Header */}
-      <header className="bg-[#1b365d] text-white py-4 px-6 shadow-md border-b-4 border-amber-400">
+      {/* Screen Header */}
+      <header className="no-print bg-[#1b365d] text-white py-4 px-6 shadow-md border-b-4 border-amber-400">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-lg font-bold tracking-wide">OFFICIAL CANDIDATE RESPONSE SHEET & MARKSHEET</h1>
-              <p className="text-xs text-amber-300 font-semibold">{testTitle || 'IISER / NEST Examination 2024'}</p>
-            </div>
+          <div>
+            <h1 className="text-lg font-bold tracking-wide">OFFICIAL CANDIDATE RESPONSE SHEET & MARKSHEET</h1>
+            <p className="text-xs text-amber-300 font-semibold">{testTitle || 'IISER / NEST Examination'}</p>
           </div>
 
-          {/* Navigation & Print Buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={handleReattempt}
+              className="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow transition"
+            >
+              <RotateCcw size={15} /> 🔄 Re-Attempt Test (Fresh Session)
+            </button>
             <a
               href="https://vigyanprep.com"
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-lg flex items-center gap-2 border border-white/20 transition"
+              className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 border border-white/20 transition"
             >
-              <Home size={15} /> Home Page
+              <Home size={15} /> Home
             </a>
             <a
               href="https://vigyanprep.com/pyq/iiser"
-              className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-neutral-950 font-bold text-xs rounded-lg flex items-center gap-2 transition shadow"
+              className="px-3.5 py-2 bg-amber-400 hover:bg-amber-300 text-neutral-950 font-bold text-xs rounded-lg flex items-center gap-1.5 transition shadow"
             >
-              <BookOpen size={15} /> Back to PYQ Section
+              <BookOpen size={15} /> PYQ Section
             </a>
             <button
               onClick={() => window.print()}
-              className="px-4 py-2 bg-[#28a745] hover:bg-[#218838] text-white font-bold text-xs rounded-lg flex items-center gap-2 shadow transition"
+              className="px-4 py-2 bg-[#28a745] hover:bg-[#218838] text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow transition"
             >
-              <Download size={15} /> Print / Save PDF
+              <Download size={15} /> Print / Save Full PDF (All Sections)
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto p-6 space-y-6">
-
+      {/* Main Screen Content */}
+      <main className="no-print max-w-7xl mx-auto p-6 space-y-6">
         {/* Candidate & Total Score Summary Banner */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 grid grid-cols-1 md:grid-cols-4 gap-6">
-
-          {/* Column 1: Candidate Meta */}
           <div className="space-y-2 border-r border-gray-100 pr-4">
             <span className="text-[10px] font-bold uppercase tracking-widest text-[#1b365d]">Candidate Profile</span>
             <h2 className="text-xl font-extrabold text-gray-900">{candidateName || 'Student Name'}</h2>
@@ -110,7 +138,6 @@ export const ResponseSheet: React.FC = () => {
             <p className="text-xs text-gray-500">Exam Category: <strong>{examType || 'IAT'}</strong></p>
           </div>
 
-          {/* Column 2: Total Score */}
           <div className="space-y-1 text-center border-r border-gray-100 pr-4 flex flex-col justify-center">
             <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Total Marks Secured</span>
             <div className="text-4xl font-extrabold text-[#1b365d]">
@@ -119,7 +146,6 @@ export const ResponseSheet: React.FC = () => {
             <p className="text-xs font-semibold text-emerald-600">Accuracy: {accuracy}%</p>
           </div>
 
-          {/* Column 3: Attempt Breakdown */}
           <div className="grid grid-cols-3 gap-2 text-center border-r border-gray-100 pr-4 items-center">
             <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-200">
               <span className="block text-xl font-bold text-emerald-700">{correctCount}</span>
@@ -135,7 +161,6 @@ export const ResponseSheet: React.FC = () => {
             </div>
           </div>
 
-          {/* Column 4: Sectional Score Chips */}
           <div className="space-y-1.5 text-xs flex flex-col justify-center">
             <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Sectional Scores</span>
             {sections.map(sec => (
@@ -145,10 +170,9 @@ export const ResponseSheet: React.FC = () => {
               </div>
             ))}
           </div>
-
         </div>
 
-        {/* Subject Filter Tabs */}
+        {/* Subject Filter Tabs for On-Screen Interactive Review */}
         <div className="flex gap-2 border-b border-gray-300 pb-2">
           {sections.map(sec => {
             const count = questions.filter(q => q.section === sec || (!sections.includes(q.section) && sec === 'Physics')).length;
@@ -169,7 +193,7 @@ export const ResponseSheet: React.FC = () => {
           })}
         </div>
 
-        {/* Detailed Question-by-Question Response Sheet */}
+        {/* Question Cards (Screen View) */}
         <div className="space-y-6">
           {filteredQuestions.map((q, idx) => {
             const studentAns = answers[q.id];
@@ -179,15 +203,11 @@ export const ResponseSheet: React.FC = () => {
 
             return (
               <div key={q.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 space-y-4">
-                {/* Header */}
                 <div className="flex items-center justify-between border-b pb-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-bold text-[#1b365d] uppercase tracking-wider">
-                      Question No. {q.question_number || idx + 1} ({q.section})
-                    </span>
-                  </div>
+                  <span className="text-xs font-bold text-[#1b365d] uppercase tracking-wider">
+                    Question No. {q.question_number || idx + 1} ({q.section || activeTab})
+                  </span>
 
-                  {/* Result Status Badge */}
                   {isUnattempted ? (
                     <span className="px-3 py-1 bg-gray-100 text-gray-700 font-bold text-xs rounded-full border border-gray-300">
                       Unattempted (0 Marks)
@@ -203,13 +223,11 @@ export const ResponseSheet: React.FC = () => {
                   )}
                 </div>
 
-                {/* Question Text with KaTeX Rendering */}
                 <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 text-sm leading-relaxed text-gray-900 space-y-3">
                   <div className="font-medium text-base">
                     <MathText text={(q as any).question_text || q.text} />
                   </div>
 
-                  {/* Question Diagram Image */}
                   {(q.image_url || (q as any).imageUrl) && (
                     <div className="p-3 bg-white border border-gray-300 rounded-lg text-center">
                       <img
@@ -221,7 +239,6 @@ export const ResponseSheet: React.FC = () => {
                   )}
                 </div>
 
-                {/* Options List with Selection Highlights and KaTeX Rendering */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                   {((q.options && q.options.length === 4) ? q.options : ['Option A', 'Option B', 'Option C', 'Option D']).map((opt, optIdx) => {
                     const optKey = ['A', 'B', 'C', 'D'][optIdx];
@@ -249,21 +266,101 @@ export const ResponseSheet: React.FC = () => {
                         }`}>
                           {optKey}
                         </span>
-                        <span className="font-medium">
+                        <div className="flex-1 text-xs">
                           <MathText text={opt} />
-                        </span>
+                        </div>
                         {keyBadge}
                       </div>
                     );
                   })}
                 </div>
-
               </div>
             );
           })}
         </div>
-
       </main>
+
+      {/* ================= PRINT-ONLY VIEW (INCLUDES ALL SECTIONS FOR FULL PDF PRINTING) ================= */}
+      <div className="print-only p-6 space-y-6">
+        <div className="border-b-2 border-black pb-4 text-center">
+          <h1 className="text-xl font-bold uppercase tracking-wider text-black">VIGYANPREP OFFICIAL MARKSHEET & RESPONSE SHEET</h1>
+          <p className="text-sm font-bold text-black">{testTitle || 'IISER IAT / NEST Examination'}</p>
+          <div className="mt-3 flex justify-between text-xs font-semibold border-t pt-2">
+            <span>Candidate: <strong>{candidateName || 'Student Name'}</strong> ({rollNumber || 'VP-2026'})</span>
+            <span>Marks: <strong>{totalScore} / {totalMaxScore}</strong> (Accuracy: {accuracy}%)</span>
+          </div>
+        </div>
+
+        {/* Loop through ALL sections (Physics, Chemistry, Mathematics, Biology) for Print */}
+        {sections.map(sec => {
+          const secQuestions = questions.filter(q => q.section === sec || (!sections.includes(q.section) && sec === 'Physics'));
+          if (secQuestions.length === 0) return null;
+
+          return (
+            <div key={sec} className="space-y-4">
+              <h2 className="text-base font-bold uppercase border-b-2 border-black pt-4 pb-1 text-black">
+                SECTION: {sec} ({secQuestions.length} Questions — Score: {sectionScores[sec]?.score || 0} Marks)
+              </h2>
+
+              {secQuestions.map((q, idx) => {
+                const studentAns = answers[q.id];
+                const correctKey = q.correct_answer || q.correctAnswer;
+                const isCorrect = studentAns === correctKey;
+                const isUnattempted = !studentAns;
+
+                return (
+                  <div key={q.id} className="print-card space-y-2">
+                    <div className="flex justify-between items-center text-xs font-bold border-b pb-1">
+                      <span>Q{q.question_number || idx + 1} ({sec})</span>
+                      <span>
+                        {isUnattempted ? '[ Unattempted (0) ]' : isCorrect ? '[ ✓ Correct (+4) ]' : '[ ✗ Incorrect (-1) ]'}
+                      </span>
+                    </div>
+
+                    <div className="text-xs">
+                      <MathText text={(q as any).question_text || q.text} />
+                    </div>
+
+                    {(q.image_url || (q as any).imageUrl) && (
+                      <div className="my-2 text-center">
+                        <img
+                          src={formatImageUrl(q.image_url || (q as any).imageUrl || '')}
+                          alt="Diagram"
+                          className="max-h-48 mx-auto object-contain"
+                        />
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                      {((q.options && q.options.length === 4) ? q.options : ['Option A', 'Option B', 'Option C', 'Option D']).map((opt, optIdx) => {
+                        const optKey = ['A', 'B', 'C', 'D'][optIdx];
+                        const isChosen = studentAns === optKey;
+                        const isKey = correctKey === optKey;
+
+                        let styleClass = 'border-gray-300';
+                        let label = '';
+                        if (isKey) {
+                          styleClass = 'border-green-600 font-bold bg-green-50';
+                          label = ' [OFFICIAL KEY]';
+                        } else if (isChosen && !isCorrect) {
+                          styleClass = 'border-red-600 font-bold bg-red-50';
+                          label = ' [YOUR ANSWER - WRONG]';
+                        }
+
+                        return (
+                          <div key={optKey} className={`p-1.5 border rounded ${styleClass}`}>
+                            <strong>({optKey})</strong> <MathText text={opt} /> <em>{label}</em>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
