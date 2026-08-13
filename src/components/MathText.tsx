@@ -103,6 +103,22 @@ export const MathText: React.FC<Props> = ({ text, className = '' }) => {
                 }
               }
 
+              // Auto-detect math constructs even if dollar signs were omitted
+              if (/\\(frac|sqrt|vec|int|sum|alpha|beta|gamma|delta|theta|omega|pi|rho|lambda|sigma|mu|epsilon|infty|rightarrow|times|partial|mathrm|mathbf|gg|ll|left|right|pm|approx|neq|le|ge|cdot|binom|limits)/.test(part) || /\^{[^{}]*}|\_{[^{}]*}/.test(part)) {
+                try {
+                  const html = katex.renderToString(part, { displayMode: false, throwOnError: false });
+                  return (
+                    <span
+                      key={index}
+                      dangerouslySetInnerHTML={{ __html: html }}
+                      className="inline-block px-0.5"
+                    />
+                  );
+                } catch {
+                  return <span key={index}>{part}</span>;
+                }
+              }
+
               return <span key={index}>{part}</span>;
             })}
           </React.Fragment>
