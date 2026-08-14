@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertCircle, User } from 'lucide-react';
+import { AlertCircle, User, Loader2 } from 'lucide-react';
 import { useExamStore, generateRollNumber } from '../stores/examStore';
 import { getCookie } from '../lib/cookies';
 
@@ -9,13 +9,18 @@ export const Instructions: React.FC = () => {
   const [searchParams] = useSearchParams();
   const testId = searchParams.get('testId');
   const code = searchParams.get('code');
-  const { setTestMeta, testTitle, durationMinutes, questionsCount, totalMarks, candidateName, rollNumber, setQuestions, questions } = useExamStore();
+  const {
+    setTestMeta, testTitle, durationMinutes, questionsCount, totalMarks,
+    candidateName, rollNumber, setQuestions, questions, setAttemptId,
+    setTimeRemaining, setIsLiveTest
+  } = useExamStore();
 
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // Local state for fetched test paper metadata to guarantee React re-render
+  const [windowClosed, setWindowClosed] = useState(false);
+
   const [meta, setMeta] = useState<{
     title?: string;
     examType?: string;
@@ -23,19 +28,26 @@ export const Instructions: React.FC = () => {
     questionsCount?: number;
     totalMarks?: number;
     pyqYear?: number | string;
+    isLiveTest?: boolean;
   } | null>(null);
 
-  // Student Identity Fallbacks from Cookies & LocalStorage
-  const studentName = (typeof window !== 'undefined' ? (getCookie('student_name') || localStorage.getItem('student_name')) : null) || candidateName || 'HARSH ANAND';
-  const studentEmail = (typeof window !== 'undefined' ? (getCookie('student_email') || localStorage.getItem('student_email')) : null) || 'anandharsh437@gmail.com';
+  const studentName = (typeof window !== 'undefined'
+    ? (getCookie('student_name') || localStorage.getItem('student_name'))
+    : null) || candidateName || 'Student';
+  const studentEmail = (typeof window !== 'undefined'
+    ? (getCookie('student_email') || localStorage.getItem('student_email'))
+    : null) || '';
   const studentRoll = rollNumber || generateRollNumber(studentEmail, studentName);
+  const studentToken = (typeof window !== 'undefined'
+    ? (getCookie('auth_token') || localStorage.getItem('auth_token') || localStorage.getItem('token'))
+    : null) || '';
 
   useEffect(() => {
     const fetchMeta = async () => {
       if (testId) {
         try {
           const apiBase = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
-          
+
           let examToken = '';
           if (code) {
             const exchangeRes = await fetch(`${apiBase}/api/exam-access/exchange`, {
@@ -53,34 +65,26 @@ export const Instructions: React.FC = () => {
           const data = await res.json();
 
           if (data.success && data.test) {
-            const qCount = data.questions && Array.isArray(data.questions) ? data.questions.length : (data.test.questions_count || 60);
+            const qCount = data.questions && Array.isArray(data.questions)
+              ? data.questions.length
+              : (data.test.questions_count || 60);
             const totalMks = data.test.total_marks || (qCount * 4);
             const durMins = data.test.duration_minutes || 180;
             const pYear = data.test.pyq_year || data.test.year || new Date().getFullYear();
             const pTitle = data.test.title || 'IISER IAT Official Question Paper';
             const eType = data.test.exam_type || data.test.examType || 'IAT';
+            const isLive = data.test.content_type === 'test_series';
 
-            setMeta({
-              title: pTitle,
-              examType: eType,
-              durationMinutes: durMins,
-              questionsCount: qCount,
-              totalMarks: totalMks,
-              pyqYear: pYear
-            });
+            setMeta({ title: pTitle, examType: eType, durationMinutes: durMins, questionsCount: qCount, totalMarks: totalMks, pyqYear: pYear, isLiveTest: isLive });
 
             setTestMeta({
-              testTitle: pTitle,
-              examType: eType,
-              durationMinutes: durMins,
-              questionsCount: qCount,
-              totalMarks: totalMks,
-              pyqYear: pYear,
-              testId,
-              candidateName: studentName,
-              rollNumber: studentRoll,
-              token: examToken
+              testTitle: pTitle, examType: eType, durationMinutes: durMins,
+              questionsCount: qCount, totalMarks: totalMks, pyqYear: pYear,
+              testId, candidateName: studentName, rollNumber: studentRoll,
+              token: examToken || studentToken
             });
+
+            setIsLiveTest(isLive);
 
             if (data.questions && Array.isArray(data.questions)) {
               setQuestions(data.questions);
@@ -94,13 +98,59 @@ export const Instructions: React.FC = () => {
       setLoading(false);
     };
     fetchMeta();
-  }, [testId, code, setTestMeta, setQuestions, studentName, studentRoll]);
+  }, [testId, code]);
 
-  const handleStartExam = () => {
-    if (document.documentElement.requestFullscreen) {
-      document.documentElement.requestFullscreen().catch(() => {});
+  const handleStartExam = async () => {
+    setStarting(true);
+    setError(null);
+
+    try {
+      const apiBase = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
+      const authToken = studentToken || useExamStore.getState().token;
+
+      if (authToken && testId) {
+        try {
+          const startRes = await fetch(`${apiBase}/api/exam/lifecycle/start/${testId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
+            }
+          });
+
+          if (startRes.ok) {
+            const startData = await startRes.json();
+
+            if (startData.isExpired) {
+              setWindowClosed(true);
+              setStarting(false);
+              return;
+            }
+
+            if (startData.attempt?.id) {
+              setAttemptId(startData.attempt.id);
+            }
+
+            // Use server-authoritative remaining time (fixes timer bug)
+            if (typeof startData.remaining_seconds === 'number' && startData.remaining_seconds > 0) {
+              setTimeRemaining(startData.remaining_seconds);
+            }
+          }
+        } catch (lifecycleErr) {
+          // Non-fatal: continue with local timer if lifecycle call fails
+          console.warn('Lifecycle start failed (continuing):', lifecycleErr);
+        }
+      }
+
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+
+      navigate('/exam' + window.location.search);
+    } catch (err: any) {
+      setError(err.message || 'Failed to start exam. Please try again.');
+      setStarting(false);
     }
-    navigate('/exam' + window.location.search);
   };
 
   const displayTitle = meta?.title || testTitle || 'IISER IAT Official Question Paper';
@@ -117,16 +167,35 @@ export const Instructions: React.FC = () => {
     );
   }
 
+  if (windowClosed) {
+    return (
+      <div className="min-h-screen bg-[#f4f6f9] flex flex-col items-center justify-center font-sans p-8">
+        <div className="bg-white rounded-2xl shadow-lg border border-red-200 p-10 text-center max-w-md space-y-4">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+            <AlertCircle className="text-red-500" size={36} />
+          </div>
+          <h2 className="text-xl font-bold text-red-700">Test Window Closed</h2>
+          <p className="text-sm text-gray-600">
+            The examination window for this test has expired. You cannot start or resume this test.
+            Please contact your administrator if you believe this is an error.
+          </p>
+          <button
+            onClick={() => window.history.back()}
+            className="px-6 py-2.5 bg-[#1b365d] text-white font-bold text-sm rounded-lg hover:bg-[#2a4a7f] transition"
+          >
+            ← Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#f4f6f9] text-gray-800 font-sans flex flex-col justify-between">
-
-      {/* Official Header */}
       <header className="bg-[#1b365d] text-white py-4 px-6 shadow-md border-b-4 border-amber-400">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center font-bold text-[#1b365d] text-xl shadow">
-              VP
-            </div>
+            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center font-bold text-[#1b365d] text-xl shadow">VP</div>
             <div>
               <h1 className="text-lg font-bold tracking-wide">VIGYAN.PREP CBT TEST PORTAL</h1>
               <p className="text-xs text-amber-300 uppercase tracking-widest font-semibold">National Testing Agency (NTA) Standard Interface</p>
@@ -138,12 +207,8 @@ export const Instructions: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Instructions Area */}
       <main className="max-w-7xl mx-auto w-full p-6 flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6">
-
-        {/* Instructions Body */}
         <div className="lg:col-span-3 bg-white rounded-xl shadow-sm border border-gray-200 p-8 space-y-6 text-sm text-gray-700">
-
           <div className="border-b pb-4">
             <h2 className="text-xl font-bold text-[#1b365d]">GENERAL INSTRUCTIONS</h2>
             <p className="text-xs text-gray-500 mt-1">Please read the instructions carefully before starting the examination.</p>
@@ -163,8 +228,6 @@ export const Instructions: React.FC = () => {
               <li>When the timer reaches zero, the examination will end automatically. You do not need to click submit.</li>
               <li>The Question Palette displayed on the right side of screen shows the status of each question using one of the following symbols:</li>
             </ul>
-
-            {/* Official NTA Symbol Legend Table */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded border border-gray-200">
                 <span className="w-8 h-8 rounded bg-gray-200 border border-gray-400 flex items-center justify-center font-bold text-xs text-gray-700">1</span>
@@ -212,34 +275,25 @@ export const Instructions: React.FC = () => {
             </p>
           </section>
 
-          {/* Declaration Checkbox */}
           <div className="pt-6 border-t border-gray-200 space-y-4">
             <label className="flex items-start gap-3 cursor-pointer p-4 bg-amber-50 rounded-lg border border-amber-300">
-              <input
-                type="checkbox"
-                className="w-5 h-5 accent-[#1b365d] rounded mt-0.5"
-                checked={agreed}
-                onChange={(e) => setAgreed(e.target.checked)}
-              />
+              <input type="checkbox" className="w-5 h-5 accent-[#1b365d] rounded mt-0.5" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
               <span className="text-xs font-semibold text-gray-800 leading-relaxed">
                 I have read and understood all the instructions. All computer hardware allotted to me is in proper working condition. I agree to follow all proctoring guidelines.
               </span>
             </label>
-
             <div className="flex justify-end">
               <button
                 onClick={handleStartExam}
-                disabled={!agreed}
-                className="px-8 py-3.5 bg-[#28a745] hover:bg-[#218838] disabled:bg-gray-300 disabled:text-gray-500 text-white font-bold rounded-lg shadow-md transition-all text-sm uppercase tracking-wider"
+                disabled={!agreed || starting}
+                className="px-8 py-3.5 bg-[#28a745] hover:bg-[#218838] disabled:bg-gray-300 disabled:text-gray-500 text-white font-bold rounded-lg shadow-md transition-all text-sm uppercase tracking-wider flex items-center gap-2"
               >
-                I am ready to begin →
+                {starting ? (<><Loader2 size={16} className="animate-spin" /> Starting Exam...</>) : 'I am ready to begin →'}
               </button>
             </div>
           </div>
-
         </div>
 
-        {/* Right Sidebar: Candidate Profile Panel */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6 h-fit">
           <div className="text-center space-y-3 pb-4 border-b">
             <div className="w-24 h-24 bg-gray-100 rounded-lg border border-gray-300 mx-auto flex items-center justify-center text-gray-400">
@@ -250,11 +304,10 @@ export const Instructions: React.FC = () => {
               <p className="text-xs text-gray-500 font-bold">Roll No: {studentRoll}</p>
             </div>
           </div>
-
           <div className="space-y-2 text-xs">
             <div className="flex justify-between py-1 border-b text-gray-600">
               <span>Exam Paper:</span>
-              <strong className="text-gray-900">{displayTitle}</strong>
+              <strong className="text-gray-900 text-right ml-2 truncate max-w-[120px]">{displayTitle}</strong>
             </div>
             <div className="flex justify-between py-1 border-b text-gray-600">
               <span>Duration:</span>
@@ -268,12 +321,16 @@ export const Instructions: React.FC = () => {
               <span>Maximum Marks:</span>
               <strong className="text-gray-900">{displayTotalMarks} Marks</strong>
             </div>
+            {meta?.isLiveTest && (
+              <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded text-center">
+                <p className="text-[10px] font-bold text-red-700">🔴 LIVE PROCTORED EXAM</p>
+                <p className="text-[9px] text-red-600">Single attempt only. Re-attempt not allowed.</p>
+              </div>
+            )}
           </div>
         </div>
-
       </main>
 
-      {/* Footer */}
       <footer className="bg-white border-t py-3 text-center text-xs text-gray-500">
         © 2026 Vigyan.prep NTA Standard Examination System • All Rights Reserved
       </footer>

@@ -37,6 +37,7 @@ interface ExamState {
   token: string | null;
   warningCount: number;
   isOnline: boolean;
+  isLiveTest: boolean;
 
   setQuestions: (q: Question[]) => void;
   setAnswer: (questionId: string, answer: any) => void;
@@ -55,6 +56,7 @@ interface ExamState {
   incrementWarning: () => void;
   setOnline: (status: boolean) => void;
   setAttemptId: (id: string) => void;
+  setIsLiveTest: (val: boolean) => void;
 }
 
 export const useExamStore = create<ExamState>()(
@@ -65,7 +67,7 @@ export const useExamStore = create<ExamState>()(
       answers: {},
       markedForReview: [],
       visitedQuestions: [],
-      timeRemaining: 10800, // 3 hours
+      timeRemaining: 10800,
       isSubmitted: false,
 
       testId: null,
@@ -77,13 +79,12 @@ export const useExamStore = create<ExamState>()(
       token: null,
       warningCount: 0,
       isOnline: true,
-      
+      isLiveTest: false,
+
       setQuestions: (questions) => set({ questions, isSubmitted: false, warningCount: 0, currentQuestionIndex: 0 }),
 
       resetExamState: (newTestId) => {
-        try {
-          localStorage.removeItem('vigyan_exam_v2');
-        } catch (e) {}
+        try { localStorage.removeItem('vigyan_exam_v2'); } catch (e) {}
         set({
           questions: [],
           currentQuestionIndex: 0,
@@ -94,59 +95,60 @@ export const useExamStore = create<ExamState>()(
           isSubmitted: false,
           warningCount: 0,
           attemptId: null,
+          isLiveTest: false,
           testId: newTestId || null
         });
       },
-      
+
       setAnswer: (questionId, answer) => set((state) => ({
         answers: { ...state.answers, [questionId]: answer }
       })),
-      
+
       markForReview: (questionId) => set((state) => ({
-        markedForReview: state.markedForReview.includes(questionId) 
+        markedForReview: state.markedForReview.includes(questionId)
           ? state.markedForReview.filter(id => id !== questionId)
           : [...state.markedForReview, questionId]
       })),
-      
+
       markVisited: (questionId) => set((state) => ({
-        visitedQuestions: state.visitedQuestions.includes(questionId) 
-          ? state.visitedQuestions 
+        visitedQuestions: state.visitedQuestions.includes(questionId)
+          ? state.visitedQuestions
           : [...state.visitedQuestions, questionId]
       })),
-      
+
       clearAnswer: (questionId) => set((state) => {
         const newAnswers = { ...state.answers };
         delete newAnswers[questionId];
         return { answers: newAnswers };
       }),
-      
+
       nextQuestion: () => set((state) => ({
         currentQuestionIndex: Math.min(state.currentQuestionIndex + 1, state.questions.length - 1)
       })),
-      
+
       prevQuestion: () => set((state) => ({
         currentQuestionIndex: Math.max(state.currentQuestionIndex - 1, 0)
       })),
 
       goToQuestion: (index) => set({ currentQuestionIndex: index }),
-      
+
       submitExam: () => set({ isSubmitted: true }),
-      
+
       decrementTimer: () => set((state) => ({
         timeRemaining: Math.max(state.timeRemaining - 1, 0),
         isSubmitted: state.timeRemaining <= 1 ? true : state.isSubmitted
       })),
-      
+
       setTimeRemaining: (time) => set({ timeRemaining: time }),
 
       setTestMeta: (meta) => set((state) => ({ ...state, ...meta })),
       incrementWarning: () => set((state) => ({ warningCount: state.warningCount + 1 })),
       setOnline: (status) => set({ isOnline: status }),
-      setAttemptId: (id) => set({ attemptId: id })
+      setAttemptId: (id) => set({ attemptId: id }),
+      setIsLiveTest: (val) => set({ isLiveTest: val })
     }),
     {
       name: 'vigyan_exam_v2',
-      // 🛡️ SECURITY: Only persist user's transient answers, attemptId, & timeRemaining. Never persist tokens or answers keys.
       partialize: (state) => ({
         answers: state.answers,
         markedForReview: state.markedForReview,
@@ -154,7 +156,8 @@ export const useExamStore = create<ExamState>()(
         attemptId: state.attemptId,
         testId: state.testId,
         timeRemaining: state.timeRemaining,
-        warningCount: state.warningCount
+        warningCount: state.warningCount,
+        isLiveTest: state.isLiveTest
       }),
     }
   )
@@ -162,12 +165,10 @@ export const useExamStore = create<ExamState>()(
 
 export function generateRollNumber(email?: string | null, name?: string | null): string {
   if (email && email.includes('@')) {
-    const prefix = email.split('@')[0].toUpperCase();
-    return `VP-2026-${prefix}`;
+    return `VP-2026-${email.split('@')[0].toUpperCase()}`;
   }
   if (name) {
-    const cleanName = name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-    return `VP-2026-${cleanName}`;
+    return `VP-2026-${name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()}`;
   }
   return `VP-2026-STUDENT`;
 }

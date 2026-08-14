@@ -261,9 +261,11 @@ export function Dashboard() {
 
     // Future scheduled test
     if (start && now < start) {
+      const startIST = start.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short' }) + ' ' +
+        start.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true });
       return {
         isLive: false,
-        label: `🔒 Scheduled for ${start.toLocaleDateString()} ${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+        label: `🔒 Scheduled for ${startIST} IST`,
         color: 'amber'
       };
     }
@@ -273,7 +275,16 @@ export function Dashboard() {
       return { isLive: true, label: '🟢 LIVE NOW', color: 'emerald' };
     }
 
-    // Past test paper — Subscribed students CAN attempt past tests anytime!
+    // Expired live test — window has closed
+    if (paper.content_type === 'test_series' && end && now > end) {
+      return {
+        isLive: false,
+        label: `📋 Test Closed – Results Pending`,
+        color: 'gray'
+      };
+    }
+
+    // Past PYQ paper — practice anytime
     return {
       isLive: true,
       label: `📜 Past Test Paper (Available)`,
