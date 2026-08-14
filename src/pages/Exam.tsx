@@ -5,7 +5,7 @@ import { QuestionPalette } from '../components/QuestionPalette';
 import { ScientificCalculator } from '../components/ScientificCalculator';
 import { MathText } from '../components/MathText';
 import { submitExam as apiSubmitExam } from '../lib/api';
-import { User, Clock, ShieldAlert, Award, Calculator, ChevronRight, ChevronLeft } from 'lucide-react';
+import { User, Clock, ShieldAlert, Award, Calculator, ChevronRight, ChevronLeft, Flag, X, Send, CheckCircle } from 'lucide-react';
 
 function formatImageUrl(url: string): string {
   if (!url) return '';
@@ -36,8 +36,50 @@ export default function Exam() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showCalculator, setShowCalculator] = useState(false);
 
+  // 🚩 Report Question state
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportType, setReportType] = useState('wrong_answer');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportSuccess, setReportSuccess] = useState(false);
+
   const sections = ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
   const submittingRef = useRef(false);
+
+  // 🚩 Report question handler
+  const handleSubmitReport = async () => {
+    if (!currentQ || reportReason.trim().length < 20) return;
+    setReportSubmitting(true);
+    try {
+      const apiBase = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
+      const authToken = token || localStorage.getItem('auth_token') || localStorage.getItem('token') || '';
+      const res = await fetch(`${apiBase}/api/admin/question-reports/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          testId: testIdParam || testId,
+          questionId: currentQ.id,
+          reason: `[${reportType.toUpperCase()}] ${reportReason.trim()}`
+        })
+      });
+      if (res.ok) {
+        setReportSuccess(true);
+        setReportReason('');
+        setTimeout(() => {
+          setShowReportModal(false);
+          setReportSuccess(false);
+          setReportType('wrong_answer');
+        }, 2000);
+      }
+    } catch (err) {
+      console.error('Report failed:', err);
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
 
   // Auto-fetch questions if state is empty OR if starting a new test session
   useEffect(() => {
@@ -382,14 +424,23 @@ export default function Exam() {
           ) : currentQ ? (
             <div className="space-y-6 max-w-4xl mx-auto w-full">
 
-              {/* Question Number & Type Header */}
+              {/* Question Number, Type Header & Report Button */}
               <div className="flex items-center justify-between border-b pb-3">
                 <span className="text-sm font-bold text-[#1b365d] uppercase tracking-wider">
                   Question No. {currentSectionQIndex !== -1 ? currentSectionQIndex + 1 : 1} of {sectionQuestions.length} ({activeSection})
                 </span>
-                <span className="px-3 py-1 bg-blue-50 text-blue-800 border border-blue-200 font-bold text-xs rounded-full">
-                  Marks: +4 | -1
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 bg-blue-50 text-blue-800 border border-blue-200 font-bold text-xs rounded-full">
+                    Marks: +4 | -1
+                  </span>
+                  <button
+                    onClick={() => { setShowReportModal(true); setReportSuccess(false); }}
+                    title="Report an issue with this question"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold text-xs rounded-lg transition"
+                  >
+                    <Flag size={12} /> Report
+                  </button>
+                </div>
               </div>
 
               {/* Question Body with KaTeX Math Rendering */}
@@ -479,6 +530,93 @@ export default function Exam() {
                 Save & Next →
               </button>
             </div>
+
+            {/* 🚩 REPORT QUESTION MODAL */}
+            {showReportModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+                <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-md p-6 space-y-4">
+                  {reportSuccess ? (
+                    <div className="flex flex-col items-center gap-3 py-4">
+                      <CheckCircle className="text-green-500" size={40} />
+                      <p className="text-base font-bold text-gray-800">Report Submitted!</p>
+                      <p className="text-xs text-gray-500 text-center">Thank you. Our team will review this question.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Flag className="text-red-500" size={18} />
+                          <h3 className="font-bold text-gray-900">Report This Question</h3>
+                        </div>
+                        <button onClick={() => setShowReportModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+                      </div>
+
+                      <p className="text-xs text-gray-500">Question #{currentSectionQIndex + 1} — {activeSection}</p>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-2">Type of Issue</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { value: 'wrong_answer', label: '❌ Wrong Answer Key' },
+                            { value: 'typo_error', label: '✏️ Typo / Error in Question' },
+                            { value: 'image_missing', label: '🖼️ Image Missing/Broken' },
+                            { value: 'ambiguous', label: '🤔 Ambiguous / Unclear' },
+                            { value: 'wrong_language', label: '🔤 Wrong Language/Formula' },
+                            { value: 'other', label: '📝 Other Issue' },
+                          ].map(opt => (
+                            <button
+                              key={opt.value}
+                              onClick={() => setReportType(opt.value)}
+                              className={`px-3 py-2 rounded-lg border text-xs font-semibold text-left transition ${
+                                reportType === opt.value
+                                  ? 'border-red-400 bg-red-50 text-red-700'
+                                  : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1.5">Describe the issue <span className="text-red-500">*</span></label>
+                        <textarea
+                          value={reportReason}
+                          onChange={e => setReportReason(e.target.value)}
+                          placeholder="Please describe the issue in detail (minimum 20 characters)..."
+                          rows={3}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
+                        />
+                        <p className={`text-[10px] mt-1 ${ reportReason.trim().length >= 20 ? 'text-green-600' : 'text-gray-400'}`}>
+                          {reportReason.trim().length}/20 characters minimum
+                        </p>
+                      </div>
+
+                      <div className="flex gap-3 pt-1">
+                        <button
+                          onClick={() => setShowReportModal(false)}
+                          className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-lg transition"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleSubmitReport}
+                          disabled={reportReason.trim().length < 20 || reportSubmitting}
+                          className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:text-gray-400 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-2 transition"
+                        >
+                          {reportSubmitting ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <><Send size={13} /> Submit Report</>
+                          )}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
