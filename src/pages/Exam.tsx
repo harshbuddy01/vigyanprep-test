@@ -104,10 +104,22 @@ export default function Exam() {
   useEffect(() => {
     let hideTimer: any = null;
 
+    const isTouchOrTablet = () => {
+      if (typeof window === 'undefined') return false;
+      const ua = navigator.userAgent;
+      const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isAndroidTablet = /Android/i.test(ua) && !/Mobile/i.test(ua);
+      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      return isIOS || isAndroidTablet || (hasTouch && window.innerWidth <= 1024);
+    };
+
     const handleVisibilityChange = () => {
+      const isTablet = isTouchOrTablet();
+      const delay = isTablet ? 5000 : 3500; // 5s grace period on tablets, 3.5s on desktop
+
       if (document.hidden && !isSubmitted) {
         hideTimer = setTimeout(() => {
-          if (document.hidden && !useExamStore.getState().isSubmitted) {
+          if (document.hidden && document.visibilityState === 'hidden' && !useExamStore.getState().isSubmitted) {
             incrementWarning();
             setShowTabWarning(true);
             if (useExamStore.getState().warningCount >= 3) {
@@ -115,7 +127,7 @@ export default function Exam() {
             }
             setTimeout(() => setShowTabWarning(false), 4000);
           }
-        }, 1500);
+        }, delay);
       } else {
         if (hideTimer) clearTimeout(hideTimer);
       }
@@ -129,7 +141,14 @@ export default function Exam() {
   }, [isSubmitted, incrementWarning, doSubmit]);
 
   useEffect(() => {
-    const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isTouchOrTablet = () => {
+      if (typeof window === 'undefined') return false;
+      const ua = navigator.userAgent;
+      const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isAndroidTablet = /Android/i.test(ua) && !/Mobile/i.test(ua);
+      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      return isIOS || isAndroidTablet || (hasTouch && window.innerWidth <= 1024);
+    };
 
     const preventDefault = (e: any) => e.preventDefault();
     const preventKeys = (e: KeyboardEvent) => {
@@ -139,7 +158,9 @@ export default function Exam() {
     };
 
     const handleFullscreenChange = () => {
-      if (isIOS()) return;
+      // NEVER trigger fullscreen warnings on iPad, iPhone, Android tablets, or touch devices
+      if (isTouchOrTablet()) return;
+
       const doc = document as any;
       const fsElement = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement;
       if (!fsElement && !useExamStore.getState().isSubmitted) {
