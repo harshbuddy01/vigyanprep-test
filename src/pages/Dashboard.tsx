@@ -108,6 +108,7 @@ export function Dashboard() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [subsLoading, setSubsLoading] = useState(true);
   const [hallTickets, setHallTickets] = useState<HallTicket[]>([]);
+  const [attemptedTestIds, setAttemptedTestIds] = useState<string[]>([]);
 
   // Modals & Toasts
   const [showPasscodeModal, setShowPasscodeModal] = useState(false);
@@ -241,9 +242,26 @@ export function Dashboard() {
       }
     }
 
+    async function loadAttempts(authToken: string) {
+      try {
+        const res = await fetch(`https://api.vigyanprep.com/api/student/attempts?cb=${Date.now()}`, {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.attemptedTestIds) {
+            setAttemptedTestIds(data.attemptedTestIds);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load student attempts:', err);
+      }
+    }
+
     loadDashboardTests();
     loadSubscriptions(token);
     loadHallTickets(token);
+    loadAttempts(token);
   }, []);
 
   const triggerToast = (msg: string) => {
@@ -252,8 +270,34 @@ export function Dashboard() {
   };
 
   const getWindowStatus = (paper: TestPaper) => {
+    const isAttempted = attemptedTestIds.includes(paper.id);
+
+    // Released results (completed or response_released_at set)
+    const isResultsReleased = !!(paper.response_released_at || (paper as any).result_released_at || paper.status === 'completed');
+    if (isResultsReleased) {
+      if (isAttempted) {
+        return {
+          isLive: true,
+          isPractice: true,
+          isReleased: true,
+          isAttempted: true,
+          label: '🏆 Live Attempted • Scorecard & AIR Rank Declared',
+          color: 'emerald'
+        };
+      } else {
+        return {
+          isLive: true,
+          isPractice: true,
+          isReleased: true,
+          isAttempted: false,
+          label: '⏳ Missed Live Window • Practice & Solutions Available',
+          color: 'amber'
+        };
+      }
+    }
+
     if (paper.content_type === 'pyq' || (!paper.window_start && !paper.window_end)) {
-      return { isLive: true, label: '24/7 Practice Archive', color: 'emerald' };
+      return { isLive: true, isReleased: false, isAttempted, label: '24/7 Practice Archive', color: 'emerald' };
     }
 
     const now = new Date();
@@ -266,6 +310,8 @@ export function Dashboard() {
         start.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true });
       return {
         isLive: false,
+        isReleased: false,
+        isAttempted,
         label: `🔒 Scheduled for ${startIST} IST`,
         color: 'amber'
       };
@@ -273,26 +319,17 @@ export function Dashboard() {
 
     // Live test window right now
     if (start && end && now >= start && now <= end) {
-      return { isLive: true, label: '🟢 LIVE NOW', color: 'emerald' };
+      return { isLive: true, isReleased: false, isAttempted, label: '🟢 LIVE NOW — Proctored Window Open', color: 'emerald' };
     }
 
-    // Expired live test — check if results declared
+    // Expired live test awaiting results
     if (paper.content_type === 'test_series' && end && now > end) {
-      const isResultsReleased = !!(paper.response_released_at || (paper as any).result_released_at || paper.status === 'completed');
-      if (isResultsReleased) {
-        return {
-          isLive: true,
-          isPractice: true,
-          isReleased: true,
-          label: '🏆 Results Declared • Practice & Review Available',
-          color: 'emerald'
-        };
-      }
       return {
         isLive: false,
         isPractice: false,
         isReleased: false,
-        label: `📋 Test Closed – Results Pending`,
+        isAttempted,
+        label: isAttempted ? '📋 Exam Submitted — Awaiting Official Results' : '📋 Test Window Closed — Results Pending',
         color: 'gray'
       };
     }
@@ -990,22 +1027,49 @@ export function Dashboard() {
                                 </div>
 
                                 {status.isReleased ? (
-                                  <div className="space-y-2">
-                                    <button
-                                      onClick={() => navigate(`/response-sheet?testId=${paper.id}`)}
-                                      className="w-full py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-md border border-amber-400/40 cursor-pointer transition"
-                                    >
-                                      <Award size={16} />
-                                      <span>View Result &amp; Response Sheet</span>
-                                    </button>
-                                    <button
-                                      onClick={() => handleTestClick(paper)}
-                                      className="w-full py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 bg-[#1c1815] text-amber-300 hover:bg-black border border-amber-500/30 cursor-pointer transition"
-                                    >
-                                      <PlayCircle size={14} />
-                                      <span>Practice Mode (Instant Grading)</span>
-                                    </button>
-                                  </div>
+                                  status.isAttempted ? (
+                                    <div className="space-y-2">
+                                      <button
+                                        onClick={() => navigate(`/response-sheet?testId=${paper.id}`)}
+                                        className="w-full py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-md border border-amber-400/40 cursor-pointer transition"
+                                      >
+                                        <Award size={16} />
+                                        <span>View Your Scorecard &amp; AIR Rank</span>
+                                      </button>
+                                      <button
+                                        onClick={() => handleTestClick(paper)}
+                                        className="w-full py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 bg-[#1c1815] text-amber-300 hover:bg-black border border-amber-500/30 cursor-pointer transition"
+                                      >
+                                        <PlayCircle size={14} />
+                                        <span>Re-Practice Mode (Instant Grading)</span>
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-2">
+                                      <div className="p-2.5 rounded-xl bg-amber-950/10 border border-amber-950/20 text-[11px] text-[#1c1815] space-y-1">
+                                        <p className="font-bold flex items-center gap-1.5 text-amber-950">
+                                          <span>⚠️</span> <span>Missed Live Exam Window</span>
+                                        </p>
+                                        <p className="text-[10px] text-neutral-700 leading-snug">
+                                          You did not take this exam during the scheduled live window. You can take it in Practice Mode with instant auto-grading or view official solutions below.
+                                        </p>
+                                      </div>
+                                      <button
+                                        onClick={() => handleTestClick(paper)}
+                                        className="w-full py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-md border border-amber-400/40 cursor-pointer transition"
+                                      >
+                                        <PlayCircle size={16} />
+                                        <span>Practice Mode (Instant Grading)</span>
+                                      </button>
+                                      <button
+                                        onClick={() => navigate(`/response-sheet?testId=${paper.id}&viewSolutions=true`)}
+                                        className="w-full py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 bg-[#1c1815] text-amber-300 hover:bg-black border border-amber-500/30 cursor-pointer transition"
+                                      >
+                                        <FileText size={14} />
+                                        <span>View Paper Solutions &amp; Answer Key</span>
+                                      </button>
+                                    </div>
+                                  )
                                 ) : (
                                   <button
                                     onClick={() => handleTestClick(paper)}
@@ -1103,22 +1167,49 @@ export function Dashboard() {
                         </div>
 
                         {status.isReleased ? (
-                          <div className="space-y-2">
-                            <button
-                              onClick={() => navigate(`/response-sheet?testId=${paper.id}`)}
-                              className="w-full py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-md border border-amber-400/40 cursor-pointer transition"
-                            >
-                              <Award size={16} />
-                              <span>View Result &amp; Response Sheet</span>
-                            </button>
-                            <button
-                              onClick={() => handleTestClick(paper)}
-                              className="w-full py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 bg-[#1c1815] text-amber-300 hover:bg-black border border-amber-500/30 cursor-pointer transition"
-                            >
-                              <PlayCircle size={14} />
-                              <span>Practice Mode (Instant Grading)</span>
-                            </button>
-                          </div>
+                          status.isAttempted ? (
+                            <div className="space-y-2">
+                              <button
+                                onClick={() => navigate(`/response-sheet?testId=${paper.id}`)}
+                                className="w-full py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-md border border-amber-400/40 cursor-pointer transition"
+                              >
+                                <Award size={16} />
+                                <span>View Your Scorecard &amp; AIR Rank</span>
+                              </button>
+                              <button
+                                onClick={() => handleTestClick(paper)}
+                                className="w-full py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 bg-[#1c1815] text-amber-300 hover:bg-black border border-amber-500/30 cursor-pointer transition"
+                              >
+                                <PlayCircle size={14} />
+                                <span>Re-Practice Mode (Instant Grading)</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="p-2.5 rounded-xl bg-amber-950/10 border border-amber-950/20 text-[11px] text-[#1c1815] space-y-1">
+                                <p className="font-bold flex items-center gap-1.5 text-amber-950">
+                                  <span>⚠️</span> <span>Missed Live Exam Window</span>
+                                </p>
+                                <p className="text-[10px] text-neutral-700 leading-snug">
+                                  You did not take this exam during the scheduled live window. You can take it in Practice Mode with instant auto-grading or view official solutions below.
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => handleTestClick(paper)}
+                                className="w-full py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-md border border-amber-400/40 cursor-pointer transition"
+                              >
+                                <PlayCircle size={16} />
+                                <span>Practice Mode (Instant Grading)</span>
+                              </button>
+                              <button
+                                onClick={() => navigate(`/response-sheet?testId=${paper.id}&viewSolutions=true`)}
+                                className="w-full py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 bg-[#1c1815] text-amber-300 hover:bg-black border border-amber-500/30 cursor-pointer transition"
+                              >
+                                <FileText size={14} />
+                                <span>View Paper Solutions &amp; Answer Key</span>
+                              </button>
+                            </div>
+                          )
                         ) : (
                           <button
                             onClick={() => handleTestClick(paper)}

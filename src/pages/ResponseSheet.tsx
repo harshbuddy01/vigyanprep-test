@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useExamStore } from "../stores/examStore";
 import { MathText } from "../components/MathText";
 import {
   CheckCircle2, XCircle, Download, Home, RotateCcw,
   Clock, Trophy, BarChart3, Minus, Loader2, AlertTriangle,
-  ChevronDown, ChevronUp, Flag, X, Send, CheckCircle
+  ChevronDown, ChevronUp, Flag, X, Send, CheckCircle, BookOpen, PlayCircle
 } from "lucide-react";
 
 function formatImageUrl(url: string): string {
@@ -44,12 +44,18 @@ interface AttemptResult {
 
 export const ResponseSheet: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const testIdFromUrl = searchParams.get('testId');
+  const isSolutionsOnly = searchParams.get('viewSolutions') === 'true';
+
   const {
     questions: localQuestions,
     answers: localAnswers,
     testTitle, candidateName, rollNumber, examType, testId,
     attemptId, token, isLiveTest, resetExamState, markedForReview
   } = useExamStore();
+
+  const activeTestId = testIdFromUrl || testId;
 
   const [activeTab, setActiveTab] = useState("Physics");
   const [serverResult, setServerResult] = useState<AttemptResult | null>(null);
@@ -67,28 +73,68 @@ export const ResponseSheet: React.FC = () => {
   const sections = ["Physics", "Chemistry", "Mathematics", "Biology"];
 
   useEffect(() => {
-    if (!attemptId) return;
     const authToken = token || localStorage.getItem("auth_token") || localStorage.getItem("token") || "";
     if (!authToken) return;
+    const apiBase = import.meta.env.VITE_API_URL || "https://api.vigyanprep.com";
+
     const fetchResult = async () => {
       setResultLoading(true);
       try {
-        const apiBase = import.meta.env.VITE_API_URL || "https://api.vigyanprep.com";
-        const res = await fetch(`${apiBase}/api/exam/lifecycle/result/${attemptId}`, {
-          headers: { "Authorization": `Bearer ${authToken}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.resultReleased) setServerResult(data as AttemptResult);
+        // If attempt exists and user is not explicitly requesting pure solutions, load their personal attempt result
+        if (attemptId && !isSolutionsOnly) {
+          const res = await fetch(`${apiBase}/api/exam/lifecycle/result/${attemptId}`, {
+            headers: { "Authorization": `Bearer ${authToken}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.resultReleased) {
+              setServerResult(data as AttemptResult);
+              return;
+            }
+          }
+        }
+
+        // Fallback: If no attempt was made or viewing paper key/solutions, fetch official questions & solutions
+        if (activeTestId) {
+          const solRes = await fetch(`${apiBase}/api/exam/lifecycle/solutions/${activeTestId}`, {
+            headers: { "Authorization": `Bearer ${authToken}` }
+          });
+          if (solRes.ok) {
+            const solData = await solRes.json();
+            if (solData.success && solData.questions) {
+              setServerResult({
+                totalScore: null,
+                sectionScores: null,
+                rank: null,
+                percentile: null,
+                resultReleased: true,
+                totalQuestions: solData.totalQuestions || solData.questions.length,
+                attempted: 0,
+                questions: solData.questions.map((q: any) => ({
+                  id: q.id,
+                  question_number: q.question_number,
+                  question_text: q.question_text || q.text,
+                  options: q.options,
+                  section: q.section,
+                  correct_answer: q.correct_answer,
+                  studentAnswer: null,
+                  status: 'unattempted',
+                  marksEarned: null,
+                  solution_explanation: q.solution_explanation || q.model_answer,
+                  image_url: q.image_url
+                }))
+              });
+            }
+          }
         }
       } catch (err) {
-        console.warn("Could not fetch server result:", err);
+        console.warn("Could not fetch server result or solutions:", err);
       } finally {
         setResultLoading(false);
       }
     };
     fetchResult();
-  }, [attemptId, token]);
+  }, [attemptId, token, activeTestId, isSolutionsOnly]);
 
   // 🚩 Report handler
   const handleSubmitReport = async () => {
@@ -211,129 +257,133 @@ export const ResponseSheet: React.FC = () => {
 
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
 
-        {/* SUMMARY CARDS */}
-        <div className="no-print bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-100"><p className="text-2xl font-black text-[#1b365d]">{localQuestions.length}</p><p className="text-xs text-gray-500 font-semibold mt-1">Total Questions</p></div>
-            <div className="text-center p-4 bg-emerald-50 rounded-xl border border-emerald-100"><p className="text-2xl font-black text-emerald-700">{answeredCount}</p><p className="text-xs text-gray-500 font-semibold mt-1">Answered</p></div>
-            <div className="text-center p-4 bg-red-50 rounded-xl border border-red-100"><p className="text-2xl font-black text-red-600">{localQuestions.length - answeredCount}</p><p className="text-xs text-gray-500 font-semibold mt-1">Unattempted</p></div>
-            <div className="text-center p-4 bg-amber-50 rounded-xl border border-amber-100"><p className="text-2xl font-black text-amber-700">{(markedForReview || []).length}</p><p className="text-xs text-gray-500 font-semibold mt-1">Marked for Review</p></div>
-          </div>
+        {/* SUMMARY CARDS (When candidate took local or live test) */}
+        {localQuestions.length > 0 && (
+          <div className="no-print bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-100"><p className="text-2xl font-black text-[#1b365d]">{localQuestions.length}</p><p className="text-xs text-gray-500 font-semibold mt-1">Total Questions</p></div>
+              <div className="text-center p-4 bg-emerald-50 rounded-xl border border-emerald-100"><p className="text-2xl font-black text-emerald-700">{answeredCount}</p><p className="text-xs text-gray-500 font-semibold mt-1">Answered</p></div>
+              <div className="text-center p-4 bg-red-50 rounded-xl border border-red-100"><p className="text-2xl font-black text-red-600">{localQuestions.length - answeredCount}</p><p className="text-xs text-gray-500 font-semibold mt-1">Unattempted</p></div>
+              <div className="text-center p-4 bg-amber-50 rounded-xl border border-amber-100"><p className="text-2xl font-black text-amber-700">{(markedForReview || []).length}</p><p className="text-xs text-gray-500 font-semibold mt-1">Marked for Review</p></div>
+            </div>
 
-          {isLiveTest && !hasServerResult && (
-            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
-              <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={20} />
-              <div>
-                <p className="font-bold text-amber-800 text-sm">✅ Exam Submitted Successfully</p>
-                <p className="text-xs text-amber-700 mt-1">Your responses have been recorded. Results including your <strong>All-India Rank, score, and correct answers</strong> will be declared by the administrator after the test window closes. You will be notified via email.</p>
+            {isLiveTest && !hasServerResult && (
+              <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+                <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={20} />
+                <div>
+                  <p className="font-bold text-amber-800 text-sm">✅ Exam Submitted Successfully</p>
+                  <p className="text-xs text-amber-700 mt-1">Your responses have been recorded. Results including your <strong>All-India Rank, score, and correct answers</strong> will be declared by the administrator after the test window closes. You will be notified via email.</p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {!isLiveTest && localScoring.correctCount + localScoring.incorrectCount > 0 && (
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="text-center p-3 bg-green-50 rounded-xl border border-green-100"><p className="text-xl font-black text-green-700">{localScoring.correctCount}</p><p className="text-xs text-gray-500 font-semibold">Correct</p></div>
-              <div className="text-center p-3 bg-red-50 rounded-xl border border-red-100"><p className="text-xl font-black text-red-600">{localScoring.incorrectCount}</p><p className="text-xs text-gray-500 font-semibold">Incorrect</p></div>
-              <div className="text-center p-3 bg-gray-50 rounded-xl border border-gray-100"><p className="text-xl font-black text-gray-600">{localScoring.unattemptedCount}</p><p className="text-xs text-gray-500 font-semibold">Unattempted</p></div>
-              <div className="text-center p-3 bg-blue-50 rounded-xl border border-blue-100"><p className="text-xl font-black text-[#1b365d]">{localScoring.totalScore} / {totalMaxScore}</p><p className="text-xs text-gray-500 font-semibold">Your Score</p></div>
-            </div>
-          )}
-        </div>
-
-        {/* RESPONSE TABLE */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="no-print px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="font-bold text-[#1b365d] text-base">Your Response Sheet</h2>
-            <p className="text-xs text-gray-500">Shows your selected answers only • Correct answers not shown here</p>
+            {!isLiveTest && localScoring.correctCount + localScoring.incorrectCount > 0 && (
+              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="text-center p-3 bg-green-50 rounded-xl border border-green-100"><p className="text-xl font-black text-green-700">{localScoring.correctCount}</p><p className="text-xs text-gray-500 font-semibold">Correct</p></div>
+                <div className="text-center p-3 bg-red-50 rounded-xl border border-red-100"><p className="text-xl font-black text-red-600">{localScoring.incorrectCount}</p><p className="text-xs text-gray-500 font-semibold">Incorrect</p></div>
+                <div className="text-center p-3 bg-gray-50 rounded-xl border border-gray-100"><p className="text-xl font-black text-gray-600">{localScoring.unattemptedCount}</p><p className="text-xs text-gray-500 font-semibold">Unattempted</p></div>
+                <div className="text-center p-3 bg-blue-50 rounded-xl border border-blue-100"><p className="text-xl font-black text-[#1b365d]">{localScoring.totalScore} / {totalMaxScore}</p><p className="text-xs text-gray-500 font-semibold">Your Score</p></div>
+              </div>
+            )}
           </div>
+        )}
 
-          <div className="no-print flex overflow-x-auto border-b bg-gray-50">
-            {sections.map(sec => {
-              const secQs = localQuestions.filter(q => q.section === sec || (!sections.includes(q.section) && sec === "Physics"));
-              const secAns = secQs.filter(q => localAnswers[q.id]).length;
-              return (
-                <button key={sec} onClick={() => setActiveTab(sec)} className={`px-5 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition ${activeTab === sec ? "border-[#1b365d] text-[#1b365d] bg-white" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
-                  {sec} ({secAns}/{secQs.length})
-                </button>
-              );
-            })}
-          </div>
+        {/* RESPONSE TABLE (When candidate took local or live test) */}
+        {localQuestions.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="no-print px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="font-bold text-[#1b365d] text-base">Your Response Sheet</h2>
+              <p className="text-xs text-gray-500">Shows your selected answers only • Correct answers not shown here</p>
+            </div>
 
-          <div className="no-print divide-y divide-gray-50">
-            {localQuestions
-              .filter(q => q.section === activeTab || (!sections.includes(q.section) && activeTab === "Physics"))
-              .map((q, idx) => {
-                const studentAns = localAnswers[q.id];
-                const opts = q.options && q.options.length === 4 ? q.options : ["Option A", "Option B", "Option C", "Option D"];
-                const optLabels = ["A", "B", "C", "D"];
+            <div className="no-print flex overflow-x-auto border-b bg-gray-50">
+              {sections.map(sec => {
+                const secQs = localQuestions.filter(q => q.section === sec || (!sections.includes(q.section) && sec === "Physics"));
+                const secAns = secQs.filter(q => localAnswers[q.id]).length;
                 return (
-                  <div key={q.id} className="p-5 hover:bg-gray-50 transition">
-                    <div className="flex items-start gap-4">
-                      <span className="w-7 h-7 rounded-full bg-gray-100 border border-gray-300 flex items-center justify-center text-xs font-bold text-gray-600 shrink-0 mt-0.5">{idx + 1}</span>
-                      <div className="flex-1">
-                        <div className="text-sm text-gray-800 font-medium mb-3 leading-relaxed"><MathText text={(q as any).question_text || q.text || ""} /></div>
-                        {(q.image_url || (q as any).imageUrl) && (
-                          <div className="mb-3"><img src={formatImageUrl(q.image_url || (q as any).imageUrl || "")} alt="diagram" className="max-h-40 object-contain rounded border" /></div>
-                        )}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {opts.map((opt, oi) => {
-                            const label = optLabels[oi];
-                            const isSelected = studentAns === label;
-                            return (
-                              <div key={oi} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${isSelected ? "border-[#1b365d] bg-blue-50 text-[#1b365d] font-bold" : "border-gray-200 bg-gray-50 text-gray-500"}`}>
-                                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${isSelected ? "bg-[#1b365d] text-white" : "bg-gray-200 text-gray-600"}`}>{label}</span>
-                                <MathText text={opt} />
-                              </div>
-                            );
-                          })}
-                        </div>
-                        {!studentAns && <p className="mt-2 text-xs text-gray-400 italic flex items-center gap-1"><Minus size={12} /> Not attempted</p>}
-                        <div className="mt-3 flex justify-end">
-                          <button
-                            onClick={() => { setReportingQuestionId(q.id); setShowReportModal(true); setReportSuccess(false); }}
-                            className="flex items-center gap-1 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-500 border border-red-200 rounded-lg text-[10px] font-bold transition"
-                            title="Report an issue with this question"
-                          >
-                            <Flag size={11} /> Report Issue
-                          </button>
+                  <button key={sec} onClick={() => setActiveTab(sec)} className={`px-5 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition ${activeTab === sec ? "border-[#1b365d] text-[#1b365d] bg-white" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
+                    {sec} ({secAns}/{secQs.length})
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="no-print divide-y divide-gray-50">
+              {localQuestions
+                .filter(q => q.section === activeTab || (!sections.includes(q.section) && activeTab === "Physics"))
+                .map((q, idx) => {
+                  const studentAns = localAnswers[q.id];
+                  const opts = q.options && q.options.length === 4 ? q.options : ["Option A", "Option B", "Option C", "Option D"];
+                  const optLabels = ["A", "B", "C", "D"];
+                  return (
+                    <div key={q.id} className="p-5 hover:bg-gray-50 transition">
+                      <div className="flex items-start gap-4">
+                        <span className="w-7 h-7 rounded-full bg-gray-100 border border-gray-300 flex items-center justify-center text-xs font-bold text-gray-600 shrink-0 mt-0.5">{idx + 1}</span>
+                        <div className="flex-1">
+                          <div className="text-sm text-gray-800 font-medium mb-3 leading-relaxed"><MathText text={(q as any).question_text || q.text || ""} /></div>
+                          {(q.image_url || (q as any).imageUrl) && (
+                            <div className="mb-3"><img src={formatImageUrl(q.image_url || (q as any).imageUrl || "")} alt="diagram" className="max-h-40 object-contain rounded border" /></div>
+                          )}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {opts.map((opt, oi) => {
+                              const label = optLabels[oi];
+                              const isSelected = studentAns === label;
+                              return (
+                                <div key={oi} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${isSelected ? "border-[#1b365d] bg-blue-50 text-[#1b365d] font-bold" : "border-gray-200 bg-gray-50 text-gray-500"}`}>
+                                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${isSelected ? "bg-[#1b365d] text-white" : "bg-gray-200 text-gray-600"}`}>{label}</span>
+                                  <MathText text={opt} />
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {!studentAns && <p className="mt-2 text-xs text-gray-400 italic flex items-center gap-1"><Minus size={12} /> Not attempted</p>}
+                          <div className="mt-3 flex justify-end">
+                            <button
+                              onClick={() => { setReportingQuestionId(q.id); setShowReportModal(true); setReportSuccess(false); }}
+                              className="flex items-center gap-1 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-500 border border-red-200 rounded-lg text-[10px] font-bold transition"
+                              title="Report an issue with this question"
+                            >
+                              <Flag size={11} /> Report Issue
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-          </div>
-
-          {/* PRINT TABLE */}
-          <div className="print-only" style={{display:"none"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:"10px"}}>
-              <thead>
-                <tr style={{background:"#1b365d",color:"white"}}>
-                  <th style={{padding:"5px 8px",border:"1px solid #ccc",textAlign:"left"}}>Q#</th>
-                  <th style={{padding:"5px 8px",border:"1px solid #ccc",textAlign:"left"}}>Section</th>
-                  <th style={{padding:"5px 8px",border:"1px solid #ccc",textAlign:"center"}}>Your Answer</th>
-                  <th style={{padding:"5px 8px",border:"1px solid #ccc",textAlign:"center"}}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {localQuestions.map((q, idx) => {
-                  const ans = localAnswers[q.id];
-                  return (
-                    <tr key={q.id} style={{background: idx % 2 === 0 ? "#fff" : "#f9fafb"}}>
-                      <td style={{padding:"4px 8px",border:"1px solid #e5e7eb",fontWeight:"bold"}}>{idx + 1}</td>
-                      <td style={{padding:"4px 8px",border:"1px solid #e5e7eb"}}>{q.section || "General"}</td>
-                      <td style={{padding:"4px 8px",border:"1px solid #e5e7eb",textAlign:"center",fontWeight:"bold",color: ans ? "#1b365d" : "#9ca3af"}}>{ans || "—"}</td>
-                      <td style={{padding:"4px 8px",border:"1px solid #e5e7eb",textAlign:"center",fontSize:"9px",color: ans ? "#065f46" : "#6b7280"}}>{ans ? "Attempted" : "Not Attempted"}</td>
-                    </tr>
                   );
                 })}
-              </tbody>
-            </table>
-            <div style={{marginTop:"12px",padding:"8px",background:"#f3f4f6",borderRadius:"6px",fontSize:"10px"}}>
-              <strong>Summary:</strong> Total: {localQuestions.length} | Answered: {Object.keys(localAnswers).length} | Not Attempted: {localQuestions.length - Object.keys(localAnswers).length}
+            </div>
+
+            {/* PRINT TABLE */}
+            <div className="print-only" style={{display:"none"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:"10px"}}>
+                <thead>
+                  <tr style={{background:"#1b365d",color:"white"}}>
+                    <th style={{padding:"5px 8px",border:"1px solid #ccc",textAlign:"left"}}>Q#</th>
+                    <th style={{padding:"5px 8px",border:"1px solid #ccc",textAlign:"left"}}>Section</th>
+                    <th style={{padding:"5px 8px",border:"1px solid #ccc",textAlign:"center"}}>Your Answer</th>
+                    <th style={{padding:"5px 8px",border:"1px solid #ccc",textAlign:"center"}}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {localQuestions.map((q, idx) => {
+                    const ans = localAnswers[q.id];
+                    return (
+                      <tr key={q.id} style={{background: idx % 2 === 0 ? "#fff" : "#f9fafb"}}>
+                        <td style={{padding:"4px 8px",border:"1px solid #e5e7eb",fontWeight:"bold"}}>{idx + 1}</td>
+                        <td style={{padding:"4px 8px",border:"1px solid #e5e7eb"}}>{q.section || "General"}</td>
+                        <td style={{padding:"4px 8px",border:"1px solid #e5e7eb",textAlign:"center",fontWeight:"bold",color: ans ? "#1b365d" : "#9ca3af"}}>{ans || "—"}</td>
+                        <td style={{padding:"4px 8px",border:"1px solid #e5e7eb",textAlign:"center",fontSize:"9px",color: ans ? "#065f46" : "#6b7280"}}>{ans ? "Attempted" : "Not Attempted"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <div style={{marginTop:"12px",padding:"8px",background:"#f3f4f6",borderRadius:"6px",fontSize:"10px"}}>
+                <strong>Summary:</strong> Total: {localQuestions.length} | Answered: {Object.keys(localAnswers).length} | Not Attempted: {localQuestions.length - Object.keys(localAnswers).length}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* DARK RESULTS SECTION — not printable */}
         <div className="results-dark no-print">
@@ -343,17 +393,46 @@ export const ResponseSheet: React.FC = () => {
             </div>
           ) : hasServerResult && serverResult ? (
             <div className="bg-gray-950 rounded-2xl shadow-xl border border-gray-800 overflow-hidden">
-              <div className="px-6 py-5 bg-gradient-to-r from-gray-900 to-gray-800 border-b border-gray-700">
-                <div className="flex items-center gap-3 mb-1"><Trophy className="text-amber-400" size={24} /><h2 className="text-xl font-black text-white tracking-wide">OFFICIAL RESULTS & ANALYSIS</h2></div>
-                <p className="text-xs text-gray-400">Results declared by administrator • {testTitle}</p>
+              <div className="px-6 py-5 bg-gradient-to-r from-gray-900 to-gray-800 border-b border-gray-700 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-3 mb-1">
+                    {serverResult.totalScore !== null ? <Trophy className="text-amber-400" size={24} /> : <BookOpen className="text-amber-400" size={24} />}
+                    <h2 className="text-xl font-black text-white tracking-wide">
+                      {serverResult.totalScore !== null ? "OFFICIAL RESULTS & ANALYSIS" : "OFFICIAL PAPER SOLUTIONS & ANSWER KEY"}
+                    </h2>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    {serverResult.totalScore !== null ? `Results declared by administrator • ${testTitle || 'Test Series'}` : `Verified Academic Solutions • ${testTitle || 'Official Paper'}`}
+                  </p>
+                </div>
+                {serverResult.totalScore === null && (
+                  <button
+                    onClick={() => navigate(`/instructions?testId=${activeTestId}&mode=practice`)}
+                    className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-extrabold text-xs uppercase tracking-wider rounded-xl flex items-center gap-2 shrink-0 transition shadow-lg cursor-pointer"
+                  >
+                    <PlayCircle size={15} /> Take in Practice Mode
+                  </button>
+                )}
               </div>
 
-              <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-gray-800 rounded-xl p-4 text-center border border-gray-700"><p className="text-3xl font-black text-amber-400">{serverResult.totalScore ?? "—"}</p><p className="text-xs text-gray-400 mt-1 font-semibold">Total Score</p><p className="text-[10px] text-gray-600">out of {totalMaxScore}</p></div>
-                <div className="bg-gray-800 rounded-xl p-4 text-center border border-gray-700"><p className="text-3xl font-black text-emerald-400">{serverResult.rank ? `#${serverResult.rank}` : "—"}</p><p className="text-xs text-gray-400 mt-1 font-semibold">All-India Rank</p>{serverResult.percentile && <p className="text-[10px] text-gray-500">{serverResult.percentile.toFixed(1)}th percentile</p>}</div>
-                <div className="bg-gray-800 rounded-xl p-4 text-center border border-gray-700"><p className="text-3xl font-black text-green-400">{serverResult.questions.filter(q => q.status === "correct").length}</p><p className="text-xs text-gray-400 mt-1 font-semibold">Correct</p></div>
-                <div className="bg-gray-800 rounded-xl p-4 text-center border border-gray-700"><p className="text-3xl font-black text-red-400">{serverResult.questions.filter(q => q.status === "incorrect").length}</p><p className="text-xs text-gray-400 mt-1 font-semibold">Incorrect</p></div>
-              </div>
+              {serverResult.totalScore !== null ? (
+                <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-gray-800 rounded-xl p-4 text-center border border-gray-700"><p className="text-3xl font-black text-amber-400">{serverResult.totalScore ?? "—"}</p><p className="text-xs text-gray-400 mt-1 font-semibold">Total Score</p><p className="text-[10px] text-gray-600">out of {totalMaxScore}</p></div>
+                  <div className="bg-gray-800 rounded-xl p-4 text-center border border-gray-700"><p className="text-3xl font-black text-emerald-400">{serverResult.rank ? `#${serverResult.rank}` : "—"}</p><p className="text-xs text-gray-400 mt-1 font-semibold">All-India Rank</p>{serverResult.percentile && <p className="text-[10px] text-gray-500">{serverResult.percentile.toFixed(1)}th percentile</p>}</div>
+                  <div className="bg-gray-800 rounded-xl p-4 text-center border border-gray-700"><p className="text-3xl font-black text-green-400">{serverResult.questions.filter(q => q.status === "correct").length}</p><p className="text-xs text-gray-400 mt-1 font-semibold">Correct</p></div>
+                  <div className="bg-gray-800 rounded-xl p-4 text-center border border-gray-700"><p className="text-3xl font-black text-red-400">{serverResult.questions.filter(q => q.status === "incorrect").length}</p><p className="text-xs text-gray-400 mt-1 font-semibold">Incorrect</p></div>
+                </div>
+              ) : (
+                <div className="p-5 bg-gray-900/80 border-b border-gray-800">
+                  <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-3">
+                    <AlertTriangle className="text-amber-400 shrink-0 mt-0.5" size={20} />
+                    <div className="text-xs text-neutral-300 space-y-1">
+                      <p className="font-bold text-amber-400 text-sm">Practice Review Mode Active</p>
+                      <p>You did not submit an attempt during the scheduled live window for this paper. All official correct answers and comprehensive explanations are shown below for self-study. You can also attempt this paper with instant CBT grading!</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {serverResult.sectionScores && (
                 <div className="px-6 pb-4">
