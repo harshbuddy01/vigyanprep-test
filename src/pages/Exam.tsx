@@ -7,6 +7,16 @@ import { MathText } from '../components/MathText';
 import { submitExam as apiSubmitExam } from '../lib/api';
 import { User, Clock, ShieldAlert, Award, Calculator, ChevronRight, ChevronLeft, Flag, X, Send, CheckCircle } from 'lucide-react';
 
+function formatImageUrl(url?: string): string {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  const driveMatch = trimmed.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (driveMatch && driveMatch[1]) {
+    return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+  }
+  return trimmed;
+}
+
 export default function Exam() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -470,7 +480,7 @@ export default function Exam() {
                 {((currentQ as any).image_url || (currentQ as any).diagram_url) && (
                   <div className="my-3 text-center">
                     <img
-                      src={(currentQ as any).image_url || (currentQ as any).diagram_url}
+                      src={formatImageUrl((currentQ as any).image_url || (currentQ as any).diagram_url)}
                       alt="Question Diagram"
                       className="max-h-64 sm:max-h-80 mx-auto object-contain rounded-xl border border-gray-200 shadow-sm bg-white p-1"
                     />
