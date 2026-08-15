@@ -11,17 +11,15 @@ export const SystemCheck: React.FC = () => {
     // Check browser
     setBrowserOk(typeof window !== 'undefined' && 'fetch' in window && 'localStorage' in window);
 
-    // Check screen
+    // Check screen (supports Mobile, Tablet, iPad & PC)
     const checkScreen = () => {
-      setScreenOk(window.innerWidth >= 1024);
+      setScreenOk(window.innerWidth >= 320);
     };
     checkScreen();
     window.addEventListener('resize', checkScreen);
 
     // Check network
-    fetch('/health')
-      .then(() => setNetworkOk(true))
-      .catch(() => setNetworkOk(false)); // Fallback to true if /health isn't actually implemented, but usually should check res.ok
+    setNetworkOk(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
     return () => window.removeEventListener('resize', checkScreen);
   }, []);
@@ -30,28 +28,28 @@ export const SystemCheck: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#120e08] flex items-center justify-center p-4">
-      <div className="bg-[#1a150c] p-8 rounded-lg border border-amber-900/30 max-w-md w-full">
+      <div className="bg-[#1a150c] p-8 rounded-2xl border border-amber-900/30 max-w-md w-full shadow-2xl">
         <h2 className="text-2xl font-bold text-amber-400 mb-6 text-center">System Check</h2>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between text-amber-100">
+        <div className="space-y-4 text-sm">
+          <div className="flex items-center justify-between text-amber-100 p-2 rounded-lg bg-black/30 border border-amber-500/10">
             <span>Browser Compatibility</span>
-            <span>{browserOk === null ? '...' : browserOk ? '✅' : '❌'}</span>
+            <span>{browserOk === null ? '...' : browserOk ? '✅ Supported' : '❌ Unsupported'}</span>
           </div>
-          <div className="flex items-center justify-between text-amber-100">
-            <span>Screen Resolution (&gt;= 1024px)</span>
-            <span>{screenOk === null ? '...' : screenOk ? '✅' : '❌'}</span>
+          <div className="flex items-center justify-between text-amber-100 p-2 rounded-lg bg-black/30 border border-amber-500/10">
+            <span>Device Compatibility (iPad / Tab / PC)</span>
+            <span>{screenOk === null ? '...' : screenOk ? '✅ Ready' : '❌ Too Small'}</span>
           </div>
-          <div className="flex items-center justify-between text-amber-100">
-            <span>Network Connection</span>
-            <span>{networkOk === null ? '...' : networkOk ? '✅' : '❌'}</span>
+          <div className="flex items-center justify-between text-amber-100 p-2 rounded-lg bg-black/30 border border-amber-500/10">
+            <span>Internet Connection</span>
+            <span>{networkOk === null ? '...' : networkOk ? '✅ Connected' : '❌ Offline'}</span>
           </div>
         </div>
         <button
           disabled={!allPass}
           onClick={() => navigate('/instructions' + window.location.search)}
-          className="mt-8 w-full bg-amber-500 hover:bg-amber-400 disabled:bg-amber-900/50 disabled:text-amber-700 text-black font-bold py-3 px-4 rounded transition-colors"
+          className="mt-8 w-full bg-amber-500 hover:bg-amber-400 disabled:bg-amber-900/50 disabled:text-amber-700 text-black font-bold py-3 px-4 rounded-xl transition-colors cursor-pointer"
         >
-          Continue to Instructions
+          Continue to Instructions →
         </button>
       </div>
     </div>

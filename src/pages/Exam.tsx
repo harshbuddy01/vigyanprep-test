@@ -7,16 +7,6 @@ import { MathText } from '../components/MathText';
 import { submitExam as apiSubmitExam } from '../lib/api';
 import { User, Clock, ShieldAlert, Award, Calculator, ChevronRight, ChevronLeft, Flag, X, Send, CheckCircle } from 'lucide-react';
 
-function formatImageUrl(url: string): string {
-  if (!url) return '';
-  const trimmed = url.trim();
-  const driveMatch = trimmed.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if (driveMatch && driveMatch[1]) {
-    return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
-  }
-  return trimmed;
-}
-
 export default function Exam() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -43,43 +33,7 @@ export default function Exam() {
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reportSuccess, setReportSuccess] = useState(false);
 
-  const sections = ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
   const submittingRef = useRef(false);
-
-  // 🚩 Report question handler
-  const handleSubmitReport = async () => {
-    if (!currentQ || reportReason.trim().length < 20) return;
-    setReportSubmitting(true);
-    try {
-      const apiBase = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
-      const authToken = token || localStorage.getItem('auth_token') || localStorage.getItem('token') || '';
-      const res = await fetch(`${apiBase}/api/admin/question-reports/submit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
-        },
-        body: JSON.stringify({
-          testId: testIdParam || testId,
-          questionId: currentQ.id,
-          reason: `[${reportType.toUpperCase()}] ${reportReason.trim()}`
-        })
-      });
-      if (res.ok) {
-        setReportSuccess(true);
-        setReportReason('');
-        setTimeout(() => {
-          setShowReportModal(false);
-          setReportSuccess(false);
-          setReportType('wrong_answer');
-        }, 2000);
-      }
-    } catch (err) {
-      console.error('Report failed:', err);
-    } finally {
-      setReportSubmitting(false);
-    }
-  };
 
   // Auto-fetch questions if state is empty OR if starting a new test session
   useEffect(() => {
@@ -137,54 +91,54 @@ export default function Exam() {
     navigate('/response-sheet' + window.location.search, { replace: true });
   }, [submitExam, attemptId, answers, token, navigate]);
 
-  // Tab switch proctoring
   useEffect(() => {
+    let hideTimer: any = null;
+
     const handleVisibilityChange = () => {
       if (document.hidden && !isSubmitted) {
-        incrementWarning();
-        setShowTabWarning(true);
-        if (warningCount + 1 >= 3) {
-          doSubmit();
-        }
-        setTimeout(() => setShowTabWarning(false), 4000);
-      }
-    };
-
-    const handleWindowBlur = () => {
-      if (!document.hidden && !isSubmitted) {
-        incrementWarning();
-        setShowTabWarning(true);
-        if (warningCount + 1 >= 3) {
-          doSubmit();
-        }
-        setTimeout(() => setShowTabWarning(false), 4000);
+        hideTimer = setTimeout(() => {
+          if (document.hidden && !useExamStore.getState().isSubmitted) {
+            incrementWarning();
+            setShowTabWarning(true);
+            if (useExamStore.getState().warningCount >= 3) {
+              doSubmit();
+            }
+            setTimeout(() => setShowTabWarning(false), 4000);
+          }
+        }, 1500);
+      } else {
+        if (hideTimer) clearTimeout(hideTimer);
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('blur', handleWindowBlur);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('blur', handleWindowBlur);
+      if (hideTimer) clearTimeout(hideTimer);
     };
-  }, [isSubmitted, warningCount, incrementWarning, doSubmit]);
+  }, [isSubmitted, incrementWarning, doSubmit]);
 
-  // Anti-cheating & Fullscreen
   useEffect(() => {
+    const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
     const preventDefault = (e: any) => e.preventDefault();
     const preventKeys = (e: KeyboardEvent) => {
       if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I', 'C', 'J'].includes(e.key)) || (e.ctrlKey && e.key === 'u')) {
         e.preventDefault();
       }
     };
-    // I10: Fullscreen escape detection
+
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement && !useExamStore.getState().isSubmitted) {
+      if (isIOS()) return;
+      const doc = document as any;
+      const fsElement = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement;
+      if (!fsElement && !useExamStore.getState().isSubmitted) {
         useExamStore.getState().incrementWarning?.();
         setShowTabWarning(true);
         setTimeout(() => setShowTabWarning(false), 4000);
-        // Try to re-enter fullscreen
-        document.documentElement.requestFullscreen?.().catch(() => {});
+        const docEl = document.documentElement as any;
+        const reqFs = docEl.requestFullscreen || docEl.webkitRequestFullscreen;
+        if (reqFs) reqFs.call(docEl).catch(() => {});
       }
     };
 
@@ -193,10 +147,7 @@ export default function Exam() {
     document.addEventListener('paste', preventDefault);
     document.addEventListener('keydown', preventKeys);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-
-    if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    }
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
 
     return () => {
       document.removeEventListener('contextmenu', preventDefault);
@@ -204,10 +155,10 @@ export default function Exam() {
       document.removeEventListener('paste', preventDefault);
       document.removeEventListener('keydown', preventKeys);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
     };
   }, []);
 
-  // C4: Server heartbeat — sync answers every 15 seconds
   useEffect(() => {
     const heartbeatInterval = setInterval(async () => {
       try {
@@ -219,39 +170,169 @@ export default function Exam() {
         const apiBase = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
         await fetch(`${apiBase}/api/exam/heartbeat`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${t}`
+          },
           body: JSON.stringify({
             attempt_id: aId,
             time_remaining: state.timeRemaining,
-            answers_json: state.answers,
-            warning_count: state.warningCount || 0
+            answers_count: Object.keys(state.answers).length
           })
         });
       } catch (err) {
-        console.warn('Heartbeat sync failed:', err);
       }
     }, 15000);
+
     return () => clearInterval(heartbeatInterval);
   }, []);
 
-  const currentQ = questions[currentQuestionIndex];
-  const currentAnswer = currentQ ? answers[currentQ.id] : undefined;
+  useEffect(() => {
+    if (timeRemaining <= 0 && !isSubmitted && questions.length > 0) {
+      doSubmit();
+    }
+  }, [timeRemaining, isSubmitted, questions.length, doSubmit]);
 
-  // I5: Mark question as visited when navigated to
+  const currentQ = questions[currentQuestionIndex];
+  const sections = ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
+
+  const sectionQuestions = questions.filter(q =>
+    q.section === activeSection || (!sections.includes(q.section) && activeSection === 'Physics')
+  );
+
+  const currentSectionQIndex = sectionQuestions.findIndex(q => q.id === currentQ?.id);
+
+  const handleOptionSelect = (optionKey: string) => {
+    if (!currentQ) return;
+    setAnswer(currentQ.id, optionKey);
+  };
+
+  const handleSaveAndNext = () => {
+    if (currentSectionQIndex !== -1 && currentSectionQIndex < sectionQuestions.length - 1) {
+      const nextQ = sectionQuestions[currentSectionQIndex + 1];
+      const globalNextIdx = questions.findIndex(q => q.id === nextQ.id);
+      if (globalNextIdx !== -1) {
+        goToQuestion(globalNextIdx);
+        return;
+      }
+    }
+    const curSecIdx = sections.indexOf(activeSection);
+    if (curSecIdx !== -1 && curSecIdx < sections.length - 1) {
+      const nextSec = sections[curSecIdx + 1];
+      setActiveSection(nextSec);
+      const firstQOfNextSec = questions.findIndex(q => q.section === nextSec);
+      if (firstQOfNextSec !== -1) {
+        goToQuestion(firstQOfNextSec);
+      }
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentSectionQIndex > 0) {
+      const prevQ = sectionQuestions[currentSectionQIndex - 1];
+      const globalPrevIdx = questions.findIndex(q => q.id === prevQ.id);
+      if (globalPrevIdx !== -1) {
+        goToQuestion(globalPrevIdx);
+        return;
+      }
+    }
+    const curSecIdx = sections.indexOf(activeSection);
+    if (curSecIdx > 0) {
+      const prevSec = sections[curSecIdx - 1];
+      setActiveSection(prevSec);
+      const prevSecQuestions = questions.filter(q => q.section === prevSec);
+      if (prevSecQuestions.length > 0) {
+        const lastQOfPrevSec = prevSecQuestions[prevSecQuestions.length - 1];
+        const globalIdx = questions.findIndex(q => q.id === lastQOfPrevSec.id);
+        if (globalIdx !== -1) {
+          goToQuestion(globalIdx);
+        }
+      }
+    }
+  };
+
+  const handleSubmitReport = async () => {
+    if (!currentQ || !reportReason.trim() || reportReason.trim().length < 20) return;
+    setReportSubmitting(true);
+    try {
+      const apiBase = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
+      const t = token || localStorage.getItem('exam_token');
+      const res = await fetch(`${apiBase}/api/student/report-question`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(t ? { 'Authorization': `Bearer ${t}` } : {})
+        },
+        body: JSON.stringify({
+          question_id: currentQ.id,
+          test_id: (currentQ as any).test_id || testTitle,
+          issue_type: reportType,
+          reason: reportReason.trim(),
+          candidate_name: candidateName,
+          roll_number: rollNumber
+        })
+      });
+      if (res.ok) {
+        setReportSuccess(true);
+        setTimeout(() => {
+          setShowReportModal(false);
+          setReportReason('');
+          setReportType('wrong_answer');
+          setReportSuccess(false);
+        }, 2000);
+      } else {
+        alert('Failed to submit report. Please try again.');
+      }
+    } catch {
+      alert('Network error submitting report.');
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
+
   useEffect(() => {
     if (currentQ?.id && markVisited) {
       markVisited(currentQ.id);
     }
   }, [currentQ?.id, markVisited]);
 
-  // Sync active section when question changes via next/prev
   useEffect(() => {
-    if (currentQ && currentQ.section && currentQ.section !== activeSection) {
-      if (sections.includes(currentQ.section)) {
-        setActiveSection(currentQ.section);
+    const autoFetchQuestions = async () => {
+      if (!testIdParam) return;
+      if (testIdParam !== testId || isSubmitted) {
+        resetExamState(testIdParam);
       }
-    }
-  }, [currentQuestionIndex]);
+      setLoadingQuestions(true);
+      try {
+        const apiBase = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
+        const res = await fetch(`${apiBase}/api/public/tests/${testIdParam}`);
+        const data = await res.json();
+        if (data.questions && Array.isArray(data.questions) && data.questions.length > 0) {
+          setQuestions(data.questions);
+          if (data.test) {
+            setTestMeta({
+              testTitle: data.test.title,
+              examType: data.test.exam_type || data.test.test_type || 'IAT',
+              testId: testIdParam
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Failed to auto-fetch test questions:', e);
+      } finally {
+        setLoadingQuestions(false);
+      }
+    };
+    autoFetchQuestions();
+  }, [testIdParam, testId, isSubmitted, resetExamState, setQuestions, setTestMeta]);
+
+  useEffect(() => {
+    if (isSubmitted) return;
+    const interval = setInterval(() => {
+      decrementTimer();
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isSubmitted, decrementTimer]);
 
   const formatTimer = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
@@ -260,110 +341,56 @@ export default function Exam() {
     return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Questions belonging strictly to the active section
-  const sectionQuestions = questions.filter(q => q.section === activeSection || (!sections.includes(q.section) && activeSection === 'Physics'));
-  const currentSectionQIndex = sectionQuestions.findIndex(q => q.id === currentQ?.id);
-
-  // Section-Bound Question Navigation (Save & Next / Previous)
-  const handleSaveAndNext = () => {
-    if (!currentQ) return;
-    const currentSecIdx = sectionQuestions.findIndex(q => q.id === currentQ.id);
-    if (currentSecIdx !== -1 && currentSecIdx < sectionQuestions.length - 1) {
-      // Move to next question within current section
-      const nextQ = sectionQuestions[currentSecIdx + 1];
-      const globalIdx = questions.findIndex(q => q.id === nextQ.id);
-      if (globalIdx !== -1) goToQuestion(globalIdx);
-    } else {
-      // Transition to next section if at end of section
-      const currentSecPos = sections.indexOf(activeSection);
-      if (currentSecPos !== -1 && currentSecPos < sections.length - 1) {
-        const nextSec = sections[currentSecPos + 1];
-        setActiveSection(nextSec);
-        const firstQInNextSec = questions.findIndex(q => q.section === nextSec);
-        if (firstQInNextSec !== -1) goToQuestion(firstQInNextSec);
-      }
-    }
-  };
-
-  const handlePrevious = () => {
-    if (!currentQ) return;
-    const currentSecIdx = sectionQuestions.findIndex(q => q.id === currentQ.id);
-    if (currentSecIdx > 0) {
-      // Move to previous question within current section
-      const prevQ = sectionQuestions[currentSecIdx - 1];
-      const globalIdx = questions.findIndex(q => q.id === prevQ.id);
-      if (globalIdx !== -1) goToQuestion(globalIdx);
-    } else {
-      // Transition to previous section if at start of section
-      const currentSecPos = sections.indexOf(activeSection);
-      if (currentSecPos > 0) {
-        const prevSec = sections[currentSecPos - 1];
-        setActiveSection(prevSec);
-        const secQuestionsPrev = questions.filter(q => q.section === prevSec);
-        const lastQInPrevSec = secQuestionsPrev[secQuestionsPrev.length - 1];
-        if (lastQInPrevSec) {
-          const globalIdx = questions.findIndex(q => q.id === lastQInPrevSec.id);
-          if (globalIdx !== -1) goToQuestion(globalIdx);
-        }
-      }
-    }
-  };
-
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-[#f4f6f9] font-sans text-gray-800 relative select-none">
-
-      {/* Scientific Calculator Modal */}
+    <div className="flex flex-col h-[100dvh] overflow-hidden bg-[#f4f6f9] font-sans text-gray-800 relative select-none">
       {showCalculator && <ScientificCalculator onClose={() => setShowCalculator(false)} />}
-
-      {/* Warning Banner */}
       {showTabWarning && (
-        <div className="fixed top-0 inset-x-0 z-50 bg-red-600 text-white text-center py-2 font-bold text-xs shadow-lg animate-pulse flex items-center justify-center gap-2">
-          <ShieldAlert size={16} /> ⚠️ SECURITY WARNING: Tab switch detected! ({warningCount}/3). 3 violations will auto-submit exam.
+        <div className="fixed top-0 inset-x-0 z-50 bg-red-600 text-white text-center py-2 font-bold text-xs shadow-lg animate-pulse flex items-center justify-center gap-2 px-2">
+          <ShieldAlert size={16} /> ⚠️ Tab switch detected! ({warningCount}/3). 3 violations will auto-submit exam.
         </div>
       )}
 
-      {/* NTA Official Header */}
-      <header className="bg-[#1b365d] text-white px-6 py-3 shrink-0 flex items-center justify-between shadow border-b-4 border-amber-400 z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-white text-[#1b365d] font-bold text-lg rounded flex items-center justify-center shadow">
+      <header className="bg-[#1b365d] text-white px-3 sm:px-6 py-2.5 sm:py-3 shrink-0 flex items-center justify-between shadow border-b-4 border-amber-400 z-30">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 bg-white text-[#1b365d] font-black text-sm sm:text-lg rounded flex items-center justify-center shadow shrink-0">
             VP
           </div>
-          <div>
-            <h1 className="text-base font-bold tracking-wide uppercase">{testTitle || 'IISER IAT Official Question Paper'}</h1>
-            <p className="text-xs text-amber-300 font-semibold">Category: {examType || 'IAT'} • NTA Standard CBT Mode</p>
+          <div className="min-w-0">
+            <h1 className="text-xs sm:text-base font-bold tracking-wide uppercase truncate max-w-[140px] sm:max-w-xs md:max-w-md lg:max-w-xl">
+              {testTitle || 'IISER IAT Official Question Paper'}
+            </h1>
+            <p className="text-[10px] sm:text-xs text-amber-300 font-semibold truncate">
+              {examType || 'IAT'} • NTA Standard CBT Mode
+            </p>
           </div>
         </div>
 
-        {/* Scientific Calculator, Timer & Submit Controls */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           <button
             onClick={() => setShowCalculator(!showCalculator)}
-            className="flex items-center gap-2 px-3.5 py-2 bg-amber-400 hover:bg-amber-300 text-neutral-950 font-bold text-xs rounded-lg shadow transition"
+            className="flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-amber-400 hover:bg-amber-300 text-neutral-950 font-bold text-xs rounded-lg shadow transition cursor-pointer"
           >
-            <Calculator size={16} /> Calculator
+            <Calculator size={15} /> <span className="hidden md:inline">Calculator</span>
           </button>
-
-          <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg border border-white/10">
-            <Clock className="text-amber-300 animate-pulse" size={18} />
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-white/10 px-2 sm:px-3.5 py-1 sm:py-1.5 rounded-lg border border-white/10">
+            <Clock className="text-amber-300 animate-pulse shrink-0" size={16} />
             <div className="text-right">
-              <p className="text-[10px] text-amber-200 uppercase font-bold tracking-wider">Time Remaining</p>
-              <p className="text-lg font-mono font-bold text-white tracking-widest">{formatTimer(timeRemaining)}</p>
+              <p className="text-[9px] sm:text-[10px] text-amber-200 uppercase font-bold tracking-wider hidden sm:block">Time Left</p>
+              <p className="text-sm sm:text-lg font-mono font-bold text-white tracking-wider">{formatTimer(timeRemaining)}</p>
             </div>
           </div>
-
           <button
             onClick={() => setShowSubmitModal(true)}
-            className="px-5 py-2.5 bg-[#dc3545] hover:bg-[#c82333] text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow transition"
+            className="px-3 sm:px-5 py-1.5 sm:py-2 bg-[#dc3545] hover:bg-[#c82333] text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow transition cursor-pointer"
           >
-            Submit Exam
+            Submit
           </button>
         </div>
       </header>
 
-      {/* NTA Subject Tabs Bar */}
-      <div className="bg-white border-b px-6 py-2 flex items-center justify-between shrink-0 shadow-sm z-10">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-[#1b365d] uppercase mr-3">Sections:</span>
+      <div className="bg-white border-b px-3 sm:px-6 py-2 flex items-center justify-between shrink-0 shadow-sm z-20 gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-0.5 scrollbar-none flex-1">
+          <span className="text-xs font-bold text-[#1b365d] uppercase mr-1 hidden sm:inline shrink-0">Sections:</span>
           {sections.map(sec => {
             const secQuestions = questions.filter(q => q.section === sec || (!sections.includes(q.section) && sec === 'Physics'));
             const secAnswered = secQuestions.filter(q => answers[q.id] !== undefined).length;
@@ -376,162 +403,147 @@ export default function Exam() {
                   const firstQIndex = questions.findIndex(q => q.section === sec || (!sections.includes(q.section) && sec === 'Physics'));
                   if (firstQIndex !== -1) goToQuestion(firstQIndex);
                 }}
-                className={`px-4 py-2 rounded text-xs font-bold transition flex items-center gap-2 ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
                   isActive
                     ? 'bg-[#1b365d] text-white shadow'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
                 }`}
               >
-                {sec}
-                <span className={`px-2 py-0.5 rounded-full text-[10px] ${isActive ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'}`}>
+                <span>{sec}</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${isActive ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'}`}>
                   {secAnswered}/{secQuestions.length}
                 </span>
               </button>
             );
           })}
         </div>
-
-        {/* Sidebar Toggle Minimize/Maximize Button */}
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-[#1b365d] border border-gray-300 text-xs font-bold rounded transition"
+          className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-[#1b365d] border border-gray-300 text-xs font-bold rounded-lg transition shrink-0 cursor-pointer shadow-sm"
           title={sidebarOpen ? "Minimize Question Palette" : "Expand Question Palette"}
         >
-          {sidebarOpen ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-          {sidebarOpen ? "Full View" : "Show Palette"}
+          {sidebarOpen ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
+          <span className="hidden sm:inline">{sidebarOpen ? "Full View" : "Palette"}</span>
+          <span className="sm:hidden font-bold">Q-Palette</span>
         </button>
       </div>
 
-      {/* Main Workspace Area */}
       <div className="flex flex-1 overflow-hidden relative">
-
-        {/* REPEATING WATERMARK OVERLAY FOR SECURITY & BRAND IDENTITY */}
         <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden select-none opacity-[0.05] flex flex-wrap content-start justify-center gap-20 p-8 transform -rotate-12 scale-125">
           {Array.from({ length: 30 }).map((_, i) => (
             <div key={i} className="text-xl font-serif font-black tracking-widest text-[#1b365d] uppercase whitespace-nowrap">
-              VIGYAN PREP · CANDIDATE: {candidateName || 'HARSH ANAND'} ({rollNumber || 'VP-2026-ANANDHARSH437'})
+              VIGYAN PREP · {candidateName || 'CANDIDATE'} ({rollNumber || 'ID'})
             </div>
           ))}
         </div>
 
-        {/* Left Side: Question Panel */}
-        <div className="flex-1 flex flex-col justify-between overflow-y-auto p-6 bg-white border-r relative z-20">
+        <div className="flex-1 flex flex-col justify-between overflow-y-auto p-3 sm:p-6 bg-white border-r relative z-10">
           {loadingQuestions ? (
             <div className="flex flex-col items-center justify-center h-full space-y-3 text-gray-500">
               <div className="w-8 h-8 border-4 border-[#1b365d] border-t-transparent rounded-full animate-spin"></div>
               <p className="text-xs font-semibold">Loading Question Paper...</p>
             </div>
           ) : currentQ ? (
-            <div className="space-y-6 max-w-4xl mx-auto w-full">
-
-              {/* Question Number, Type Header & Report Button */}
-              <div className="flex items-center justify-between border-b pb-3">
-                <span className="text-sm font-bold text-[#1b365d] uppercase tracking-wider">
+            <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto w-full">
+              <div className="flex items-center justify-between border-b pb-3 flex-wrap gap-2">
+                <span className="text-xs sm:text-sm font-bold text-[#1b365d] uppercase tracking-wider">
                   Question No. {currentSectionQIndex !== -1 ? currentSectionQIndex + 1 : 1} of {sectionQuestions.length} ({activeSection})
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 bg-blue-50 text-blue-800 border border-blue-200 font-bold text-xs rounded-full">
+                  <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 bg-blue-50 text-blue-800 border border-blue-200 font-bold text-[11px] sm:text-xs rounded-full">
                     Marks: +4 | -1
                   </span>
                   <button
                     onClick={() => { setShowReportModal(true); setReportSuccess(false); }}
                     title="Report an issue with this question"
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold text-xs rounded-lg transition"
+                    className="flex items-center gap-1 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold text-[11px] sm:text-xs rounded-lg transition cursor-pointer"
                   >
                     <Flag size={12} /> Report
                   </button>
                 </div>
               </div>
 
-              {/* Question Body with KaTeX Math Rendering */}
-              <div className="p-6 bg-gray-50 rounded-xl border border-gray-200 text-sm leading-relaxed text-gray-900 min-h-[140px] space-y-4">
-                <div className="font-medium text-base">
+              <div className="p-4 sm:p-6 bg-gray-50 rounded-xl border border-gray-200 text-sm leading-relaxed text-gray-900 min-h-[120px] space-y-4">
+                <div className="font-medium text-sm sm:text-base">
                   <MathText text={(currentQ as any).question_text || currentQ.text || 'Question text will appear here.'} />
                 </div>
-
-                {/* Question Diagram Image */}
-                {(currentQ.image_url || (currentQ as any).imageUrl) && (
-                  <div className="p-3 bg-white border border-gray-300 rounded-lg text-center shadow-sm">
+                {((currentQ as any).image_url || (currentQ as any).diagram_url) && (
+                  <div className="my-3 text-center">
                     <img
-                      src={formatImageUrl(currentQ.image_url || (currentQ as any).imageUrl || '')}
+                      src={(currentQ as any).image_url || (currentQ as any).diagram_url}
                       alt="Question Diagram"
-                      className="max-h-80 mx-auto object-contain rounded"
+                      className="max-h-64 sm:max-h-80 mx-auto object-contain rounded-xl border border-gray-200 shadow-sm bg-white p-1"
                     />
                   </div>
                 )}
               </div>
 
-              {/* Multiple Choice Options with KaTeX Math Rendering */}
-              <div className="space-y-3 pt-2">
-                {((currentQ.options && currentQ.options.length === 4) ? currentQ.options : ['Option A', 'Option B', 'Option C', 'Option D']).map((opt, idx) => {
-                  const optKey = ['A', 'B', 'C', 'D'][idx];
-                  const isSelected = currentAnswer === optKey;
+              <div className="space-y-2.5">
+                {(currentQ.options || ['Option A', 'Option B', 'Option C', 'Option D']).map((opt, optIndex) => {
+                  const optKey = String.fromCharCode(65 + optIndex);
+                  const isSelected = answers[currentQ.id] === optKey;
+
                   return (
                     <button
-                      key={idx}
-                      onClick={() => setAnswer(currentQ.id, optKey)}
-                      className={`flex items-center gap-4 p-4 rounded-xl border w-full text-left transition ${
+                      key={optIndex}
+                      onClick={() => handleOptionSelect(optKey)}
+                      className={`w-full text-left p-3 sm:p-4 rounded-xl border-2 transition-all flex items-center gap-3 active:scale-[0.99] cursor-pointer ${
                         isSelected
-                          ? 'border-[#007bff] bg-blue-50/80 text-blue-900 shadow-sm'
-                          : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-800'
+                          ? 'border-[#007bff] bg-blue-50/70 text-[#1b365d] shadow-sm'
+                          : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 text-gray-800'
                       }`}
                     >
-                      <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition ${
+                      <span className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm shrink-0 transition ${
                         isSelected ? 'bg-[#007bff] text-white shadow' : 'bg-gray-100 border border-gray-300 text-gray-700'
                       }`}>
                         {optKey}
                       </span>
-                      <span className="text-sm font-medium">
+                      <span className="text-xs sm:text-sm font-medium flex-1">
                         <MathText text={opt} />
                       </span>
                     </button>
                   );
                 })}
               </div>
-
             </div>
           ) : (
             <div className="text-center py-16 text-gray-500">No questions loaded.</div>
           )}
 
-          {/* Bottom Control Bar (Section-Bound Next / Previous Navigation) */}
-          <div className="border-t pt-4 mt-6 flex items-center justify-between bg-white max-w-4xl mx-auto w-full">
-            <div className="flex gap-3">
+          <div className="border-t pt-3 sm:pt-4 mt-4 sm:mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white max-w-4xl mx-auto w-full">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <button
                 onClick={() => {
                   if (currentQ) markForReview(currentQ.id);
                   handleSaveAndNext();
                 }}
-                className="px-5 py-2.5 bg-[#6f42c1] hover:bg-[#5a32a3] text-white font-bold text-xs rounded-lg shadow transition"
+                className="flex-1 sm:flex-none px-3 sm:px-5 py-2.5 bg-[#6f42c1] hover:bg-[#5a32a3] text-white font-bold text-xs rounded-xl shadow transition active:scale-95 cursor-pointer"
               >
-                Mark for Review & Next
+                Mark & Next
               </button>
               <button
                 onClick={() => {
                   if (currentQ) clearAnswer(currentQ.id);
                 }}
-                className="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold text-xs rounded-lg transition"
+                className="px-3 sm:px-5 py-2.5 bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 font-bold text-xs rounded-xl transition active:scale-95 cursor-pointer"
               >
-                Clear Response
+                Clear
               </button>
             </div>
-
-            <div className="flex gap-3">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <button
                 onClick={handlePrevious}
-                className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 font-bold text-xs rounded-lg transition"
+                className="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 font-bold text-xs rounded-xl transition active:scale-95 cursor-pointer"
               >
-                ← Previous
+                ← Prev
               </button>
               <button
                 onClick={handleSaveAndNext}
-                className="px-6 py-2.5 bg-[#28a745] hover:bg-[#218838] text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow transition"
+                className="flex-1 sm:flex-none px-5 sm:px-6 py-2.5 bg-[#28a745] hover:bg-[#218838] text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow transition active:scale-95 cursor-pointer"
               >
                 Save & Next →
               </button>
             </div>
-
-            {/* 🚩 REPORT QUESTION MODAL */}
             {showReportModal && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
                 <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-md p-6 space-y-4">
@@ -539,7 +551,7 @@ export default function Exam() {
                     <div className="flex flex-col items-center gap-3 py-4">
                       <CheckCircle className="text-green-500" size={40} />
                       <p className="text-base font-bold text-gray-800">Report Submitted!</p>
-                      <p className="text-xs text-gray-500 text-center">Thank you. Our team will review this question.</p>
+                      <p className="text-xs text-gray-500 text-center">Thank you.</p>
                     </div>
                   ) : (
                     <>
@@ -548,26 +560,24 @@ export default function Exam() {
                           <Flag className="text-red-500" size={18} />
                           <h3 className="font-bold text-gray-900">Report This Question</h3>
                         </div>
-                        <button onClick={() => setShowReportModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+                        <button onClick={() => setShowReportModal(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer"><X size={20} /></button>
                       </div>
-
                       <p className="text-xs text-gray-500">Question #{currentSectionQIndex + 1} — {activeSection}</p>
-
                       <div>
                         <label className="block text-xs font-bold text-gray-700 mb-2">Type of Issue</label>
                         <div className="grid grid-cols-2 gap-2">
                           {[
                             { value: 'wrong_answer', label: '❌ Wrong Answer Key' },
-                            { value: 'typo_error', label: '✏️ Typo / Error in Question' },
-                            { value: 'image_missing', label: '🖼️ Image Missing/Broken' },
-                            { value: 'ambiguous', label: '🤔 Ambiguous / Unclear' },
-                            { value: 'wrong_language', label: '🔤 Wrong Language/Formula' },
-                            { value: 'other', label: '📝 Other Issue' },
+                            { value: 'typo_error', label: '✏️ Typo / Error' },
+                            { value: 'image_missing', label: '🖼️ Image Broken' },
+                            { value: 'ambiguous', label: '🤔 Ambiguous' },
+                            { value: 'wrong_language', label: '🔤 Formula Error' },
+                            { value: 'other', label: '📝 Other' },
                           ].map(opt => (
                             <button
                               key={opt.value}
                               onClick={() => setReportType(opt.value)}
-                              className={`px-3 py-2 rounded-lg border text-xs font-semibold text-left transition ${
+                              className={`px-2.5 py-1.5 rounded-lg border text-xs font-semibold text-left transition cursor-pointer ${
                                 reportType === opt.value
                                   ? 'border-red-400 bg-red-50 text-red-700'
                                   : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'
@@ -578,7 +588,6 @@ export default function Exam() {
                           ))}
                         </div>
                       </div>
-
                       <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1.5">Describe the issue <span className="text-red-500">*</span></label>
                         <textarea
@@ -588,22 +597,18 @@ export default function Exam() {
                           rows={3}
                           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
                         />
-                        <p className={`text-[10px] mt-1 ${ reportReason.trim().length >= 20 ? 'text-green-600' : 'text-gray-400'}`}>
-                          {reportReason.trim().length}/20 characters minimum
-                        </p>
                       </div>
-
                       <div className="flex gap-3 pt-1">
                         <button
                           onClick={() => setShowReportModal(false)}
-                          className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-lg transition"
+                          className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition cursor-pointer"
                         >
                           Cancel
                         </button>
                         <button
                           onClick={handleSubmitReport}
                           disabled={reportReason.trim().length < 20 || reportSubmitting}
-                          className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:text-gray-400 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-2 transition"
+                          className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:text-gray-400 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition cursor-pointer"
                         >
                           {reportSubmitting ? (
                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -620,46 +625,61 @@ export default function Exam() {
           </div>
         </div>
 
-        {/* Right Side: Candidate Panel & NTA Question Palette (Collapsible) */}
         {sidebarOpen && (
-          <div className="w-80 bg-gray-50 flex flex-col justify-between p-4 overflow-y-auto shrink-0 border-l transition-all">
-
-            {/* Candidate Profile Box */}
-            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-3">
-              <div className="w-12 h-12 bg-gray-100 rounded-lg border border-gray-300 flex items-center justify-center text-gray-400 shrink-0">
-                <User size={28} />
+          <>
+            <div
+              onClick={() => setSidebarOpen(false)}
+              className="fixed inset-0 bg-black/50 backdrop-blur-xs z-40 lg:hidden transition-opacity"
+            />
+            <div className="fixed inset-y-0 right-0 z-50 w-80 max-w-[85vw] bg-gray-50 flex flex-col justify-between p-4 overflow-y-auto shrink-0 border-l shadow-2xl lg:static lg:shadow-none lg:z-10 transition-transform">
+              <div className="flex items-center justify-between pb-2 border-b border-gray-200 lg:hidden mb-3">
+                <span className="text-xs font-bold text-[#1b365d] uppercase tracking-wider">Question Navigation</span>
+                <button
+                  onClick={() => setSidebarOpen(false)}
+                  className="p-1 text-gray-500 hover:text-gray-900 rounded-lg hover:bg-gray-200 cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
               </div>
-              <div className="overflow-hidden">
-                <p className="text-xs font-bold text-[#1b365d] truncate">{candidateName || 'Student Candidate'}</p>
-                <p className="text-[11px] text-gray-500 font-bold truncate">Roll: {rollNumber || 'VP-2026-STUDENT'}</p>
-                <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-0.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Live Online
-                </p>
+              <div className="bg-white p-3 sm:p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 rounded-lg border border-gray-300 flex items-center justify-center text-gray-400 shrink-0">
+                  <User size={24} />
+                </div>
+                <div className="overflow-hidden">
+                  <p className="text-xs font-bold text-[#1b365d] truncate">{candidateName || 'Student Candidate'}</p>
+                  <p className="text-[10px] sm:text-[11px] text-gray-500 font-bold truncate">Roll: {rollNumber || 'VP-2026-STUDENT'}</p>
+                  <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-0.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Live Online
+                  </p>
+                </div>
               </div>
+              <div className="my-3 sm:my-4 flex-1 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">{activeSection} Palette</h3>
+                  <span className="text-[10px] bg-gray-200 px-2 py-0.5 rounded text-gray-600 font-bold">{sectionQuestions.length} Questions</span>
+                </div>
+                <QuestionPalette
+                  activeSection={activeSection}
+                  onSelect={(q) => {
+                    const gIdx = questions.findIndex(item => item.id === q.id);
+                    if (gIdx !== -1) goToQuestion(gIdx);
+                    if (window.innerWidth < 1024) {
+                      setSidebarOpen(false);
+                    }
+                  }}
+                />
+              </div>
+              <button
+                onClick={() => setShowSubmitModal(true)}
+                className="w-full py-3 bg-[#dc3545] hover:bg-[#c82333] text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow transition mt-2 cursor-pointer"
+              >
+                Submit Examination
+              </button>
             </div>
-
-            {/* Question Palette Section (Isolated to Active Section) */}
-            <div className="my-4 flex-1 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">{activeSection} Palette</h3>
-                <span className="text-[10px] bg-gray-200 px-2 py-0.5 rounded text-gray-600 font-bold">{sectionQuestions.length} Questions</span>
-              </div>
-              <QuestionPalette activeSection={activeSection} />
-            </div>
-
-            {/* Submit Test Button */}
-            <button
-              onClick={() => setShowSubmitModal(true)}
-              className="w-full py-3 bg-[#dc3545] hover:bg-[#c82333] text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow transition mt-2"
-            >
-              Submit Examination
-            </button>
-          </div>
+          </>
         )}
-
       </div>
 
-      {/* Submit Confirmation Modal */}
       {showSubmitModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full border border-gray-200 shadow-2xl space-y-4 text-center">

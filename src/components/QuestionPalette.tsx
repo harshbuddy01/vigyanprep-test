@@ -41,7 +41,7 @@ export const QuestionPalette: React.FC<Props> = (props) => {
   const visitedQuestions = store.visitedQuestions || [];
 
   return (
-    <div className="grid grid-cols-5 gap-2 p-1">
+    <div className="grid grid-cols-5 gap-2 sm:gap-2.5 p-1">
       {filteredQuestions.map((q, idx) => {
         const isAnswered = answers[q.id] !== undefined;
         const isMarked = markedForReview.includes(q.id);
@@ -51,16 +51,16 @@ export const QuestionPalette: React.FC<Props> = (props) => {
         // Official NTA CBT 5-Color Question Status
         let bg = '#e9ecef'; // 1. Not Visited (Light Grey)
         let color = '#495057';
-        let shapeClass = 'rounded';
+        let shapeClass = 'rounded-lg';
 
         if (isAnswered && isMarked) {
           bg = '#6f42c1'; color = '#fff'; shapeClass = 'rounded-full border-2 border-emerald-400'; // 5. Answered + Marked
         } else if (isMarked) {
           bg = '#6f42c1'; color = '#fff'; shapeClass = 'rounded-full'; // 4. Marked for Review (Purple)
         } else if (isAnswered) {
-          bg = '#28a745'; color = '#fff'; shapeClass = 'rounded-tl-lg rounded-br-lg'; // 3. Answered (Green)
+          bg = '#28a745'; color = '#fff'; shapeClass = 'rounded-tl-xl rounded-br-xl'; // 3. Answered (Green)
         } else if (isVisited) {
-          bg = '#dc3545'; color = '#fff'; shapeClass = 'rounded-tr-lg rounded-bl-lg'; // 2. Not Answered but Visited (Red)
+          bg = '#dc3545'; color = '#fff'; shapeClass = 'rounded-tr-xl rounded-bl-xl'; // 2. Not Answered but Visited (Red)
         }
         // else: Not Visited stays grey (default)
 
@@ -69,12 +69,12 @@ export const QuestionPalette: React.FC<Props> = (props) => {
             key={q.id}
             onClick={() => handleClick(q)}
             title={`Question ${idx + 1}`}
-            className={`w-9 h-9 flex items-center justify-center text-xs font-bold transition-all shadow-sm ${shapeClass}`}
+            className={`w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-xs sm:text-sm font-extrabold transition-all active:scale-95 cursor-pointer shadow-sm ${shapeClass}`}
             style={{
               background: bg,
               color: color,
-              border: isCurrent ? '2.5px solid #007bff' : '1px solid rgba(0,0,0,0.1)',
-              boxShadow: isCurrent ? '0 0 8px rgba(0,123,255,0.4)' : 'none'
+              border: isCurrent ? '2.5px solid #007bff' : '1px solid rgba(0,0,0,0.12)',
+              boxShadow: isCurrent ? '0 0 10px rgba(0,123,255,0.6)' : 'none'
             }}
           >
             {idx + 1}

@@ -142,9 +142,14 @@ export const Instructions: React.FC = () => {
         }
       }
 
-      if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      }
+      // Cross-browser & iPad fullscreen attempt with vendor prefixes
+      try {
+        const docEl = document.documentElement as any;
+        const reqFs = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
+        if (reqFs) {
+          reqFs.call(docEl).catch(() => {});
+        }
+      } catch {}
 
       navigate('/exam' + window.location.search);
     } catch (err: any) {

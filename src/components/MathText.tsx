@@ -116,7 +116,7 @@ export const MathText: React.FC<Props> = ({ text, className = '' }) => {
                     <span
                       key={index}
                       dangerouslySetInnerHTML={{ __html: html }}
-                      className="inline-block px-0.5"
+                      className={`inline-block px-0.5 max-w-full ${isDisplay ? 'block overflow-x-auto overflow-y-hidden my-2 py-1 scrollbar-thin' : 'overflow-x-auto'}`}
                     />
                   );
                 } catch {
@@ -132,7 +132,7 @@ export const MathText: React.FC<Props> = ({ text, className = '' }) => {
                     <span
                       key={index}
                       dangerouslySetInnerHTML={{ __html: html }}
-                      className="inline-block px-0.5"
+                      className="inline-block px-0.5 max-w-full overflow-x-auto"
                     />
                   );
                 } catch {
