@@ -345,6 +345,13 @@ export function Dashboard() {
 
   const handleTestClick = (paper: TestPaper) => {
     const status = getWindowStatus(paper);
+
+    // If student already attempted this live exam and results are not released yet
+    if (status.isAttempted && !status.isReleased && paper.content_type === 'test_series') {
+      triggerToast('📋 You have already submitted this exam. Official scorecard & AIR rankings will be released after 09:00 PM.');
+      return;
+    }
+
     if (!status.isLive && status.color !== 'emerald') {
       triggerToast(`⚠️ ${status.label}`);
       return;
@@ -1171,6 +1178,16 @@ export function Dashboard() {
                                       </button>
                                     </div>
                                   )
+                                ) : status.isAttempted && paper.content_type === 'test_series' ? (
+                                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-1">
+                                    <div className="text-xs font-black text-emerald-700 flex items-center justify-center gap-1.5">
+                                      <CheckCircle2 size={16} className="text-emerald-600" />
+                                      <span>Exam Submitted Successfully</span>
+                                    </div>
+                                    <p className="text-[10px] text-neutral-600">
+                                      Your responses have been recorded. Official results &amp; AIR rankings will be released after 09:00 PM.
+                                    </p>
+                                  </div>
                                 ) : (
                                   <button
                                     onClick={() => handleTestClick(paper)}
@@ -1311,6 +1328,16 @@ export function Dashboard() {
                               </button>
                             </div>
                           )
+                        ) : status.isAttempted && paper.content_type === 'test_series' ? (
+                          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-1">
+                            <div className="text-xs font-black text-emerald-700 flex items-center justify-center gap-1.5">
+                              <CheckCircle2 size={16} className="text-emerald-600" />
+                              <span>Exam Submitted Successfully</span>
+                            </div>
+                            <p className="text-[10px] text-neutral-600">
+                              Your responses have been recorded. Official results &amp; AIR rankings will be released after 09:00 PM.
+                            </p>
+                          </div>
                         ) : (
                           <button
                             onClick={() => handleTestClick(paper)}
