@@ -18,6 +18,13 @@ body {
   min-height: 100vh;
   margin: 0;
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overscroll-behavior-y: contain;
+}
+
+button, a, input, select {
+  touch-action: manipulation;
 }
 
 h1, h2, h3, h4, h5, h6 {

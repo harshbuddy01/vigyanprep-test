@@ -4,7 +4,7 @@ import {
   LayoutDashboard, FileText, BookOpen, BarChart3, Bookmark, StickyNote,
   MessageSquare, Settings, Search, Bell, Award, Sparkles, ShieldCheck,
   ArrowRight, PlayCircle, Lock, Key, X, AlertCircle, CheckCircle2,
-  RefreshCw, HelpCircle, Download, ChevronRight
+  RefreshCw, HelpCircle, Download, ChevronRight, Menu
 } from 'lucide-react';
 import { getCookie, deleteCookie } from '../lib/cookies';
 import { useExamStore, generateRollNumber } from '../stores/examStore';
@@ -111,6 +111,7 @@ export function Dashboard() {
   const [attemptedTestIds, setAttemptedTestIds] = useState<string[]>([]);
 
   // Modals & Toasts
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [showPasscodeModal, setShowPasscodeModal] = useState(false);
   const [selectedTestForPasscode, setSelectedTestForPasscode] = useState<TestPaper | null>(null);
   const [inputPasscode, setInputPasscode] = useState('');
@@ -487,9 +488,10 @@ export function Dashboard() {
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          LEFT SIDEBAR NAVIGATION (Ultra-Transparent Glass Frame with Defined Dark Border)
+          LEFT SIDEBAR NAVIGATION (Desktop Static + Mobile Slide-over Drawer)
          ═══════════════════════════════════════════════════════════════════════ */}
-      <aside className="w-64 bg-white/20 backdrop-blur-2xl border-r-2 border-amber-950/30 flex flex-col justify-between p-6 z-20 shrink-0 min-h-screen shadow-2xl shadow-amber-950/10">
+      {/* Desktop Static Sidebar */}
+      <aside className="hidden lg:flex w-64 bg-white/20 backdrop-blur-2xl border-r-2 border-amber-950/30 flex-col justify-between p-6 z-20 shrink-0 min-h-screen shadow-2xl shadow-amber-950/10">
         <div className="space-y-8">
           
           {/* Official Logo — Clicking redirects directly to homepage */}
@@ -513,7 +515,7 @@ export function Dashboard() {
             <button
               type="button"
               onClick={() => { setActiveNav('dashboard'); }}
-              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
+              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition cursor-pointer ${
                 activeNav === 'dashboard'
                   ? 'bg-[#1c1815] text-amber-300 font-bold shadow-lg shadow-amber-950/30 border border-amber-500/30'
                   : 'text-[#1c1815] hover:text-amber-950 hover:bg-white/40'
@@ -526,7 +528,7 @@ export function Dashboard() {
             <button
               type="button"
               onClick={() => { setActiveNav('test_series'); setActiveTab('TEST_SERIES'); }}
-              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
+              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition cursor-pointer ${
                 activeNav === 'test_series'
                   ? 'bg-[#1c1815] text-amber-300 font-bold shadow-lg shadow-amber-950/30 border border-amber-500/30'
                   : 'text-[#1c1815] hover:text-amber-950 hover:bg-white/40'
@@ -540,7 +542,7 @@ export function Dashboard() {
               href="https://vigyanprep.com/pyq"
               target="_blank"
               rel="noreferrer"
-              className="w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 text-[#1c1815] hover:text-amber-950 hover:bg-white/40 transition"
+              className="w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 text-[#1c1815] hover:text-amber-950 hover:bg-white/40 transition cursor-pointer"
             >
               <BookOpen size={18} />
               <span>PYQ Library</span>
@@ -549,7 +551,7 @@ export function Dashboard() {
             <button
               type="button"
               onClick={() => { setActiveNav('performance'); setShowPerformanceModal(true); }}
-              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
+              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition cursor-pointer ${
                 activeNav === 'performance'
                   ? 'bg-[#1c1815] text-amber-300 font-bold shadow-lg shadow-amber-950/30 border border-amber-500/30'
                   : 'text-[#1c1815] hover:text-amber-950 hover:bg-white/40'
@@ -562,7 +564,7 @@ export function Dashboard() {
             <button
               type="button"
               onClick={() => { setActiveNav('bookmarks'); triggerToast('🔖 Bookmarks feature coming soon! Save questions for revision.'); }}
-              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
+              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition cursor-pointer ${
                 activeNav === 'bookmarks'
                   ? 'bg-[#1c1815] text-amber-300 font-bold shadow-lg shadow-amber-950/30 border border-amber-500/30'
                   : 'text-[#1c1815] hover:text-amber-950 hover:bg-white/40'
@@ -575,7 +577,7 @@ export function Dashboard() {
             <button
               type="button"
               onClick={() => { setActiveNav('notes'); triggerToast('📋 Notes feature coming soon! Write revision notes during CBT tests.'); }}
-              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
+              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition cursor-pointer ${
                 activeNav === 'notes'
                   ? 'bg-[#1c1815] text-amber-300 font-bold shadow-lg shadow-amber-950/30 border border-amber-500/30'
                   : 'text-[#1c1815] hover:text-amber-950 hover:bg-white/40'
@@ -588,7 +590,7 @@ export function Dashboard() {
             <button
               type="button"
               onClick={() => { setActiveNav('discussions'); triggerToast('💬 Student Discussion Forum coming soon!'); }}
-              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
+              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition cursor-pointer ${
                 activeNav === 'discussions'
                   ? 'bg-[#1c1815] text-amber-300 font-bold shadow-lg shadow-amber-950/30 border border-amber-500/30'
                   : 'text-[#1c1815] hover:text-amber-950 hover:bg-white/40'
@@ -601,7 +603,7 @@ export function Dashboard() {
             <button
               type="button"
               onClick={() => { setActiveNav('settings'); setShowSettingsModal(true); }}
-              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
+              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition cursor-pointer ${
                 activeNav === 'settings'
                   ? 'bg-[#1c1815] text-amber-300 font-bold shadow-lg shadow-amber-950/30 border border-amber-500/30'
                   : 'text-[#1c1815] hover:text-amber-950 hover:bg-white/40'
@@ -618,12 +620,112 @@ export function Dashboard() {
           <p className="text-[10px] text-[#1c1815] font-extrabold">Need Assistance?</p>
           <a
             href="https://vigyanprep.com/about"
-            className="px-4 py-2 rounded-xl bg-white/30 border-2 border-amber-950/30 text-amber-950 text-xs font-bold block hover:bg-white/60 transition shadow-sm"
+            className="px-4 py-2 rounded-xl bg-white/30 border-2 border-amber-950/30 text-amber-950 text-xs font-bold block hover:bg-white/60 transition shadow-sm cursor-pointer"
           >
             Contact Support
           </a>
         </div>
       </aside>
+
+      {/* Mobile Drawer (Slide-over Navigation for Phones and Tablets) */}
+      {mobileNavOpen && (
+        <>
+          <div
+            onClick={() => setMobileNavOpen(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 lg:hidden transition-opacity"
+          />
+          <aside className="fixed inset-y-0 left-0 z-50 w-72 bg-[#f4ecd8] border-r-2 border-amber-950/40 p-6 flex flex-col justify-between shadow-2xl lg:hidden overflow-y-auto">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b-2 border-amber-950/20 pb-4">
+                <a href="https://vigyanprep.com/" className="flex flex-col items-start gap-1">
+                  <img src="/vigyan-logo.png" alt="VigyanPrep Logo" className="h-16 w-auto object-contain drop-shadow" />
+                  <span className="text-[9px] text-amber-950 font-black tracking-widest uppercase">TEST PORTAL</span>
+                </a>
+                <button
+                  onClick={() => setMobileNavOpen(false)}
+                  className="p-2 rounded-xl bg-amber-950/10 hover:bg-amber-950/20 text-amber-950 transition cursor-pointer"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Mobile Navigation Links */}
+              <nav className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => { setActiveNav('dashboard'); setMobileNavOpen(false); }}
+                  className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
+                    activeNav === 'dashboard'
+                      ? 'bg-[#1c1815] text-amber-300 font-bold shadow-md border border-amber-500/30'
+                      : 'text-[#1c1815] hover:bg-white/60'
+                  }`}
+                >
+                  <LayoutDashboard size={18} />
+                  <span>Dashboard</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setActiveNav('test_series'); setActiveTab('TEST_SERIES'); setMobileNavOpen(false); }}
+                  className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
+                    activeNav === 'test_series'
+                      ? 'bg-[#1c1815] text-amber-300 font-bold shadow-md border border-amber-500/30'
+                      : 'text-[#1c1815] hover:bg-white/60'
+                  }`}
+                >
+                  <FileText size={18} />
+                  <span>Test Series</span>
+                </button>
+
+                <a
+                  href="https://vigyanprep.com/pyq"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 text-[#1c1815] hover:bg-white/60 transition"
+                >
+                  <BookOpen size={18} />
+                  <span>PYQ Library</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => { setActiveNav('performance'); setShowPerformanceModal(true); setMobileNavOpen(false); }}
+                  className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
+                    activeNav === 'performance'
+                      ? 'bg-[#1c1815] text-amber-300 font-bold shadow-md border border-amber-500/30'
+                      : 'text-[#1c1815] hover:bg-white/60'
+                  }`}
+                >
+                  <BarChart3 size={18} />
+                  <span>Performance</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setActiveNav('settings'); setShowSettingsModal(true); setMobileNavOpen(false); }}
+                  className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
+                    activeNav === 'settings'
+                      ? 'bg-[#1c1815] text-amber-300 font-bold shadow-md border border-amber-500/30'
+                      : 'text-[#1c1815] hover:bg-white/60'
+                  }`}
+                >
+                  <Settings size={18} />
+                  <span>Settings</span>
+                </button>
+              </nav>
+            </div>
+
+            <div className="pt-6 border-t-2 border-amber-950/20 space-y-2 text-center">
+              <a
+                href="https://vigyanprep.com/about"
+                className="px-4 py-2.5 rounded-xl bg-amber-950 text-amber-200 text-xs font-bold block shadow-md hover:bg-amber-900 transition"
+              >
+                Contact Support
+              </a>
+            </div>
+          </aside>
+        </>
+      )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
           MAIN CONTENT AREA
@@ -631,17 +733,26 @@ export function Dashboard() {
       <div className="flex-1 flex flex-col min-w-0 z-10">
         
         {/* TOP HEADER BAR (Ultra-Transparent Glass with Dark Defined Border) */}
-        <header className="px-8 py-5 flex items-center justify-between gap-6 bg-white/20 backdrop-blur-2xl border-b-2 border-amber-950/30 sticky top-0 z-30 shadow-md">
+        <header className="px-4 sm:px-8 py-3.5 sm:py-5 flex items-center justify-between gap-3 sm:gap-6 bg-white/20 backdrop-blur-2xl border-b-2 border-amber-950/30 sticky top-0 z-30 shadow-md">
           
+          {/* Mobile Menu Hamburger Button */}
+          <button
+            onClick={() => setMobileNavOpen(true)}
+            className="lg:hidden p-2.5 rounded-xl bg-white/40 border-2 border-amber-950/30 text-[#1c1815] hover:bg-white/60 transition shadow-sm cursor-pointer shrink-0"
+            title="Open Navigation Menu"
+          >
+            <Menu size={20} />
+          </button>
+
           {/* Search Box */}
           <div className="relative w-full max-w-md">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#1c1815]" size={16} />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#1c1815]" size={15} />
             <input
               type="text"
-              placeholder="Search test series, subjects & more..."
+              placeholder="Search test series & subjects..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white/40 border-2 border-amber-950/30 rounded-full pl-11 pr-4 py-2.5 text-xs text-[#1c1815] placeholder-[#1c1815]/70 font-semibold focus:outline-none focus:border-amber-950 shadow-inner"
+              className="w-full bg-white/40 border-2 border-amber-950/30 rounded-full pl-10 pr-4 py-2 text-xs text-[#1c1815] placeholder-[#1c1815]/70 font-semibold focus:outline-none focus:border-amber-950 shadow-inner"
             />
           </div>
 
