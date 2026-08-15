@@ -306,43 +306,12 @@ export default function Exam() {
     }
   }, [currentQ?.id, markVisited]);
 
+  // Auto-submit on timer expiration
   useEffect(() => {
-    const autoFetchQuestions = async () => {
-      if (!testIdParam) return;
-      if (testIdParam !== testId || isSubmitted) {
-        resetExamState(testIdParam);
-      }
-      setLoadingQuestions(true);
-      try {
-        const apiBase = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
-        const res = await fetch(`${apiBase}/api/public/tests/${testIdParam}`);
-        const data = await res.json();
-        if (data.questions && Array.isArray(data.questions) && data.questions.length > 0) {
-          setQuestions(data.questions);
-          if (data.test) {
-            setTestMeta({
-              testTitle: data.test.title,
-              examType: data.test.exam_type || data.test.test_type || 'IAT',
-              testId: testIdParam
-            });
-          }
-        }
-      } catch (e) {
-        console.error('Failed to auto-fetch test questions:', e);
-      } finally {
-        setLoadingQuestions(false);
-      }
-    };
-    autoFetchQuestions();
-  }, [testIdParam, testId, isSubmitted, resetExamState, setQuestions, setTestMeta]);
-
-  useEffect(() => {
-    if (isSubmitted) return;
-    const interval = setInterval(() => {
-      decrementTimer();
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isSubmitted, decrementTimer]);
+    if (timeRemaining <= 0 && questions.length > 0 && !submittingRef.current) {
+      doSubmit();
+    }
+  }, [timeRemaining, questions.length, doSubmit]);
 
   const formatTimer = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
