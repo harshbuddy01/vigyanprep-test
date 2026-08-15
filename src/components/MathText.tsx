@@ -20,6 +20,27 @@ function formatImageUrl(url: string): string {
 export const MathText: React.FC<Props> = ({ text, className = '' }) => {
   if (!text) return null;
 
+  const trimmedText = text.trim();
+  if (/^https?:\/\/[^\s]+$/i.test(trimmedText) && (
+    /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(trimmedText) ||
+    /googleusercontent\.com/i.test(trimmedText) ||
+    /drive\.google\.com/i.test(trimmedText)
+  )) {
+    const formattedUrl = formatImageUrl(trimmedText);
+    return (
+      <span className={`block my-1.5 text-center ${className}`}>
+        <img
+          src={formattedUrl}
+          alt="Option Diagram"
+          className="max-h-48 mx-auto object-contain rounded-xl border border-gray-200 shadow-sm bg-white p-1"
+          onError={(e) => {
+            (e.target as HTMLElement).style.display = 'none';
+          }}
+        />
+      </span>
+    );
+  }
+
   // Clean common PDF encoding artifacts
   const sanitized = text
     .replace(/5Õ|5Ö|5Ô/g, "5'")
