@@ -13,5 +13,7 @@ export function setCookie(name: string, value: string, days = 365) {
 
 export function deleteCookie(name: string) {
   if (typeof document === 'undefined') return;
-  document.cookie = `${name}=; domain=.vigyanprep.com; path=/; max-age=-1; secure; samesite=lax`;
+  document.cookie = `${name}=; domain=.vigyanprep.com; path=/; max-age=-1; expires=Thu, 01 Jan 1970 00:00:00 GMT; secure; samesite=lax`;
+  document.cookie = `${name}=; domain=vigyanprep.com; path=/; max-age=-1; expires=Thu, 01 Jan 1970 00:00:00 GMT; secure; samesite=lax`;
+  document.cookie = `${name}=; path=/; max-age=-1; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
 }
