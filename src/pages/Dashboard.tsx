@@ -33,6 +33,7 @@ interface TestPaper {
   content_type?: string;
   passcode?: string;
   access_code?: string;
+  response_released_at?: string;
 }
 
 interface HallTicket {
@@ -275,10 +276,22 @@ export function Dashboard() {
       return { isLive: true, label: '🟢 LIVE NOW', color: 'emerald' };
     }
 
-    // Expired live test — window has closed
+    // Expired live test — check if results declared
     if (paper.content_type === 'test_series' && end && now > end) {
+      const isResultsReleased = !!(paper.response_released_at || (paper as any).result_released_at || paper.status === 'completed');
+      if (isResultsReleased) {
+        return {
+          isLive: true,
+          isPractice: true,
+          isReleased: true,
+          label: '🏆 Results Declared • Practice & Review Available',
+          color: 'emerald'
+        };
+      }
       return {
         isLive: false,
+        isPractice: false,
+        isReleased: false,
         label: `📋 Test Closed – Results Pending`,
         color: 'gray'
       };
@@ -976,18 +989,37 @@ export function Dashboard() {
                                   )}
                                 </div>
 
-                                <button
-                                  onClick={() => handleTestClick(paper)}
-                                  disabled={!status.isLive}
-                                  className={`w-full py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md ${
-                                    status.isLive
-                                      ? (myHallTicket ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-900/30 border border-emerald-500 cursor-pointer' : 'bg-[#1c1815] text-amber-300 hover:bg-black shadow-amber-950/30 cursor-pointer border border-amber-500/30')
-                                      : 'bg-neutral-300/60 text-neutral-600 border border-neutral-400 cursor-not-allowed'
-                                  }`}
-                                >
-                                  {status.isLive ? <PlayCircle size={16} /> : <Lock size={16} />}
-                                  <span>{status.isLive ? (myHallTicket ? 'Enter Exam' : 'Start CBT Exam') : 'Test Window Closed'}</span>
-                                </button>
+                                {status.isReleased ? (
+                                  <div className="space-y-2">
+                                    <button
+                                      onClick={() => navigate(`/response-sheet?testId=${paper.id}`)}
+                                      className="w-full py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-md border border-amber-400/40 cursor-pointer transition"
+                                    >
+                                      <Award size={16} />
+                                      <span>View Result &amp; Response Sheet</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleTestClick(paper)}
+                                      className="w-full py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 bg-[#1c1815] text-amber-300 hover:bg-black border border-amber-500/30 cursor-pointer transition"
+                                    >
+                                      <PlayCircle size={14} />
+                                      <span>Practice Mode (Instant Grading)</span>
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => handleTestClick(paper)}
+                                    disabled={!status.isLive}
+                                    className={`w-full py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md ${
+                                      status.isLive
+                                        ? (myHallTicket ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-900/30 border border-emerald-500 cursor-pointer' : 'bg-[#1c1815] text-amber-300 hover:bg-black shadow-amber-950/30 cursor-pointer border border-amber-500/30')
+                                        : 'bg-neutral-300/60 text-neutral-600 border border-neutral-400 cursor-not-allowed'
+                                    }`}
+                                  >
+                                    {status.isLive ? <PlayCircle size={16} /> : <Lock size={16} />}
+                                    <span>{status.isLive ? (myHallTicket ? 'Enter Exam' : 'Start CBT Exam') : 'Test Window Closed'}</span>
+                                  </button>
+                                )}
                               </div>
                             );
                           })}
@@ -1070,18 +1102,37 @@ export function Dashboard() {
                           )}
                         </div>
 
-                        <button
-                          onClick={() => handleTestClick(paper)}
-                          disabled={!status.isLive}
-                          className={`w-full py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md ${
-                            status.isLive
-                              ? (myHallTicket ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-900/30 border border-emerald-500 cursor-pointer' : 'bg-[#1c1815] text-amber-300 hover:bg-black shadow-amber-950/30 cursor-pointer border border-amber-500/30')
-                              : 'bg-neutral-300/60 text-neutral-600 border border-neutral-400 cursor-not-allowed'
-                          }`}
-                        >
-                          {status.isLive ? <PlayCircle size={16} /> : <Lock size={16} />}
-                          <span>{status.isLive ? (myHallTicket ? 'Enter Exam' : 'Start CBT Exam') : 'Test Window Closed'}</span>
-                        </button>
+                        {status.isReleased ? (
+                          <div className="space-y-2">
+                            <button
+                              onClick={() => navigate(`/response-sheet?testId=${paper.id}`)}
+                              className="w-full py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-md border border-amber-400/40 cursor-pointer transition"
+                            >
+                              <Award size={16} />
+                              <span>View Result &amp; Response Sheet</span>
+                            </button>
+                            <button
+                              onClick={() => handleTestClick(paper)}
+                              className="w-full py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 bg-[#1c1815] text-amber-300 hover:bg-black border border-amber-500/30 cursor-pointer transition"
+                            >
+                              <PlayCircle size={14} />
+                              <span>Practice Mode (Instant Grading)</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleTestClick(paper)}
+                            disabled={!status.isLive}
+                            className={`w-full py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md ${
+                              status.isLive
+                                ? (myHallTicket ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-900/30 border border-emerald-500 cursor-pointer' : 'bg-[#1c1815] text-amber-300 hover:bg-black shadow-amber-950/30 cursor-pointer border border-amber-500/30')
+                                : 'bg-neutral-300/60 text-neutral-600 border border-neutral-400 cursor-not-allowed'
+                            }`}
+                          >
+                            {status.isLive ? <PlayCircle size={16} /> : <Lock size={16} />}
+                            <span>{status.isLive ? (myHallTicket ? 'Enter Exam' : 'Start CBT Exam') : 'Test Window Closed'}</span>
+                          </button>
+                        )}
 
                       </div>
                     );
