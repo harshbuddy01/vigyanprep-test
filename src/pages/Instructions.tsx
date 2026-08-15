@@ -39,7 +39,7 @@ export const Instructions: React.FC = () => {
     : null) || '';
   const studentRoll = rollNumber || generateRollNumber(studentEmail, studentName);
   const studentToken = (typeof window !== 'undefined'
-    ? (getCookie('auth_token') || localStorage.getItem('auth_token') || localStorage.getItem('token'))
+    ? (getCookie('student_token') || localStorage.getItem('student_token') || getCookie('auth_token') || localStorage.getItem('auth_token') || localStorage.getItem('token'))
     : null) || '';
 
   useEffect(() => {

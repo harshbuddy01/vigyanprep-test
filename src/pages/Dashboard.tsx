@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, FileText, BookOpen, BarChart3, Bookmark, StickyNote,
-  MessageSquare, Settings, Search, Bell, Award, Sparkles, ShieldCheck,
+  LayoutDashboard, FileText, BookOpen, BarChart3, Bookmark, MessageSquare,
+  Settings, Search, Bell, Award, Sparkles, ShieldCheck,
   ArrowRight, PlayCircle, Lock, Key, X, AlertCircle, CheckCircle2,
   RefreshCw, HelpCircle, Download, ChevronRight, Menu
 } from 'lucide-react';
@@ -345,10 +345,12 @@ export function Dashboard() {
 
   const handleTestClick = (paper: TestPaper) => {
     const status = getWindowStatus(paper);
-    if (!status.isLive) {
-      alert(`⚠️ This test paper is not currently open.\n\nStatus: ${status.label}`);
+    if (!status.isLive && status.color !== 'emerald') {
+      triggerToast(`⚠️ ${status.label}`);
       return;
     }
+
+    const token = getCookie('student_token') || localStorage.getItem('student_token') || getCookie('auth_token') || localStorage.getItem('auth_token') || '';
 
     useExamStore.getState().setTestMeta({
       candidateName: studentName || 'Student Candidate',
@@ -358,12 +360,14 @@ export function Dashboard() {
       durationMinutes: paper.duration_minutes || 180,
       questionsCount: paper.questions_count || 60,
       totalMarks: paper.total_marks || 240,
-      pyqYear: paper.pyq_year || paper.year || new Date().getFullYear()
+      pyqYear: paper.pyq_year || paper.year || new Date().getFullYear(),
+      testId: paper.id,
+      token
     });
 
     const myHallTicket = hallTickets.find(h => h.test_id === paper.id);
     if (myHallTicket) {
-      navigate(`/system-check?testId=${paper.id}`);
+      navigate(`/instructions?testId=${paper.id}`);
       return;
     }
 
@@ -374,7 +378,7 @@ export function Dashboard() {
       setPasscodeError(null);
       setShowPasscodeModal(true);
     } else {
-      navigate(`/system-check?testId=${paper.id}`);
+      navigate(`/instructions?testId=${paper.id}`);
     }
   };
 
@@ -401,7 +405,7 @@ export function Dashboard() {
       const data = await res.json();
       if (data.success) {
         setShowPasscodeModal(false);
-        navigate(`/system-check?testId=${selectedTestForPasscode.id}`);
+        navigate(`/instructions?testId=${selectedTestForPasscode.id}`);
       } else {
         setPasscodeError(data.error || 'Invalid passcode.');
       }
@@ -514,7 +518,7 @@ export function Dashboard() {
           <nav className="space-y-1.5">
             <button
               type="button"
-              onClick={() => { setActiveNav('dashboard'); }}
+              onClick={() => { setActiveNav('dashboard'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition cursor-pointer ${
                 activeNav === 'dashboard'
                   ? 'bg-[#1c1815] text-amber-300 font-bold shadow-lg shadow-amber-950/30 border border-amber-500/30'
@@ -527,7 +531,11 @@ export function Dashboard() {
 
             <button
               type="button"
-              onClick={() => { setActiveNav('test_series'); setActiveTab('TEST_SERIES'); }}
+              onClick={() => {
+                setActiveNav('test_series');
+                setActiveTab('TEST_SERIES');
+                document.getElementById('tests-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition cursor-pointer ${
                 activeNav === 'test_series'
                   ? 'bg-[#1c1815] text-amber-300 font-bold shadow-lg shadow-amber-950/30 border border-amber-500/30'
@@ -538,15 +546,22 @@ export function Dashboard() {
               <span>Test Series</span>
             </button>
 
-            <a
-              href="https://vigyanprep.com/pyq"
-              target="_blank"
-              rel="noreferrer"
-              className="w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 text-[#1c1815] hover:text-amber-950 hover:bg-white/40 transition cursor-pointer"
+            <button
+              type="button"
+              onClick={() => {
+                setActiveNav('pyq');
+                setActiveTab('PYQ');
+                document.getElementById('tests-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition cursor-pointer ${
+                activeNav === 'pyq'
+                  ? 'bg-[#1c1815] text-amber-300 font-bold shadow-lg shadow-amber-950/30 border border-amber-500/30'
+                  : 'text-[#1c1815] hover:text-amber-950 hover:bg-white/40'
+              }`}
             >
               <BookOpen size={18} />
-              <span>PYQ Library</span>
-            </a>
+              <span>Practice Tests</span>
+            </button>
 
             <button
               type="button"
@@ -559,45 +574,6 @@ export function Dashboard() {
             >
               <BarChart3 size={18} />
               <span>Performance</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => { setActiveNav('bookmarks'); triggerToast('🔖 Bookmarks feature coming soon! Save questions for revision.'); }}
-              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition cursor-pointer ${
-                activeNav === 'bookmarks'
-                  ? 'bg-[#1c1815] text-amber-300 font-bold shadow-lg shadow-amber-950/30 border border-amber-500/30'
-                  : 'text-[#1c1815] hover:text-amber-950 hover:bg-white/40'
-              }`}
-            >
-              <Bookmark size={18} />
-              <span>Bookmarks</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => { setActiveNav('notes'); triggerToast('📋 Notes feature coming soon! Write revision notes during CBT tests.'); }}
-              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition cursor-pointer ${
-                activeNav === 'notes'
-                  ? 'bg-[#1c1815] text-amber-300 font-bold shadow-lg shadow-amber-950/30 border border-amber-500/30'
-                  : 'text-[#1c1815] hover:text-amber-950 hover:bg-white/40'
-              }`}
-            >
-              <StickyNote size={18} />
-              <span>Notes</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => { setActiveNav('discussions'); triggerToast('💬 Student Discussion Forum coming soon!'); }}
-              className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition cursor-pointer ${
-                activeNav === 'discussions'
-                  ? 'bg-[#1c1815] text-amber-300 font-bold shadow-lg shadow-amber-950/30 border border-amber-500/30'
-                  : 'text-[#1c1815] hover:text-amber-950 hover:bg-white/40'
-              }`}
-            >
-              <MessageSquare size={18} />
-              <span>Discussions</span>
             </button>
 
             <button
@@ -615,15 +591,15 @@ export function Dashboard() {
           </nav>
         </div>
 
-        {/* Footer Support Notice */}
+        {/* Footer Quick Logout */}
         <div className="pt-6 border-t-2 border-amber-950/20 space-y-3 text-center">
-          <p className="text-[10px] text-[#1c1815] font-extrabold">Need Assistance?</p>
-          <a
-            href="https://vigyanprep.com/about"
-            className="px-4 py-2 rounded-xl bg-white/30 border-2 border-amber-950/30 text-amber-950 text-xs font-bold block hover:bg-white/60 transition shadow-sm cursor-pointer"
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full px-4 py-2.5 rounded-xl bg-amber-950/10 border-2 border-amber-950/30 text-amber-950 hover:bg-amber-950 hover:text-amber-200 text-xs font-extrabold block transition shadow-sm cursor-pointer"
           >
-            Contact Support
-          </a>
+            Sign Out
+          </button>
         </div>
       </aside>
 
@@ -653,7 +629,7 @@ export function Dashboard() {
               <nav className="space-y-2">
                 <button
                   type="button"
-                  onClick={() => { setActiveNav('dashboard'); setMobileNavOpen(false); }}
+                  onClick={() => { setActiveNav('dashboard'); setMobileNavOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                   className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                     activeNav === 'dashboard'
                       ? 'bg-[#1c1815] text-amber-300 font-bold shadow-md border border-amber-500/30'
@@ -666,7 +642,12 @@ export function Dashboard() {
 
                 <button
                   type="button"
-                  onClick={() => { setActiveNav('test_series'); setActiveTab('TEST_SERIES'); setMobileNavOpen(false); }}
+                  onClick={() => {
+                    setActiveNav('test_series');
+                    setActiveTab('TEST_SERIES');
+                    setMobileNavOpen(false);
+                    document.getElementById('tests-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
                   className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
                     activeNav === 'test_series'
                       ? 'bg-[#1c1815] text-amber-300 font-bold shadow-md border border-amber-500/30'
@@ -677,15 +658,23 @@ export function Dashboard() {
                   <span>Test Series</span>
                 </button>
 
-                <a
-                  href="https://vigyanprep.com/pyq"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 text-[#1c1815] hover:bg-white/60 transition"
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveNav('pyq');
+                    setActiveTab('PYQ');
+                    setMobileNavOpen(false);
+                    document.getElementById('tests-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition ${
+                    activeNav === 'pyq'
+                      ? 'bg-[#1c1815] text-amber-300 font-bold shadow-md border border-amber-500/30'
+                      : 'text-[#1c1815] hover:bg-white/60'
+                  }`}
                 >
                   <BookOpen size={18} />
-                  <span>PYQ Library</span>
-                </a>
+                  <span>Practice Tests</span>
+                </button>
 
                 <button
                   type="button"
@@ -716,12 +705,13 @@ export function Dashboard() {
             </div>
 
             <div className="pt-6 border-t-2 border-amber-950/20 space-y-2 text-center">
-              <a
-                href="https://vigyanprep.com/about"
-                className="px-4 py-2.5 rounded-xl bg-amber-950 text-amber-200 text-xs font-bold block shadow-md hover:bg-amber-900 transition"
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full px-4 py-2.5 rounded-xl bg-amber-950 text-amber-200 text-xs font-bold block shadow-md hover:bg-amber-900 transition cursor-pointer"
               >
-                Contact Support
-              </a>
+                Sign Out
+              </button>
             </div>
           </aside>
         </>
@@ -907,7 +897,7 @@ export function Dashboard() {
           </div>
 
           {/* FILTER TABS ROW (Pill Buttons) */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-amber-950/25 pb-4">
+          <div id="tests-section" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-amber-950/25 pb-4 scroll-mt-24">
             
             {/* Left Primary Switcher Pills */}
             <div className="flex items-center gap-2">
