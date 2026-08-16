@@ -5,7 +5,7 @@ import {
   Settings, Search, Bell, Award, Sparkles,
   ArrowRight, PlayCircle, Lock, Key, X, AlertCircle, CheckCircle2,
   RefreshCw, HelpCircle, Download, ChevronRight, Menu, Home, Mail,
-  Edit3, GraduationCap
+  Edit3, GraduationCap, Trophy
 } from 'lucide-react';
 import { getCookie, deleteCookie } from '../lib/cookies';
 import { useExamStore, generateRollNumber } from '../stores/examStore';
@@ -132,6 +132,42 @@ export function Dashboard() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showPerformanceModal, setShowPerformanceModal] = useState(false);
+  const [analyticsData, setAnalyticsData] = useState<{
+    summary: {
+      totalTests: number;
+      totalQuestionsAttempted: number;
+      averageScore: number;
+      bestScore: number;
+      accuracy: number;
+      totalCorrect: number;
+      totalIncorrect: number;
+      bestRank: number | null;
+    };
+    subjectMastery: Record<string, {
+      correct: number;
+      incorrect: number;
+      attempted: number;
+      score: number;
+      accuracy: number;
+    }>;
+    trendData: Array<{
+      attemptId: string;
+      testId: string;
+      testTitle: string;
+      examType: string;
+      date: string;
+      isResultReleased: boolean;
+      score: number | null;
+      totalMarks: number;
+      percentage: number | null;
+      accuracy: number | null;
+      rank: number | null;
+      percentile: number | null;
+      questionsAttempted: number;
+      totalQuestions: number;
+      sectionScores: Record<string, any>;
+    }>;
+  } | null>(null);
 
   // Scientist Avatar & Profile Update State
   const [selectedAvatarId, setSelectedAvatarId] = useState<string>(() => {
@@ -321,15 +357,33 @@ ${studentName}`
       }
     }
 
+    async function loadAnalytics(authToken: string) {
+      try {
+        const res = await fetch(`https://api.vigyanprep.com/api/student/analytics/performance?cb=${Date.now()}`, {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setAnalyticsData(data);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load student analytics:', err);
+      }
+    }
+
     loadDashboardTests();
     loadSubscriptions(token);
     loadHallTickets(token);
     loadAttempts(token);
+    loadAnalytics(token);
 
     // 🔄 Live Auto-Sync Every 15 Seconds
     const syncInterval = setInterval(() => {
       loadAttempts(token);
       loadDashboardTests(true);
+      loadAnalytics(token);
     }, 15000);
 
     return () => clearInterval(syncInterval);
@@ -1058,7 +1112,9 @@ ${studentName}`
               </div>
               <div>
                 <p className="text-[10px] font-extrabold text-[#1c1815] uppercase">Tests Attempted</p>
-                <p className="text-lg font-extrabold text-[#1c1815]">0</p>
+                <p className="text-lg font-extrabold text-[#1c1815]">
+                  {analyticsData?.summary ? analyticsData.summary.totalTests : 0}
+                </p>
               </div>
             </div>
 
@@ -1068,7 +1124,9 @@ ${studentName}`
               </div>
               <div>
                 <p className="text-[10px] font-extrabold text-[#1c1815] uppercase">Average Score</p>
-                <p className="text-lg font-extrabold text-[#1c1815]">0%</p>
+                <p className="text-lg font-extrabold text-[#1c1815]">
+                  {analyticsData?.summary ? `${analyticsData.summary.averageScore}%` : '0%'}
+                </p>
               </div>
             </div>
 
@@ -1078,7 +1136,9 @@ ${studentName}`
               </div>
               <div>
                 <p className="text-[10px] font-extrabold text-[#1c1815] uppercase">Best Score</p>
-                <p className="text-lg font-extrabold text-[#1c1815]">0%</p>
+                <p className="text-lg font-extrabold text-[#1c1815]">
+                  {analyticsData?.summary ? `${analyticsData.summary.bestScore}%` : '0%'}
+                </p>
               </div>
             </div>
 
@@ -1088,7 +1148,9 @@ ${studentName}`
               </div>
               <div>
                 <p className="text-[10px] font-extrabold text-[#1c1815] uppercase">Total Questions</p>
-                <p className="text-lg font-extrabold text-[#1c1815]">0</p>
+                <p className="text-lg font-extrabold text-[#1c1815]">
+                  {analyticsData?.summary ? analyticsData.summary.totalQuestionsAttempted : 0}
+                </p>
               </div>
             </div>
 
@@ -1098,7 +1160,9 @@ ${studentName}`
               </div>
               <div>
                 <p className="text-[10px] font-extrabold text-[#1c1815] uppercase">Accuracy</p>
-                <p className="text-lg font-extrabold text-[#1c1815]">0%</p>
+                <p className="text-lg font-extrabold text-[#1c1815]">
+                  {analyticsData?.summary ? `${analyticsData.summary.accuracy}%` : '0%'}
+                </p>
               </div>
             </div>
           </div>
@@ -1609,41 +1673,209 @@ ${studentName}`
         </div>
       )}
 
-      {/* PERFORMANCE MODAL */}
+      {/* PRODUCTION-GRADE CBT PERFORMANCE & ANALYTICS COCKPIT MODAL */}
       {showPerformanceModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#fcfbfa] border-2 border-amber-950/40 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-6 relative">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-[#fcfbfa] border-2 border-amber-950/40 rounded-3xl p-6 sm:p-8 max-w-3xl w-full shadow-2xl space-y-6 relative my-8 max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setShowPerformanceModal(false)}
-              className="absolute top-5 right-5 text-neutral-600 hover:text-[#1c1815] p-2 rounded-full hover:bg-amber-950/10 transition"
+              className="absolute top-5 right-5 text-neutral-600 hover:text-[#1c1815] p-2 rounded-full hover:bg-amber-950/10 transition cursor-pointer"
             >
               <X size={20} />
             </button>
 
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-2xl bg-amber-950/15 text-amber-950 border border-amber-950/25">
+            {/* Modal Header */}
+            <div className="flex items-center gap-3 border-b border-amber-950/15 pb-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-950 text-amber-300 flex items-center justify-center text-xl shadow-md border border-amber-500/30">
                 <BarChart3 size={24} />
               </div>
               <div>
-                <h3 className="font-serif text-xl font-bold text-[#1c1815]">Performance Analytics</h3>
-                <p className="text-xs text-neutral-600 font-semibold">Student Progress & Attempt Overview</p>
+                <h3 className="font-serif text-xl font-bold text-[#1c1815]">CBT Performance &amp; Analytics Cockpit</h3>
+                <p className="text-xs text-neutral-600 font-semibold">Live Accuracy, Subject Mastery &amp; All-India Rank Analysis</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-2xl bg-amber-950/10 border border-amber-950/20 space-y-1">
-                <p className="text-[10px] font-extrabold text-neutral-600 uppercase">Tests Completed</p>
-                <p className="text-2xl font-extrabold text-amber-950">0</p>
+            {/* 4-Card Hero Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3.5 rounded-2xl bg-amber-950/10 border border-amber-950/20 text-center">
+                <p className="text-[10px] font-extrabold text-neutral-600 uppercase">Tests Attempted</p>
+                <p className="text-2xl font-black text-amber-950 mt-1">
+                  {analyticsData?.summary ? analyticsData.summary.totalTests : 0}
+                </p>
+                <p className="text-[10px] text-neutral-500 font-semibold mt-0.5">Submitted Mocks</p>
               </div>
-              <div className="p-4 rounded-2xl bg-amber-950/10 border border-amber-950/20 space-y-1">
-                <p className="text-[10px] font-extrabold text-neutral-600 uppercase">Average Accuracy</p>
-                <p className="text-2xl font-extrabold text-amber-950">0%</p>
+              <div className="p-3.5 rounded-2xl bg-emerald-100/70 border border-emerald-300 text-center">
+                <p className="text-[10px] font-extrabold text-emerald-900 uppercase">Global Accuracy</p>
+                <p className="text-2xl font-black text-emerald-800 mt-1">
+                  {analyticsData?.summary ? `${analyticsData.summary.accuracy}%` : '0%'}
+                </p>
+                <p className="text-[10px] text-emerald-700 font-semibold mt-0.5">
+                  {analyticsData?.summary ? `${analyticsData.summary.totalCorrect} / ${analyticsData.summary.totalQuestionsAttempted} Correct` : '0 Correct'}
+                </p>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-indigo-100/70 border border-indigo-300 text-center">
+                <p className="text-[10px] font-extrabold text-indigo-900 uppercase">Average Score</p>
+                <p className="text-2xl font-black text-indigo-900 mt-1">
+                  {analyticsData?.summary ? `${analyticsData.summary.averageScore}%` : '0%'}
+                </p>
+                <p className="text-[10px] text-indigo-700 font-semibold mt-0.5">
+                  Best: {analyticsData?.summary ? `${analyticsData.summary.bestScore}%` : '0%'}
+                </p>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-rose-100/70 border border-rose-300 text-center">
+                <p className="text-[10px] font-extrabold text-rose-900 uppercase">Negative Marks</p>
+                <p className="text-2xl font-black text-rose-800 mt-1">
+                  {analyticsData?.summary ? `-${analyticsData.summary.totalIncorrect}` : '0'}
+                </p>
+                <p className="text-[10px] text-rose-700 font-semibold mt-0.5">Marks Penalized</p>
               </div>
             </div>
 
-            <p className="text-xs text-neutral-700 leading-relaxed text-center font-bold">
-              Complete your first scheduled CBT test series exam to view subject-wise performance graphs and All-India ranks!
-            </p>
+            {/* Subject Mastery Breakdown (PCMB) */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-extrabold uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
+                  <Award size={15} className="text-amber-800" /> Subject-wise Accuracy &amp; Score Mastery
+                </h4>
+                <span className="text-[10px] text-neutral-500 font-bold">Physics • Chemistry • Math • Biology</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {['Physics', 'Chemistry', 'Mathematics', 'Biology'].map(subj => {
+                  const sm = analyticsData?.subjectMastery?.[subj] || { correct: 0, incorrect: 0, attempted: 0, score: 0, accuracy: 0 };
+                  const acc = sm.accuracy;
+                  let statusBadge = "bg-gray-100 text-gray-700 border-gray-200";
+                  let statusText = "No Attempts";
+                  if (sm.attempted > 0) {
+                    if (acc >= 70) { statusBadge = "bg-emerald-100 text-emerald-800 border-emerald-300"; statusText = "⚡ Strong Focus"; }
+                    else if (acc >= 40) { statusBadge = "bg-amber-100 text-amber-800 border-amber-300"; statusText = "📈 Steady Progress"; }
+                    else { statusBadge = "bg-rose-100 text-rose-800 border-rose-300"; statusText = "📘 Revision Needed"; }
+                  }
+
+                  return (
+                    <div key={subj} className="p-4 rounded-2xl bg-white border border-amber-950/15 shadow-xs space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-sm text-[#1c1815]">{subj}</span>
+                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${statusBadge}`}>
+                          {statusText}
+                        </span>
+                      </div>
+
+                      {/* Accuracy Progress Bar */}
+                      <div>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-neutral-500 font-medium">Accuracy</span>
+                          <span className="font-bold text-amber-950">{acc}%</span>
+                        </div>
+                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              acc >= 70 ? 'bg-emerald-500' : acc >= 40 ? 'bg-amber-500' : 'bg-rose-500'
+                            }`}
+                            style={{ width: `${acc}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 pt-1 border-t border-gray-100 text-center text-xs">
+                        <div>
+                          <p className="text-[10px] text-neutral-400 font-bold uppercase">Net Score</p>
+                          <p className={`font-extrabold ${sm.score >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
+                            {sm.score > 0 ? `+${sm.score}` : sm.score}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-neutral-400 font-bold uppercase">Correct</p>
+                          <p className="font-extrabold text-emerald-600">{sm.correct}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-neutral-400 font-bold uppercase">Wrong</p>
+                          <p className="font-extrabold text-rose-500">{sm.incorrect}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Exam Progression & Test History */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-extrabold uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
+                <FileText size={15} className="text-amber-800" /> Submitted Examination History &amp; Scorecards
+              </h4>
+
+              {analyticsData?.trendData && analyticsData.trendData.length > 0 ? (
+                <div className="space-y-2">
+                  {analyticsData.trendData.map((t, idx) => (
+                    <div
+                      key={t.attemptId || idx}
+                      className="p-4 rounded-2xl bg-white border border-amber-950/15 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-[#1c1815]">{t.testTitle}</span>
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-full uppercase">
+                            {t.examType}
+                          </span>
+                          {t.isResultReleased ? (
+                            <span className="text-[10px] font-extrabold px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full">
+                              Result Declared
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-extrabold px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full">
+                              Result Pending
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-neutral-500">
+                          Attempted: <strong>{t.questionsAttempted} / {t.totalQuestions} Questions</strong> • {new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        {t.isResultReleased && (
+                          <div className="text-right">
+                            <p className="text-sm font-black text-amber-950">
+                              {t.score} <span className="text-[10px] font-semibold text-neutral-400">/ {t.totalMarks}</span>
+                            </p>
+                            <p className="text-[10px] text-emerald-700 font-bold">{t.accuracy}% Accuracy</p>
+                          </div>
+                        )}
+                        <button
+                          onClick={() => {
+                            setShowPerformanceModal(false);
+                            navigate(`/response-sheet?testId=${t.testId}`);
+                          }}
+                          className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-extrabold text-xs rounded-xl shadow transition cursor-pointer flex items-center gap-1.5 shrink-0"
+                        >
+                          <Trophy size={13} />
+                          <span>View Scorecard</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-6 rounded-2xl bg-amber-950/5 border border-amber-950/15 text-center space-y-1">
+                  <p className="text-xs font-bold text-neutral-700">No examination attempts recorded yet.</p>
+                  <p className="text-[11px] text-neutral-500">Attempt a live test series mock or practice PYQ to start tracking your performance analytics!</p>
+                </div>
+              )}
+            </div>
+
+            {/* Strategic Diagnostic Recommendation */}
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 flex items-start gap-3">
+              <Sparkles className="text-amber-600 shrink-0 mt-0.5" size={18} />
+              <div className="text-xs text-amber-950 space-y-1">
+                <p className="font-extrabold">💡 Academic Strategic Insight</p>
+                <p className="text-[11px] leading-relaxed text-amber-900">
+                  {analyticsData?.summary && analyticsData.summary.accuracy < 60
+                    ? "Your attempt rate is solid, but negative marking (-1 mark penalty) is impacting your net score. Practice selective question filtering to target 75%+ accuracy in your core subjects."
+                    : "Excellent question accuracy! Focus on consistent speed drills and mock simulations to maximize your All-India Rank in the upcoming IISER / NEST examinations."}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
