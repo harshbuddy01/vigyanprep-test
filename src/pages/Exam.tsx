@@ -4,7 +4,8 @@ import { useExamStore } from '../stores/examStore';
 import { QuestionPalette } from '../components/QuestionPalette';
 import { ScientificCalculator } from '../components/ScientificCalculator';
 import { MathText } from '../components/MathText';
-import { submitExam as apiSubmitExam } from '../lib/api';
+import { submitExam as apiSubmitExam, sendHeartbeat } from '../lib/api';
+import { getCookie } from '../lib/cookies';
 import { User, Clock, ShieldAlert, Award, Calculator, ChevronRight, ChevronLeft, Flag, X, Send, CheckCircle } from 'lucide-react';
 
 function formatImageUrl(url?: string): string {
@@ -36,7 +37,7 @@ export default function Exam() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showCalculator, setShowCalculator] = useState(false);
 
-  // 🚩 Report Question state
+  // 🚩 Report state
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportType, setReportType] = useState('wrong_answer');
@@ -45,38 +46,39 @@ export default function Exam() {
 
   const submittingRef = useRef(false);
 
-  // Auto-fetch questions if state is empty OR if starting a new test session
+  // Auto-Fetch Questions from API if store empty on direct URL access
   useEffect(() => {
     const autoFetchQuestions = async () => {
-      if (!testIdParam) return;
+      const activeId = testIdParam || testId;
+      if (!activeId) return;
 
-      // Only reset if switching to a DIFFERENT test paper entirely
-      if (testId && testIdParam !== testId) {
-        resetExamState(testIdParam);
-      }
+      const currentQuestions = useExamStore.getState().questions;
+      if (currentQuestions && currentQuestions.length > 0) return;
 
       setLoadingQuestions(true);
       try {
         const apiBase = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
-        const res = await fetch(`${apiBase}/api/public/tests/${testIdParam}`);
+        const res = await fetch(`${apiBase}/api/public/tests/${activeId}`);
         const data = await res.json();
-        if (data.questions && Array.isArray(data.questions) && data.questions.length > 0) {
+        if (data.success && data.questions && data.questions.length > 0) {
           setQuestions(data.questions);
           if (data.test) {
             setTestMeta({
               testTitle: data.test.title,
-              examType: data.test.exam_type || data.test.test_type || 'IAT',
-              testId: testIdParam
+              examType: data.test.exam_type,
+              durationMinutes: data.test.duration_minutes || 180,
+              questionsCount: data.questions.length,
+              totalMarks: data.test.total_marks || (data.questions.length * 4),
+              testId: activeId
             });
           }
         }
-      } catch (e) {
-        console.error('Failed to auto-fetch test questions:', e);
+      } catch (err) {
+        console.error('Failed to auto-fetch questions for exam:', err);
       } finally {
         setLoadingQuestions(false);
       }
     };
-
     autoFetchQuestions();
   }, [testIdParam, testId, resetExamState, setQuestions, setTestMeta]);
 
@@ -93,25 +95,32 @@ export default function Exam() {
     if (submittingRef.current) return;
     submittingRef.current = true;
 
+    const currentAnswers = { ...useExamStore.getState().answers, ...answers };
+    const activeId = testIdParam || testId || useExamStore.getState().testId || '';
+    const activeAttemptId = attemptId || useExamStore.getState().attemptId || '';
+    const activeToken = token || useExamStore.getState().token || getCookie('student_token') || localStorage.getItem('student_token') || getCookie('auth_token') || localStorage.getItem('auth_token') || '';
+
     // Persist backup snapshot in localStorage so ResponseSheet NEVER loses student answers
     try {
-      if (testIdParam) {
-        localStorage.setItem(`vigyan_response_${testIdParam}`, JSON.stringify(answers));
+      if (activeId) {
+        localStorage.setItem(`vigyan_response_${activeId}`, JSON.stringify(currentAnswers));
       }
+      localStorage.setItem('vigyan_last_answers', JSON.stringify(currentAnswers));
     } catch (e) {}
 
     submitExam();
 
     try {
-      if (attemptId && token) {
-        await apiSubmitExam(attemptId, answers, token);
+      if (activeAttemptId) {
+        await apiSubmitExam(activeAttemptId, currentAnswers, activeToken);
       }
     } catch (e) {
       console.error('API submission error:', e);
     }
 
-    navigate('/response-sheet' + window.location.search, { replace: true });
-  }, [submitExam, attemptId, answers, token, navigate, testIdParam]);
+    const search = activeId ? `?testId=${activeId}` : window.location.search;
+    navigate('/response-sheet' + search, { replace: true });
+  }, [submitExam, attemptId, answers, token, navigate, testIdParam, testId]);
 
   useEffect(() => {
     let hideTimer: any = null;
@@ -290,6 +299,22 @@ export default function Exam() {
   const handleOptionSelect = (optionKey: string) => {
     if (!currentQ) return;
     setAnswer(currentQ.id, optionKey);
+    const updated = { ...answers, [currentQ.id]: optionKey };
+    const activeId = testIdParam || testId || useExamStore.getState().testId || '';
+    const activeAttemptId = attemptId || useExamStore.getState().attemptId || '';
+    const activeToken = token || useExamStore.getState().token || getCookie('student_token') || localStorage.getItem('student_token') || '';
+
+    try {
+      if (activeId) {
+        localStorage.setItem(`vigyan_response_${activeId}`, JSON.stringify(updated));
+      }
+      localStorage.setItem('vigyan_last_answers', JSON.stringify(updated));
+    } catch (e) {}
+
+    // Instant non-blocking server autosave sync on every click
+    if (activeAttemptId) {
+      sendHeartbeat(activeAttemptId, timeRemaining, updated, warningCount, activeToken).catch(() => {});
+    }
   };
 
   const handleSaveAndNext = () => {

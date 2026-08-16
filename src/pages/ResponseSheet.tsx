@@ -185,9 +185,11 @@ export const ResponseSheet: React.FC = () => {
   const displayAnswers = React.useMemo(() => {
     let merged: Record<string, string> = {};
     try {
+      const rawLast = localStorage.getItem('vigyan_last_answers');
+      if (rawLast) merged = { ...merged, ...JSON.parse(rawLast) };
       if (activeTestId) {
         const raw = localStorage.getItem(`vigyan_response_${activeTestId}`);
-        if (raw) merged = JSON.parse(raw);
+        if (raw) merged = { ...merged, ...JSON.parse(raw) };
       }
     } catch (e) {}
     if (serverResult?.questions) {
