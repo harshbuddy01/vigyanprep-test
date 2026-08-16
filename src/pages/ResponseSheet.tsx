@@ -205,6 +205,7 @@ export const ResponseSheet: React.FC = () => {
 
   const displayQuestions = React.useMemo(() => {
     if (serverResult?.questions && serverResult.questions.length > 0) return serverResult.questions;
+    if (fetchedQuestions && fetchedQuestions.length > 0 && fetchedQuestions.some(q => Boolean(q.correct_answer || (q as any).correctAnswer))) return fetchedQuestions;
     if (localQuestions && localQuestions.length > 0) return localQuestions;
     if (fetchedQuestions && fetchedQuestions.length > 0) return fetchedQuestions;
     return [];
