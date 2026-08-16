@@ -190,6 +190,7 @@ export const ResponseSheet: React.FC = () => {
         body: JSON.stringify({
           testId: targetTestId,
           questionId: reportingQuestionId,
+          attemptId: activeAttemptId,
           reason: `[${reportType.toUpperCase()}] ${reportReason.trim()}`
         })
       });
