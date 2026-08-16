@@ -5,8 +5,8 @@ import { getCookie } from "../lib/cookies";
 import { MathText } from "../components/MathText";
 import {
   CheckCircle2, XCircle, Download, Home, RotateCcw,
-  Clock, Trophy, BarChart3, Minus, Loader2, AlertTriangle,
-  ChevronDown, ChevronUp, Flag, X, Send, CheckCircle, BookOpen, PlayCircle
+  Trophy, BarChart3, Minus, AlertTriangle,
+  ChevronDown, ChevronUp, Flag, X, Send, CheckCircle, BookOpen
 } from "lucide-react";
 
 function formatImageUrl(url: string): string {
@@ -53,14 +53,13 @@ export const ResponseSheet: React.FC = () => {
     questions: localQuestions,
     answers: localAnswers,
     testTitle, candidateName, rollNumber, examType, testId,
-    attemptId, token, isLiveTest, resetExamState, markedForReview
+    attemptId, token, resetExamState, markedForReview
   } = useExamStore();
 
   const activeTestId = testIdFromUrl || testId;
 
   const [activeTab, setActiveTab] = useState("Physics");
   const [serverResult, setServerResult] = useState<AttemptResult | null>(null);
-  const [resultLoading, setResultLoading] = useState(false);
   const [expandedSolutions, setExpandedSolutions] = useState<Record<string, boolean>>({});
 
   // 🚩 Report state
@@ -81,7 +80,6 @@ export const ResponseSheet: React.FC = () => {
     const apiBase = import.meta.env.VITE_API_URL || "https://api.vigyanprep.com";
 
     const fetchResult = async () => {
-      setResultLoading(true);
       try {
         // 1. If attempt exists, load their personal attempt result
         if (attemptId && !isSolutionsOnly && authToken) {
@@ -160,8 +158,6 @@ export const ResponseSheet: React.FC = () => {
         }
       } catch (err) {
         console.warn("Could not fetch server result or solutions:", err);
-      } finally {
-        setResultLoading(false);
       }
     };
     fetchResult();
@@ -711,163 +707,6 @@ export const ResponseSheet: React.FC = () => {
           </div>
         )}
 
-        {/* DARK RESULTS SECTION — not printable */}
-        <div className="results-dark no-print">
-          {resultLoading ? (
-            <div className="bg-gray-900 rounded-2xl p-8 flex items-center justify-center gap-3 text-white">
-              <Loader2 size={20} className="animate-spin" /><span className="text-sm font-semibold">Loading your results...</span>
-            </div>
-          ) : hasServerResult && serverResult ? (
-            <div className="bg-gray-950 rounded-2xl shadow-xl border border-gray-800 overflow-hidden">
-              <div className="px-6 py-5 bg-gradient-to-r from-gray-900 to-gray-800 border-b border-gray-700 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-3 mb-1">
-                    {serverResult.totalScore !== null ? <Trophy className="text-amber-400" size={24} /> : <BookOpen className="text-amber-400" size={24} />}
-                    <h2 className="text-xl font-black text-white tracking-wide">
-                      {serverResult.totalScore !== null ? "OFFICIAL RESULTS & ANALYSIS" : "OFFICIAL PAPER SOLUTIONS & ANSWER KEY"}
-                    </h2>
-                  </div>
-                  <p className="text-xs text-gray-400">
-                    {serverResult.totalScore !== null ? `Results declared by administrator • ${testTitle || 'Test Series'}` : `Verified Academic Solutions • ${testTitle || 'Official Paper'}`}
-                  </p>
-                </div>
-                {serverResult.totalScore === null && (
-                  <button
-                    onClick={() => navigate(`/instructions?testId=${activeTestId}&mode=practice`)}
-                    className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-extrabold text-xs uppercase tracking-wider rounded-xl flex items-center gap-2 shrink-0 transition shadow-lg cursor-pointer"
-                  >
-                    <PlayCircle size={15} /> Take in Practice Mode
-                  </button>
-                )}
-              </div>
-
-              {serverResult.totalScore !== null ? (
-                <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-gray-800 rounded-xl p-4 text-center border border-gray-700"><p className="text-3xl font-black text-amber-400">{serverResult.totalScore ?? "—"}</p><p className="text-xs text-gray-400 mt-1 font-semibold">Total Score</p><p className="text-[10px] text-gray-600">out of {totalMaxScore}</p></div>
-                  <div className="bg-gray-800 rounded-xl p-4 text-center border border-gray-700"><p className="text-3xl font-black text-emerald-400">{serverResult.rank ? `#${serverResult.rank}` : "—"}</p><p className="text-xs text-gray-400 mt-1 font-semibold">All-India Rank</p>{serverResult.percentile && <p className="text-[10px] text-gray-500">{serverResult.percentile.toFixed(1)}th percentile</p>}</div>
-                  <div className="bg-gray-800 rounded-xl p-4 text-center border border-gray-700"><p className="text-3xl font-black text-green-400">{serverResult.questions.filter(q => q.status === "correct").length}</p><p className="text-xs text-gray-400 mt-1 font-semibold">Correct</p></div>
-                  <div className="bg-gray-800 rounded-xl p-4 text-center border border-gray-700"><p className="text-3xl font-black text-red-400">{serverResult.questions.filter(q => q.status === "incorrect").length}</p><p className="text-xs text-gray-400 mt-1 font-semibold">Incorrect</p></div>
-                </div>
-              ) : (
-                <div className="p-5 bg-gray-900/80 border-b border-gray-800">
-                  <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-3">
-                    <AlertTriangle className="text-amber-400 shrink-0 mt-0.5" size={20} />
-                    <div className="text-xs text-neutral-300 space-y-1">
-                      <p className="font-bold text-amber-400 text-sm">Practice Review Mode Active</p>
-                      <p>You did not submit an attempt during the scheduled live window for this paper. All official correct answers and comprehensive explanations are shown below for self-study. You can also attempt this paper with instant CBT grading!</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {serverResult.sectionScores && (
-                <div className="px-6 pb-4">
-                  <div className="flex items-center gap-2 mb-3"><BarChart3 className="text-blue-400" size={16} /><h3 className="text-sm font-bold text-white">Section-wise Analysis</h3></div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {sections.map(sec => {
-                      const s = serverResult.sectionScores![sec];
-                      if (!s) return null;
-                      const acc = (s.correct + s.incorrect) > 0 ? Math.round((s.correct / (s.correct + s.incorrect)) * 100) : 0;
-                      return (
-                        <div key={sec} className="bg-gray-800 rounded-xl p-3 border border-gray-700">
-                          <p className="text-xs font-bold text-white mb-2">{sec}</p>
-                          <div className="space-y-1 text-[11px]">
-                            <div className="flex justify-between text-green-400"><span>✓ Correct</span><span className="font-bold">{s.correct}</span></div>
-                            <div className="flex justify-between text-red-400"><span>✗ Wrong</span><span className="font-bold">{s.incorrect}</span></div>
-                            <div className="flex justify-between text-gray-500"><span>— Skipped</span><span className="font-bold">{s.unattempted}</span></div>
-                            <div className="flex justify-between text-amber-400 border-t border-gray-700 pt-1 mt-1"><span>Score</span><span className="font-bold">{s.score}</span></div>
-                          </div>
-                          <div className="mt-2 h-1.5 bg-gray-700 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 rounded-full" style={{width:`${acc}%`}} /></div>
-                          <p className="text-[9px] text-gray-500 mt-1 text-right">{acc}% accuracy</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <div className="border-t border-gray-800">
-                <div className="flex border-b border-gray-800 overflow-x-auto bg-gray-900">
-                  {sections.map(sec => {
-                    const cnt = serverResult!.questions.filter(q => q.section === sec || (!sections.includes(q.section || "") && sec === "Physics")).length;
-                    return (
-                      <button key={sec} onClick={() => setActiveTab(sec)} className={`px-5 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition ${activeTab === sec ? "border-amber-400 text-amber-400 bg-gray-800" : "border-transparent text-gray-500 hover:text-gray-300"}`}>
-                        {sec} ({cnt})
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="divide-y divide-gray-800">
-                  {serverResult!.questions
-                    .filter(q => q.section === activeTab || (!sections.includes(q.section || "") && activeTab === "Physics"))
-                    .map((q, idx) => {
-                      const opts = q.options && q.options.length >= 2 ? q.options : ["Option A","Option B","Option C","Option D"];
-                      const optLabels = ["A","B","C","D"];
-                      const isExpanded = expandedSolutions[q.id];
-                      const statusBorder = q.status === "correct" ? "border-l-4 border-emerald-600" : q.status === "incorrect" ? "border-l-4 border-red-600" : "border-l-4 border-gray-700";
-                      return (
-                        <div key={q.id} className={`p-5 ${statusBorder} bg-gray-900 hover:bg-gray-800 transition`}>
-                          <div className="flex items-start gap-3">
-                            {q.status === "correct" ? <CheckCircle2 className="text-emerald-400 shrink-0" size={18} /> : q.status === "incorrect" ? <XCircle className="text-red-400 shrink-0" size={18} /> : <Minus className="text-gray-500 shrink-0" size={18} />}
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs text-gray-400 font-bold">Q{idx + 1}</span>
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${q.status === "correct" ? "bg-emerald-900 text-emerald-300" : q.status === "incorrect" ? "bg-red-900 text-red-300" : "bg-gray-800 text-gray-500"}`}>
-                                  {q.status === "correct" ? `+${q.marksEarned ?? 4}` : q.status === "incorrect" ? `${q.marksEarned ?? -1}` : "0"}
-                                </span>
-                              </div>
-                              <div className="text-sm text-gray-200 mb-3 leading-relaxed"><MathText text={(q as any).question_text || q.text || ""} /></div>
-                              {q.image_url && <img src={formatImageUrl(q.image_url)} alt="diagram" className="max-h-40 object-contain rounded border border-gray-700 mb-3" />}
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
-                                {opts.map((opt, oi) => {
-                                  const label = optLabels[oi];
-                                  const isStudentChoice = q.studentAnswer === label;
-                                  const isCorrect = (q.correct_answer || q.correctAnswer) === label;
-                                  let cls = "border-gray-700 bg-gray-800 text-gray-400";
-                                  if (isCorrect) cls = "border-emerald-500 bg-emerald-950 text-emerald-300 font-bold";
-                                  if (isStudentChoice && !isCorrect) cls = "border-red-500 bg-red-950 text-red-300 font-bold";
-                                  if (isStudentChoice && isCorrect) cls = "border-emerald-500 bg-emerald-900 text-emerald-200 font-black";
-                                  return (
-                                    <div key={oi} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${cls}`}>
-                                      <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 bg-gray-700">{label}</span>
-                                      <MathText text={opt} />
-                                      {isCorrect && <CheckCircle2 size={12} className="ml-auto text-emerald-400 shrink-0" />}
-                                      {isStudentChoice && !isCorrect && <XCircle size={12} className="ml-auto text-red-400 shrink-0" />}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                              <div className="flex items-center gap-4 text-xs">
-                                {q.studentAnswer ? <span className="text-gray-400">Your answer: <strong className={q.status === "correct" ? "text-emerald-400" : "text-red-400"}>{q.studentAnswer}</strong></span> : <span className="text-gray-600 italic">Not attempted</span>}
-                                {(q.correct_answer || q.correctAnswer) && <span className="text-gray-400">Correct: <strong className="text-emerald-400">{q.correct_answer || q.correctAnswer}</strong></span>}
-                                {q.solution_explanation && (
-                                  <button onClick={() => toggleSolution(q.id)} className="ml-auto flex items-center gap-1 text-blue-400 hover:text-blue-300 transition font-semibold">
-                                    {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />} Solution
-                                  </button>
-                                )}
-                              </div>
-                              {isExpanded && q.solution_explanation && (
-                                <div className="mt-3 p-3 bg-blue-950 border border-blue-800 rounded-lg text-xs text-blue-200 leading-relaxed"><MathText text={q.solution_explanation} /></div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-            </div>
-          ) : isLiveTest ? (
-            <div className="bg-gray-900 rounded-2xl border border-gray-800 p-8 text-center space-y-4">
-              <div className="w-16 h-16 bg-amber-900/30 rounded-full flex items-center justify-center mx-auto"><Clock className="text-amber-400" size={32} /></div>
-              <h3 className="text-xl font-bold text-white">Results Pending</h3>
-              <p className="text-sm text-gray-400 max-w-md mx-auto">Your exam has been submitted successfully. The administrator will declare results including your <strong className="text-white">All-India Rank, score, and answer key</strong> after the test window closes.</p>
-              <p className="text-xs text-gray-600">You will be notified via email when results are declared.</p>
-              <a href="https://vigyanprep.com" className="inline-block px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs rounded-xl transition">Go to Dashboard</a>
-            </div>
-          ) : null}
-        </div>
       </div>
 
       {/* 🚩 REPORT QUESTION MODAL */}
