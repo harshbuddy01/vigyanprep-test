@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useExamStore } from "../stores/examStore";
+import { getCookie } from "../lib/cookies";
 import { MathText } from "../components/MathText";
 import {
   CheckCircle2, XCircle, Download, Home, RotateCcw,
@@ -76,7 +77,7 @@ export const ResponseSheet: React.FC = () => {
   const [testData, setTestData] = useState<any>(null);
 
   useEffect(() => {
-    const authToken = token || localStorage.getItem("auth_token") || localStorage.getItem("token") || "";
+    const authToken = token || getCookie('student_token') || localStorage.getItem('student_token') || getCookie('auth_token') || localStorage.getItem('auth_token') || localStorage.getItem('token') || '';
     const apiBase = import.meta.env.VITE_API_URL || "https://api.vigyanprep.com";
 
     const fetchResult = async () => {
@@ -97,7 +98,7 @@ export const ResponseSheet: React.FC = () => {
           }
         }
 
-        // 2. If no attemptId in state, look up user's latest attempt for this test
+        // 2. If no attemptId in state, look up user's latest submitted attempt for this test
         if (activeTestId && !isSolutionsOnly && authToken) {
           try {
             const attRes = await fetch(`${apiBase}/api/student/attempts?cb=${Date.now()}`, {
@@ -105,7 +106,8 @@ export const ResponseSheet: React.FC = () => {
             });
             if (attRes.ok) {
               const attData = await attRes.json();
-              const match = (attData.attempts || []).find((a: any) => a.test_id === activeTestId);
+              const match = (attData.attempts || []).find((a: any) => (a.test_id === activeTestId || a.testId === activeTestId) && a.status === 'submitted')
+                || (attData.attempts || []).find((a: any) => a.test_id === activeTestId || a.testId === activeTestId);
               if (match?.id) {
                 const res = await fetch(`${apiBase}/api/exam/lifecycle/result/${match.id}`, {
                   headers: { "Authorization": `Bearer ${authToken}` }
@@ -120,6 +122,26 @@ export const ResponseSheet: React.FC = () => {
                 }
               }
             }
+          } catch (e) {
+            console.warn("Attempt lookup notice:", e);
+          }
+        }
+
+        // 2.5 Try fetching paper solutions if released
+        if (activeTestId) {
+          try {
+            const solRes = await fetch(`${apiBase}/api/exam/lifecycle/solutions/${activeTestId}`, {
+              headers: authToken ? { "Authorization": `Bearer ${authToken}` } : {}
+            });
+            if (solRes.ok) {
+              const solData = await solRes.json();
+              if (solData.success && solData.questions) {
+                setFetchedQuestions(solData.questions);
+                if (solData.testTitle) {
+                  setTestData((prev: any) => ({ ...prev, title: solData.testTitle, response_released_at: new Date().toISOString() }));
+                }
+              }
+            }
           } catch (e) {}
         }
 
@@ -129,10 +151,10 @@ export const ResponseSheet: React.FC = () => {
           if (pubRes.ok) {
             const pubData = await pubRes.json();
             if (pubData.test) {
-              setTestData(pubData.test);
+              setTestData((prev: any) => ({ ...pubData.test, ...(prev || {}) }));
             }
             if (pubData.questions && Array.isArray(pubData.questions)) {
-              setFetchedQuestions(pubData.questions);
+              setFetchedQuestions(prev => prev.length > 0 ? prev : pubData.questions);
             }
           }
         }
@@ -217,7 +239,12 @@ export const ResponseSheet: React.FC = () => {
 
   const isPaidSeries = !isExplicitPyq;
   const hasServerResult = Boolean(serverResult && (serverResult.resultReleased || serverResult.totalScore !== null));
-  const isResultDeclared = Boolean(!isPaidSeries || hasServerResult || (testData?.response_released_at && new Date(testData.response_released_at) <= new Date()));
+  const isResultDeclared = Boolean(
+    !isPaidSeries ||
+    hasServerResult ||
+    testData?.status === 'completed' ||
+    Boolean(testData?.response_released_at && new Date(testData.response_released_at) <= new Date())
+  );
 
   const localScoring = React.useMemo(() => {
     let correctCount = 0, incorrectCount = 0, unattemptedCount = 0, totalScore = 0;
@@ -298,8 +325,12 @@ export const ResponseSheet: React.FC = () => {
       <header className="no-print bg-[#1b365d] text-white py-4 px-6 shadow-md border-b-4 border-amber-400">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div>
-            <h1 className="text-lg font-bold tracking-wide">OFFICIAL CANDIDATE RESPONSE SHEET</h1>
-            <p className="text-xs text-amber-300 font-semibold">{testTitle || "IISER / NEST Examination"}</p>
+            <h1 className="text-lg font-bold tracking-wide">
+              {isResultDeclared ? "OFFICIAL EXAMINATION SCORECARD & PERFORMANCE ANALYSIS" : "OFFICIAL CANDIDATE RESPONSE SHEET"}
+            </h1>
+            <p className="text-xs text-amber-300 font-semibold">
+              {testData?.title || testTitle || "IISER / NEST Examination"} • {isResultDeclared ? "Official Merit, Marks Breakdown & Verified Solutions" : "Recorded Responses"}
+            </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
             {!isPaidSeries && (
@@ -308,7 +339,7 @@ export const ResponseSheet: React.FC = () => {
               </button>
             )}
             <button onClick={() => window.print()} className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow transition cursor-pointer">
-              <Download size={15} /> Download Response Sheet
+              <Download size={15} /> Download {isResultDeclared ? "Scorecard" : "Response Sheet"}
             </button>
             <a href="https://vigyanprep.com" className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 border border-white/20 transition cursor-pointer">
               <Home size={15} /> Home
@@ -592,13 +623,13 @@ export const ResponseSheet: React.FC = () => {
                                   </span>
                                   <div className="flex-1"><MathText text={opt} /></div>
                                   {isResultDeclared && isOfficialCorrect && (
-                                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded shrink-0">
-                                      {isStudentChoice ? "Your Answer (Correct)" : "Correct Answer"}
+                                    <span className="text-[10px] font-extrabold text-emerald-900 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md shrink-0 flex items-center gap-1">
+                                      {isStudentChoice ? "✓ Your Choice (Correct +4)" : "✓ Official Correct Key"}
                                     </span>
                                   )}
                                   {isResultDeclared && isStudentChoice && !isOfficialCorrect && (
-                                    <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded shrink-0">
-                                      Your Answer
+                                    <span className="text-[10px] font-extrabold text-rose-900 bg-rose-100 border border-rose-300 px-2 py-0.5 rounded-md shrink-0 flex items-center gap-1">
+                                      ✗ Your Choice (-1 Mark)
                                     </span>
                                   )}
                                 </div>
