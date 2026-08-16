@@ -72,58 +72,61 @@ export const ResponseSheet: React.FC = () => {
 
   const sections = ["Physics", "Chemistry", "Mathematics", "Biology"];
 
+  const [fetchedQuestions, setFetchedQuestions] = useState<any[]>([]);
+
   useEffect(() => {
     const authToken = token || localStorage.getItem("auth_token") || localStorage.getItem("token") || "";
-    if (!authToken) return;
     const apiBase = import.meta.env.VITE_API_URL || "https://api.vigyanprep.com";
 
     const fetchResult = async () => {
       setResultLoading(true);
       try {
-        // If attempt exists and user is not explicitly requesting pure solutions, load their personal attempt result
-        if (attemptId && !isSolutionsOnly) {
+        // 1. If attempt exists, load their personal attempt result
+        if (attemptId && !isSolutionsOnly && authToken) {
           const res = await fetch(`${apiBase}/api/exam/lifecycle/result/${attemptId}`, {
             headers: { "Authorization": `Bearer ${authToken}` }
           });
           if (res.ok) {
             const data = await res.json();
-            if (data.success && data.resultReleased) {
+            if (data.success) {
               setServerResult(data as AttemptResult);
               return;
             }
           }
         }
 
-        // Fallback: If no attempt was made or viewing paper key/solutions, fetch official questions & solutions
+        // 2. If no attemptId in state, look up user's latest attempt for this test
+        if (activeTestId && !isSolutionsOnly && authToken) {
+          try {
+            const attRes = await fetch(`${apiBase}/api/student/attempts?cb=${Date.now()}`, {
+              headers: { "Authorization": `Bearer ${authToken}` }
+            });
+            if (attRes.ok) {
+              const attData = await attRes.json();
+              const match = (attData.attempts || []).find((a: any) => a.test_id === activeTestId);
+              if (match?.id) {
+                const res = await fetch(`${apiBase}/api/exam/lifecycle/result/${match.id}`, {
+                  headers: { "Authorization": `Bearer ${authToken}` }
+                });
+                if (res.ok) {
+                  const data = await res.json();
+                  if (data.success) {
+                    setServerResult(data as AttemptResult);
+                    return;
+                  }
+                }
+              }
+            }
+          } catch (e) {}
+        }
+
+        // 3. Fallback: Fetch public questions / solutions
         if (activeTestId) {
-          const solRes = await fetch(`${apiBase}/api/exam/lifecycle/solutions/${activeTestId}`, {
-            headers: { "Authorization": `Bearer ${authToken}` }
-          });
-          if (solRes.ok) {
-            const solData = await solRes.json();
-            if (solData.success && solData.questions) {
-              setServerResult({
-                totalScore: null,
-                sectionScores: null,
-                rank: null,
-                percentile: null,
-                resultReleased: true,
-                totalQuestions: solData.totalQuestions || solData.questions.length,
-                attempted: 0,
-                questions: solData.questions.map((q: any) => ({
-                  id: q.id,
-                  question_number: q.question_number,
-                  question_text: q.question_text || q.text,
-                  options: q.options,
-                  section: q.section,
-                  correct_answer: q.correct_answer,
-                  studentAnswer: null,
-                  status: 'unattempted',
-                  marksEarned: null,
-                  solution_explanation: q.solution_explanation || q.model_answer,
-                  image_url: q.image_url
-                }))
-              });
+          const pubRes = await fetch(`${apiBase}/api/public/tests/${activeTestId}`);
+          if (pubRes.ok) {
+            const pubData = await pubRes.json();
+            if (pubData.questions && Array.isArray(pubData.questions)) {
+              setFetchedQuestions(pubData.questions);
             }
           }
         }
@@ -166,6 +169,34 @@ export const ResponseSheet: React.FC = () => {
     finally { setReportSubmitting(false); }
   };
 
+  const displayQuestions = React.useMemo(() => {
+    if (serverResult?.questions && serverResult.questions.length > 0) return serverResult.questions;
+    if (localQuestions && localQuestions.length > 0) return localQuestions;
+    if (fetchedQuestions && fetchedQuestions.length > 0) return fetchedQuestions;
+    return [];
+  }, [serverResult, localQuestions, fetchedQuestions]);
+
+  const displayAnswers = React.useMemo(() => {
+    let merged: Record<string, string> = {};
+    try {
+      if (activeTestId) {
+        const raw = localStorage.getItem(`vigyan_response_${activeTestId}`);
+        if (raw) merged = JSON.parse(raw);
+      }
+    } catch (e) {}
+    if (serverResult?.questions) {
+      serverResult.questions.forEach(q => {
+        if (q.studentAnswer) merged[q.id] = q.studentAnswer;
+      });
+    }
+    return { ...merged, ...(localAnswers || {}) };
+  }, [localAnswers, activeTestId, serverResult]);
+
+  const answeredCount = Object.keys(displayAnswers).filter(k => !!displayAnswers[k]).length;
+  const totalMaxScore = displayQuestions.length * 4;
+
+  const isPaidSeries = isLiveTest || examType === 'IAT' || examType === 'NEST' || (serverResult as any)?.test?.content_type === 'test_series';
+
   const localScoring = React.useMemo(() => {
     let correctCount = 0, incorrectCount = 0, unattemptedCount = 0, totalScore = 0;
     const sectionScores: Record<string, any> = {
@@ -174,11 +205,11 @@ export const ResponseSheet: React.FC = () => {
       Mathematics: { correct: 0, incorrect: 0, unattempted: 0, score: 0 },
       Biology: { correct: 0, incorrect: 0, unattempted: 0, score: 0 },
     };
-    localQuestions.forEach(q => {
-      const studentAns = localAnswers[q.id];
+    displayQuestions.forEach(q => {
+      const studentAns = displayAnswers[q.id];
       const sec = q.section && sections.includes(q.section) ? q.section : "Physics";
       if (!sectionScores[sec]) sectionScores[sec] = { correct: 0, incorrect: 0, unattempted: 0, score: 0 };
-      const correctKey = q.correct_answer || q.correctAnswer;
+      const correctKey = q.correct_answer || (q as any).correctAnswer;
       if (!studentAns) { unattemptedCount++; sectionScores[sec].unattempted++; }
       else if (correctKey && studentAns === correctKey) { correctCount++; totalScore += 4; sectionScores[sec].correct++; sectionScores[sec].score += 4; }
       else if (!correctKey) { sectionScores[sec].unattempted++; }
@@ -186,11 +217,9 @@ export const ResponseSheet: React.FC = () => {
     });
     const accuracy = (correctCount + incorrectCount) > 0 ? Math.round((correctCount / (correctCount + incorrectCount)) * 100) : 0;
     return { correctCount, incorrectCount, unattemptedCount, totalScore, sectionScores, accuracy };
-  }, [localQuestions, localAnswers]);
+  }, [displayQuestions, displayAnswers]);
 
   const hasServerResult = !!(serverResult && serverResult.resultReleased);
-  const answeredCount = Object.keys(localAnswers).length;
-  const totalMaxScore = localQuestions.length * 4;
 
   const handleReattempt = () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -223,15 +252,15 @@ export const ResponseSheet: React.FC = () => {
             <p className="text-xs text-amber-300 font-semibold">{testTitle || "IISER / NEST Examination"}</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
-            {!isLiveTest && (
-              <button onClick={handleReattempt} className="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow transition">
+            {!isPaidSeries && (
+              <button onClick={handleReattempt} className="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow transition cursor-pointer">
                 <RotateCcw size={15} /> Re-Attempt Test
               </button>
             )}
-            <button onClick={() => window.print()} className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow transition">
+            <button onClick={() => window.print()} className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow transition cursor-pointer">
               <Download size={15} /> Download Response Sheet
             </button>
-            <a href="https://vigyanprep.com" className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 border border-white/20 transition">
+            <a href="https://vigyanprep.com" className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 border border-white/20 transition cursor-pointer">
               <Home size={15} /> Home
             </a>
           </div>
@@ -257,17 +286,17 @@ export const ResponseSheet: React.FC = () => {
 
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
 
-        {/* SUMMARY CARDS (When candidate took local or live test) */}
-        {localQuestions.length > 0 && (
+        {/* SUMMARY CARDS */}
+        {displayQuestions.length > 0 && (
           <div className="no-print bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-100"><p className="text-2xl font-black text-[#1b365d]">{localQuestions.length}</p><p className="text-xs text-gray-500 font-semibold mt-1">Total Questions</p></div>
+              <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-100"><p className="text-2xl font-black text-[#1b365d]">{displayQuestions.length}</p><p className="text-xs text-gray-500 font-semibold mt-1">Total Questions</p></div>
               <div className="text-center p-4 bg-emerald-50 rounded-xl border border-emerald-100"><p className="text-2xl font-black text-emerald-700">{answeredCount}</p><p className="text-xs text-gray-500 font-semibold mt-1">Answered</p></div>
-              <div className="text-center p-4 bg-red-50 rounded-xl border border-red-100"><p className="text-2xl font-black text-red-600">{localQuestions.length - answeredCount}</p><p className="text-xs text-gray-500 font-semibold mt-1">Unattempted</p></div>
+              <div className="text-center p-4 bg-red-50 rounded-xl border border-red-100"><p className="text-2xl font-black text-red-600">{displayQuestions.length - answeredCount}</p><p className="text-xs text-gray-500 font-semibold mt-1">Unattempted</p></div>
               <div className="text-center p-4 bg-amber-50 rounded-xl border border-amber-100"><p className="text-2xl font-black text-amber-700">{(markedForReview || []).length}</p><p className="text-xs text-gray-500 font-semibold mt-1">Marked for Review</p></div>
             </div>
 
-            {isLiveTest && !hasServerResult && (
+            {isPaidSeries && !hasServerResult && (
               <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
                 <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={20} />
                 <div>
@@ -277,7 +306,7 @@ export const ResponseSheet: React.FC = () => {
               </div>
             )}
 
-            {!isLiveTest && localScoring.correctCount + localScoring.incorrectCount > 0 && (
+            {!isPaidSeries && localScoring.correctCount + localScoring.incorrectCount > 0 && (
               <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="text-center p-3 bg-green-50 rounded-xl border border-green-100"><p className="text-xl font-black text-green-700">{localScoring.correctCount}</p><p className="text-xs text-gray-500 font-semibold">Correct</p></div>
                 <div className="text-center p-3 bg-red-50 rounded-xl border border-red-100"><p className="text-xl font-black text-red-600">{localScoring.incorrectCount}</p><p className="text-xs text-gray-500 font-semibold">Incorrect</p></div>
@@ -288,8 +317,8 @@ export const ResponseSheet: React.FC = () => {
           </div>
         )}
 
-        {/* RESPONSE TABLE (When candidate took local or live test) */}
-        {localQuestions.length > 0 && (
+        {/* RESPONSE TABLE */}
+        {displayQuestions.length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="no-print px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-bold text-[#1b365d] text-base">Your Response Sheet</h2>
@@ -298,8 +327,8 @@ export const ResponseSheet: React.FC = () => {
 
             <div className="no-print flex overflow-x-auto border-b bg-gray-50">
               {sections.map(sec => {
-                const secQs = localQuestions.filter(q => q.section === sec || (!sections.includes(q.section) && sec === "Physics"));
-                const secAns = secQs.filter(q => localAnswers[q.id]).length;
+                const secQs = displayQuestions.filter(q => q.section === sec || (!sections.includes(q.section) && sec === "Physics"));
+                const secAns = secQs.filter(q => displayAnswers[q.id]).length;
                 return (
                   <button key={sec} onClick={() => setActiveTab(sec)} className={`px-5 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition ${activeTab === sec ? "border-[#1b365d] text-[#1b365d] bg-white" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
                     {sec} ({secAns}/{secQs.length})
@@ -309,10 +338,10 @@ export const ResponseSheet: React.FC = () => {
             </div>
 
             <div className="no-print divide-y divide-gray-50">
-              {localQuestions
+              {displayQuestions
                 .filter(q => q.section === activeTab || (!sections.includes(q.section) && activeTab === "Physics"))
                 .map((q, idx) => {
-                  const studentAns = localAnswers[q.id];
+                  const studentAns = displayAnswers[q.id];
                   const opts = q.options && q.options.length === 4 ? q.options : ["Option A", "Option B", "Option C", "Option D"];
                   const optLabels = ["A", "B", "C", "D"];
                   return (
@@ -325,7 +354,7 @@ export const ResponseSheet: React.FC = () => {
                             <div className="mb-3"><img src={formatImageUrl(q.image_url || (q as any).imageUrl || "")} alt="diagram" className="max-h-40 object-contain rounded border" /></div>
                           )}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {opts.map((opt, oi) => {
+                            {opts.map((opt: string, oi: number) => {
                               const label = optLabels[oi];
                               const isSelected = studentAns === label;
                               return (
@@ -365,8 +394,8 @@ export const ResponseSheet: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {localQuestions.map((q, idx) => {
-                    const ans = localAnswers[q.id];
+                  {displayQuestions.map((q, idx) => {
+                    const ans = displayAnswers[q.id];
                     return (
                       <tr key={q.id} style={{background: idx % 2 === 0 ? "#fff" : "#f9fafb"}}>
                         <td style={{padding:"4px 8px",border:"1px solid #e5e7eb",fontWeight:"bold"}}>{idx + 1}</td>
@@ -379,7 +408,7 @@ export const ResponseSheet: React.FC = () => {
                 </tbody>
               </table>
               <div style={{marginTop:"12px",padding:"8px",background:"#f3f4f6",borderRadius:"6px",fontSize:"10px"}}>
-                <strong>Summary:</strong> Total: {localQuestions.length} | Answered: {Object.keys(localAnswers).length} | Not Attempted: {localQuestions.length - Object.keys(localAnswers).length}
+                <strong>Summary:</strong> Total: {displayQuestions.length} | Answered: {answeredCount} | Not Attempted: {displayQuestions.length - answeredCount}
               </div>
             </div>
           </div>

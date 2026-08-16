@@ -50,8 +50,8 @@ export default function Exam() {
     const autoFetchQuestions = async () => {
       if (!testIdParam) return;
 
-      // If testId changed or previous exam was submitted, reset local answers completely
-      if (testIdParam !== testId || isSubmitted) {
+      // Only reset if switching to a DIFFERENT test paper entirely
+      if (testId && testIdParam !== testId) {
         resetExamState(testIdParam);
       }
 
@@ -78,7 +78,7 @@ export default function Exam() {
     };
 
     autoFetchQuestions();
-  }, [testIdParam, testId, isSubmitted, resetExamState, setQuestions, setTestMeta]);
+  }, [testIdParam, testId, resetExamState, setQuestions, setTestMeta]);
 
   // Working Live 1-Second Timer Interval
   useEffect(() => {
@@ -92,14 +92,26 @@ export default function Exam() {
   const doSubmit = useCallback(async () => {
     if (submittingRef.current) return;
     submittingRef.current = true;
-    submitExam();
+
+    // Persist backup snapshot in localStorage so ResponseSheet NEVER loses student answers
     try {
-      if (attemptId && token) await apiSubmitExam(attemptId, answers, token);
+      if (testIdParam) {
+        localStorage.setItem(`vigyan_response_${testIdParam}`, JSON.stringify(answers));
+      }
+    } catch (e) {}
+
+    submitExam();
+
+    try {
+      if (attemptId && token) {
+        await apiSubmitExam(attemptId, answers, token);
+      }
     } catch (e) {
-      console.error(e);
+      console.error('API submission error:', e);
     }
+
     navigate('/response-sheet' + window.location.search, { replace: true });
-  }, [submitExam, attemptId, answers, token, navigate]);
+  }, [submitExam, attemptId, answers, token, navigate, testIdParam]);
 
   useEffect(() => {
     let hideTimer: any = null;
