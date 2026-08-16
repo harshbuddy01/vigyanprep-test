@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, BookOpen, BarChart3, Bookmark, MessageSquare,
-  Settings, Search, Bell, Award, Sparkles, ShieldCheck,
+  Settings, Search, Bell, Award, Sparkles,
   ArrowRight, PlayCircle, Lock, Key, X, AlertCircle, CheckCircle2,
-  RefreshCw, HelpCircle, Download, ChevronRight, Menu
+  RefreshCw, HelpCircle, Download, ChevronRight, Menu, Home, Mail,
+  Edit3, GraduationCap
 } from 'lucide-react';
 import { getCookie, deleteCookie } from '../lib/cookies';
 import { useExamStore, generateRollNumber } from '../stores/examStore';
@@ -15,6 +16,18 @@ import {
   DNAHelixSketch,
   StudentDeskSketch
 } from '../components/ScienceSketches';
+
+export const SCIENTIST_AVATARS = [
+  { id: 'einstein', name: 'Albert Einstein', field: 'Theoretical Physics', emoji: '⚛️', bio: 'Theory of Relativity & Photoelectric Effect' },
+  { id: 'curie', name: 'Marie Curie', field: 'Nuclear Chemistry', emoji: '🧪', bio: 'Pioneer of Radioactivity & 2x Nobel Laureate' },
+  { id: 'ramanujan', name: 'Srinivasa Ramanujan', field: 'Pure Mathematics', emoji: '📐', bio: 'Infinite Series & Modular Forms Genius' },
+  { id: 'feynman', name: 'Richard Feynman', field: 'Quantum Physics', emoji: '🌌', bio: 'Quantum Electrodynamics & Path Integrals' },
+  { id: 'raman', name: 'C. V. Raman', field: 'Optics & Light', emoji: '🧮', bio: 'Discovery of the Raman Scattering Effect' },
+  { id: 'franklin', name: 'Rosalind Franklin', field: 'Biophysics & DNA', emoji: '🧬', bio: 'X-ray Crystallography & DNA Structure' },
+  { id: 'kalam', name: 'A. P. J. Abdul Kalam', field: 'Aerospace Science', emoji: '🚀', bio: 'Missile Technology & India Space Vision' },
+  { id: 'galileo', name: 'Galileo Galilei', field: 'Astronomy', emoji: '🔭', bio: 'Father of Observational Science' },
+  { id: 'newton', name: 'Isaac Newton', field: 'Classical Mechanics', emoji: '🍎', bio: 'Gravitation & Calculus Pioneer' }
+];
 
 interface TestPaper {
   id: string;
@@ -119,6 +132,61 @@ export function Dashboard() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showPerformanceModal, setShowPerformanceModal] = useState(false);
+
+  // Scientist Avatar & Profile Update State
+  const [selectedAvatarId, setSelectedAvatarId] = useState<string>(() => {
+    return localStorage.getItem('student_avatar_id') || 'einstein';
+  });
+  const [reqName, setReqName] = useState('');
+  const [reqEmail, setReqEmail] = useState('');
+  const [reqReason, setReqReason] = useState('');
+  const [requestSent, setRequestSent] = useState(false);
+
+  const currentScientist = SCIENTIST_AVATARS.find(a => a.id === selectedAvatarId) || SCIENTIST_AVATARS[0];
+
+  const handleSelectAvatar = (id: string) => {
+    setSelectedAvatarId(id);
+    localStorage.setItem('student_avatar_id', id);
+    const scientist = SCIENTIST_AVATARS.find(a => a.id === id);
+    if (scientist) {
+      setToastMessage(`🎭 Persona set to ${scientist.name} (${scientist.emoji})`);
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  };
+
+  const handleSendProfileRequest = () => {
+    if (!reqName.trim() && !reqEmail.trim()) {
+      alert("Please enter the new name or email you wish to update.");
+      return;
+    }
+    const roll = generateRollNumber(studentEmail, studentName);
+    const subject = encodeURIComponent(`[PROFILE UPDATE REQUEST] Student: ${studentName} (${roll})`);
+    const body = encodeURIComponent(
+`Hello VigyanPrep Academic Support Team,
+
+I would like to request an official update to my student profile:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CURRENT PROFILE DETAILS:
+• Current Full Name: ${studentName}
+• Current Registered Email: ${studentEmail}
+• Candidate Roll Number: ${roll}
+
+REQUESTED UPDATES:
+• Requested New Full Name: ${reqName.trim() || '(No Change)'}
+• Requested New Email: ${reqEmail.trim() || '(No Change)'}
+• Reason for Update: ${reqReason.trim() || 'Correction / Academic verification'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Please verify my student identity and update my test series records accordingly.
+
+Thank you,
+${studentName}`
+    );
+
+    window.location.href = `mailto:support@vigyanprep.com?subject=${subject}&body=${body}`;
+    setRequestSent(true);
+  };
 
   useEffect(() => {
     let token = getCookie('student_token') || localStorage.getItem('student_token');
@@ -505,26 +573,35 @@ export function Dashboard() {
          ═══════════════════════════════════════════════════════════════════════ */}
       {/* Desktop Static Sidebar */}
       <aside className="hidden lg:flex w-64 bg-white/20 backdrop-blur-2xl border-r-2 border-amber-950/30 flex-col justify-between p-6 z-20 shrink-0 min-h-screen shadow-2xl shadow-amber-950/10">
-        <div className="space-y-8">
+        <div className="space-y-6">
           
-          {/* Official Logo — Clicking redirects directly to homepage */}
+          {/* Official Logo (Enlarged & Prominent) — Clicking redirects directly to homepage */}
           <a
             href="https://vigyanprep.com/"
-            className="flex flex-col items-start gap-1.5 group cursor-pointer"
+            className="flex flex-col items-start gap-2 group cursor-pointer"
             title="Go to VigyanPrep Homepage"
           >
             <img
               src="/vigyan-logo.png"
               alt="VigyanPrep Official Logo"
-              className="h-20 sm:h-24 w-auto max-w-[200px] object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-105"
+              className="h-24 sm:h-28 w-auto max-w-[210px] object-contain drop-shadow-md transition-transform duration-300 group-hover:scale-105"
             />
-            <span className="text-[9px] text-amber-950 font-extrabold tracking-widest uppercase border-t border-amber-950/20 pt-1.5 w-full text-left">
+            <span className="text-[9px] text-amber-950 font-extrabold tracking-widest uppercase border-t-2 border-amber-950/20 pt-2 w-full text-left">
               STUDENT TEST PORTAL
             </span>
           </a>
 
           {/* Navigation Links */}
           <nav className="space-y-1.5">
+            {/* Direct Home Link */}
+            <a
+              href="https://vigyanprep.com"
+              className="w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition cursor-pointer text-[#1c1815] hover:text-amber-950 hover:bg-white/40 border border-transparent hover:border-amber-950/20"
+            >
+              <Home size={18} className="text-amber-900" />
+              <span>Home (VigyanPrep)</span>
+            </a>
+
             <button
               type="button"
               onClick={() => { setActiveNav('dashboard'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
@@ -595,7 +672,7 @@ export function Dashboard() {
               }`}
             >
               <Settings size={18} />
-              <span>Settings</span>
+              <span>Settings &amp; Avatar</span>
             </button>
           </nav>
         </div>
@@ -623,7 +700,7 @@ export function Dashboard() {
             <div className="space-y-6">
               <div className="flex items-center justify-between border-b-2 border-amber-950/20 pb-4">
                 <a href="https://vigyanprep.com/" className="flex flex-col items-start gap-1">
-                  <img src="/vigyan-logo.png" alt="VigyanPrep Logo" className="h-16 w-auto object-contain drop-shadow" />
+                  <img src="/vigyan-logo.png" alt="VigyanPrep Logo" className="h-18 sm:h-22 w-auto object-contain drop-shadow" />
                   <span className="text-[9px] text-amber-950 font-black tracking-widest uppercase">TEST PORTAL</span>
                 </a>
                 <button
@@ -636,6 +713,14 @@ export function Dashboard() {
 
               {/* Mobile Navigation Links */}
               <nav className="space-y-2">
+                <a
+                  href="https://vigyanprep.com"
+                  className="w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition text-[#1c1815] hover:bg-white/60"
+                >
+                  <Home size={18} className="text-amber-900" />
+                  <span>Home (VigyanPrep)</span>
+                </a>
+
                 <button
                   type="button"
                   onClick={() => { setActiveNav('dashboard'); setMobileNavOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
@@ -708,7 +793,7 @@ export function Dashboard() {
                   }`}
                 >
                   <Settings size={18} />
-                  <span>Settings</span>
+                  <span>Settings &amp; Avatar</span>
                 </button>
               </nav>
             </div>
@@ -756,30 +841,37 @@ export function Dashboard() {
           </div>
 
           {/* Right Header Status */}
-          <div className="flex items-center gap-4 shrink-0">
+          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
             
-            {/* Active Pass Badge / My Subscriptions */}
+            {/* Active Pass Badge / My Subscriptions (Modern, Minimal & Attractive) */}
             <div className="hidden sm:flex flex-col items-end gap-2">
               {subsLoading ? (
-                <div className="text-xs font-bold text-neutral-500 bg-white/40 px-3 py-1.5 rounded-full border border-amber-950/20">Subscription data loading...</div>
+                <div className="text-xs font-bold text-neutral-500 bg-white/40 px-3 py-1 rounded-full border border-amber-950/20">Loading pass...</div>
               ) : subscriptions.length > 0 ? (
                 <div className="flex flex-wrap justify-end gap-2 max-w-[600px]">
                   {Array.from(new Map(subscriptions.map(s => [s.plan?.id || s.id, s])).values()).map(sub => {
                     const daysRemaining = Math.max(0, Math.ceil((new Date(sub.expires_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
+                    const passLabel = sub.plan.exam_type === 'BUNDLE' ? 'IAT + NEST Pass' : sub.plan.name;
                     return (
-                      <div key={sub.id} className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500/20 via-amber-400/25 to-amber-500/20 backdrop-blur-xl border-2 border-amber-600/40 text-amber-950 text-xs font-bold shadow-md">
-                        <Award size={16} className="text-amber-800 shrink-0" />
-                        <span className="font-serif font-extrabold tracking-wide">{sub.plan.name}</span>
-                        <span className="px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 text-[9px] font-mono font-extrabold uppercase tracking-wider">{sub.plan.exam_type}</span>
-                        <span className="text-amber-900 font-extrabold border-l-2 border-amber-950/20 pl-2">{daysRemaining} days left</span>
-                        <span className="text-[10px] text-emerald-800 font-extrabold capitalize border-l-2 border-amber-950/20 pl-2">Active Pass</span>
+                      <div
+                        key={sub.id}
+                        className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-950 text-amber-300 border border-amber-500/40 shadow-xs text-xs font-bold backdrop-blur-md transition hover:scale-105 cursor-pointer"
+                        onClick={() => setShowSettingsModal(true)}
+                        title={`${sub.plan.name} • ${daysRemaining} days remaining`}
+                      >
+                        <Sparkles size={12} className="text-amber-400 shrink-0" />
+                        <span className="font-serif font-extrabold tracking-wide text-amber-100">{passLabel}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-mono font-bold">
+                          {daysRemaining}d left
+                        </span>
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Active Pass" />
                       </div>
                     )
                   })}
                 </div>
               ) : (
-                <a href="https://vigyanprep.com/tests" className="text-xs font-bold text-amber-900 hover:underline bg-white/40 px-3 py-1.5 rounded-full border border-amber-950/20 shadow-sm">
-                  No Active Subscriptions — Browse test series packages on vigyanprep.com/tests
+                <a href="https://vigyanprep.com/tests" className="text-xs font-bold text-amber-900 hover:underline bg-white/40 px-3 py-1.5 rounded-full border border-amber-950/20 shadow-xs">
+                  Explore Test Passes →
                 </a>
               )}
             </div>
@@ -794,15 +886,17 @@ export function Dashboard() {
               <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-amber-600 animate-ping" />
             </button>
 
-            {/* Student Profile Pill */}
-            <div className="flex items-center gap-3 pl-2 cursor-pointer" onClick={() => setShowSettingsModal(true)}>
-              <div className="w-10 h-10 rounded-full bg-[#1c1815] text-amber-300 font-bold flex items-center justify-center text-sm shadow-md border border-amber-500/30">
-                {studentName.charAt(0).toUpperCase()}
-              </div>
-              <div className="hidden md:block text-left">
-                <p className="text-xs font-extrabold text-[#1c1815]">{studentName}</p>
-                <p className="text-[10px] text-[#1c1815]/80 font-bold">{studentEmail}</p>
-              </div>
+            {/* Student Scientist Avatar Button (No redundant plain text repetition) */}
+            <div className="flex items-center gap-2 pl-2">
+              <button
+                type="button"
+                onClick={() => setShowSettingsModal(true)}
+                className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1c1815] to-amber-950 text-amber-300 font-bold flex items-center justify-center text-lg shadow-md border-2 border-amber-500/40 hover:scale-105 hover:border-amber-400 transition cursor-pointer relative group"
+                title={`${studentName} • ${currentScientist.name} (${currentScientist.emoji}) • Click for Profile & Settings`}
+              >
+                <span>{currentScientist.emoji}</span>
+                <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full shadow-xs" />
+              </button>
             </div>
           </div>
         </header>
@@ -850,17 +944,18 @@ export function Dashboard() {
                 Welcome back, <span className="italic font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-900 via-amber-800 to-amber-950 font-serif tracking-wide">{studentName}!</span>
               </h2>
               <p className="text-xs text-[#1c1815] leading-relaxed font-bold max-w-md">
-                Your journey to IISER, NEST & CMI starts here. Practice. Analyze. Improve. <span className="text-amber-950 font-extrabold">Succeed!</span>
+                Your journey to IISER, NEST &amp; CMI starts here. Practice. Analyze. Improve. <span className="text-amber-950 font-extrabold">Succeed!</span>
               </p>
 
-              {/* Immutable Identity Badges */}
+              {/* Clean Aspirant Candidate Badges (Non-repetitive) */}
               <div className="flex flex-wrap items-center gap-2 pt-2">
-                <div className="px-3.5 py-1.5 rounded-xl bg-white/40 border-2 border-amber-950/30 text-[#1c1815] text-[11px] font-extrabold flex items-center gap-2 shadow-xs">
-                  <ShieldCheck size={14} className="text-amber-800" />
-                  <span>Official Identity: <strong className="text-[#1c1815]">{studentName}</strong> ({studentEmail})</span>
+                <div className="px-3.5 py-1.5 rounded-xl bg-white/40 border-2 border-amber-950/20 text-[#1c1815] text-[11px] font-bold flex items-center gap-2 shadow-xs">
+                  <GraduationCap size={15} className="text-amber-900" />
+                  <span>Candidate ID: <strong className="font-mono text-amber-950">{generateRollNumber(studentEmail, studentName)}</strong></span>
                 </div>
-                <div className="px-3 py-1.5 rounded-xl bg-amber-950/15 border-2 border-amber-950/35 text-amber-950 text-[10px] font-mono font-extrabold uppercase shadow-xs">
-                  🔒 Immutable Profile
+                <div className="px-3 py-1.5 rounded-xl bg-amber-950/10 border border-amber-950/20 text-amber-950 text-[10px] font-bold flex items-center gap-1.5 shadow-xs">
+                  <span>{currentScientist.emoji}</span>
+                  <span>Persona: {currentScientist.name}</span>
                 </div>
               </div>
             </div>
@@ -1550,40 +1645,158 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* SETTINGS MODAL */}
+      {/* SETTINGS & PROFILE UPDATE MODAL */}
       {showSettingsModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#fcfbfa] border-2 border-amber-950/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6 relative">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-[#fcfbfa] border-2 border-amber-950/40 rounded-3xl p-6 sm:p-8 max-w-xl w-full shadow-2xl space-y-6 relative my-8">
             <button
-              onClick={() => setShowSettingsModal(false)}
-              className="absolute top-5 right-5 text-neutral-600 hover:text-[#1c1815] p-2 rounded-full hover:bg-amber-950/10 transition"
+              onClick={() => { setShowSettingsModal(false); setRequestSent(false); }}
+              className="absolute top-5 right-5 text-neutral-600 hover:text-[#1c1815] p-2 rounded-full hover:bg-amber-950/10 transition cursor-pointer"
             >
               <X size={20} />
             </button>
 
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-2xl bg-amber-950/15 text-amber-950 border border-amber-950/25">
-                <Settings size={24} />
+            {/* Header */}
+            <div className="flex items-center gap-3 border-b border-amber-950/15 pb-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-950 text-amber-300 flex items-center justify-center text-2xl shadow-md border border-amber-500/30">
+                {currentScientist.emoji}
               </div>
               <div>
-                <h3 className="font-serif text-xl font-bold text-[#1c1815]">Student Settings</h3>
-                <p className="text-xs text-neutral-600 font-semibold">Manage Account & Profile</p>
+                <h3 className="font-serif text-xl font-bold text-[#1c1815]">Student Profile &amp; Settings</h3>
+                <p className="text-xs text-neutral-600 font-semibold">Active Persona: <strong className="text-amber-900">{currentScientist.name}</strong> ({currentScientist.field})</p>
               </div>
             </div>
 
-            <div className="space-y-3 text-xs text-neutral-800 bg-amber-950/10 p-4 rounded-2xl border border-amber-950/20 font-medium">
-              <p><strong className="text-[#1c1815]">Name:</strong> {studentName} (Immutable Profile)</p>
-              <p><strong className="text-[#1c1815]">Email:</strong> {studentEmail}</p>
-              <p><strong className="text-[#1c1815]">Role:</strong> Student Aspirant</p>
-              <p><strong className="text-[#1c1815]">Portal:</strong> IISER & NEST Test Center</p>
+            {/* Section 1: Choose Your Scientist Avatar */}
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-extrabold uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
+                  <Sparkles size={14} className="text-amber-800" /> Choose Your Scientist Persona
+                </label>
+                <span className="text-[10px] text-neutral-500 font-bold">9 Science Icons</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
+                {SCIENTIST_AVATARS.map(avatar => {
+                  const isSelected = selectedAvatarId === avatar.id;
+                  return (
+                    <button
+                      key={avatar.id}
+                      type="button"
+                      onClick={() => handleSelectAvatar(avatar.id)}
+                      className={`p-2 rounded-2xl border-2 text-left transition flex items-center gap-2 cursor-pointer ${
+                        isSelected
+                          ? 'border-amber-950 bg-amber-100/90 shadow-sm ring-2 ring-amber-950/20'
+                          : 'border-amber-950/15 bg-white/70 hover:bg-white hover:border-amber-950/40'
+                      }`}
+                    >
+                      <span className="text-xl shrink-0">{avatar.emoji}</span>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold text-[#1c1815] truncate">{avatar.name.split(' ').slice(-1)[0]}</p>
+                        <p className="text-[9px] text-neutral-500 truncate">{avatar.field}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            <button
-              onClick={handleLogout}
-              className="w-full py-3 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 font-bold text-xs uppercase tracking-wider rounded-xl transition"
-            >
-              Sign Out of Student Account
-            </button>
+            {/* Section 2: Current Account Details */}
+            <div className="space-y-1.5 text-xs bg-amber-950/5 p-3.5 rounded-2xl border border-amber-950/15">
+              <div className="flex justify-between items-center"><span className="text-neutral-500 font-bold">Candidate Name:</span> <span className="font-extrabold text-[#1c1815]">{studentName}</span></div>
+              <div className="flex justify-between items-center"><span className="text-neutral-500 font-bold">Registered Email:</span> <span className="font-extrabold text-[#1c1815]">{studentEmail}</span></div>
+              <div className="flex justify-between items-center"><span className="text-neutral-500 font-bold">Candidate Roll No:</span> <span className="font-mono font-bold text-amber-900">{generateRollNumber(studentEmail, studentName)}</span></div>
+            </div>
+
+            {/* Section 3: Request Profile Verification / Update */}
+            <div className="space-y-3 p-4 rounded-2xl bg-white border-2 border-amber-950/20 shadow-xs">
+              <div>
+                <h4 className="text-xs font-extrabold uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
+                  <Edit3 size={14} className="text-amber-800" /> Request Name or Email Correction
+                </h4>
+                <p className="text-[11px] text-neutral-600 mt-1 leading-relaxed">
+                  To protect your official test series scores and prevent unauthorized access, name/email changes require quick academic verification. Fill below to generate an automatic support email.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                <div>
+                  <label className="block text-[10px] font-bold text-neutral-700 mb-1">New Full Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Correct Name"
+                    value={reqName}
+                    onChange={(e) => setReqName(e.target.value)}
+                    className="w-full text-xs px-3 py-2 rounded-xl bg-gray-50 border border-gray-300 focus:outline-none focus:border-amber-950"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-neutral-700 mb-1">New Email Address</label>
+                  <input
+                    type="email"
+                    placeholder="e.g. new@email.com"
+                    value={reqEmail}
+                    onChange={(e) => setReqEmail(e.target.value)}
+                    className="w-full text-xs px-3 py-2 rounded-xl bg-gray-50 border border-gray-300 focus:outline-none focus:border-amber-950"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-neutral-700 mb-1">Reason for Update</label>
+                <input
+                  type="text"
+                  placeholder="e.g., Spelling correction / Primary email change"
+                  value={reqReason}
+                  onChange={(e) => setReqReason(e.target.value)}
+                  className="w-full text-xs px-3 py-2 rounded-xl bg-gray-50 border border-gray-300 focus:outline-none focus:border-amber-950"
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleSendProfileRequest}
+                  className="flex-1 py-2.5 px-4 bg-[#1c1815] hover:bg-black text-amber-300 font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow transition cursor-pointer border border-amber-500/30"
+                >
+                  <Mail size={14} />
+                  <span>Send Support Request Email</span>
+                </button>
+                <a
+                  href={`https://wa.me/917004283531?text=Hello%20VigyanPrep%20Support%2C%20I%20am%20student%20${encodeURIComponent(studentName)}%20(${encodeURIComponent(generateRollNumber(studentEmail, studentName))})%20and%20would%20like%20to%20request%20a%20profile%20correction.`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition cursor-pointer"
+                >
+                  <MessageSquare size={14} />
+                  <span>WhatsApp (+91 7004283531)</span>
+                </a>
+              </div>
+              {requestSent && (
+                <p className="text-[11px] text-emerald-700 font-bold text-center bg-emerald-50 py-1.5 px-3 rounded-lg border border-emerald-200">
+                  ✓ Email draft opened! Our support desk will verify and update your records promptly.
+                </p>
+              )}
+            </div>
+
+            {/* Section 4: Password Security & Sign Out */}
+            <div className="pt-2 flex items-center justify-between gap-3 border-t border-amber-950/15">
+              <a
+                href="https://auth.vigyanprep.com"
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs font-bold text-amber-900 hover:underline flex items-center gap-1"
+              >
+                <Key size={13} />
+                <span>Change Password</span>
+              </a>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="py-2 px-4 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs rounded-xl transition cursor-pointer"
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
         </div>
       )}
