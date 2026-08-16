@@ -1,15 +1,31 @@
+import { getCookie } from './cookies';
+
 const API_URL = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
 
-export const getTestMeta = async (testId: string, token: string) => {
+function resolveToken(token?: string | null): string {
+  if (token && typeof token === 'string' && token.trim().length > 10) return token.trim();
+  return (
+    getCookie('student_token') ||
+    localStorage.getItem('student_token') ||
+    getCookie('auth_token') ||
+    localStorage.getItem('auth_token') ||
+    localStorage.getItem('token') ||
+    ''
+  );
+}
+
+export const getTestMeta = async (testId: string, token?: string | null) => {
+  const validToken = resolveToken(token);
   const res = await fetch(`${API_URL}/api/public/tests/${testId}`, {
-    headers: { Authorization: token ? `Bearer ${token}` : '' }
+    headers: { Authorization: validToken ? `Bearer ${validToken}` : '' }
   });
   if (!res.ok) throw new Error('Failed to fetch test meta');
   return res.json();
 };
 
-export const submitExam = async (attemptId: string, answers: any, token: string) => {
+export const submitExam = async (attemptId: string, answers: any, token?: string | null) => {
   if (!attemptId) return { success: true };
+  const validToken = resolveToken(token);
   
   // Format answers for backend lifecycle controller
   const answersList = Array.isArray(answers)
@@ -27,20 +43,20 @@ export const submitExam = async (attemptId: string, answers: any, token: string)
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: token ? `Bearer ${token}` : ''
+          Authorization: validToken ? `Bearer ${validToken}` : ''
         },
         body: JSON.stringify({ answers: answersList })
       }).catch(() => {});
     }
 
-    // 2. Submit attempt
+    // 2. Submit attempt with answers included
     const res = await fetch(`${API_URL}/api/exam/lifecycle/submit/${attemptId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: token ? `Bearer ${token}` : ''
+        Authorization: validToken ? `Bearer ${validToken}` : ''
       },
-      body: JSON.stringify({ submitReason: 'manual' })
+      body: JSON.stringify({ submitReason: 'manual', answers: answersList })
     });
 
     if (res.ok) return res.json();
@@ -53,7 +69,7 @@ export const submitExam = async (attemptId: string, answers: any, token: string)
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: token ? `Bearer ${token}` : ''
+      Authorization: validToken ? `Bearer ${validToken}` : ''
     },
     body: JSON.stringify({ attemptId, answers: answersList })
   }).catch(() => null);
