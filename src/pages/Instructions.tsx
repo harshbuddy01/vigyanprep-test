@@ -107,6 +107,7 @@ export const Instructions: React.FC = () => {
     try {
       const apiBase = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
       const authToken = studentToken || useExamStore.getState().token;
+      let resumedAnswers: Record<string, string> = {};
 
       if (authToken && testId) {
         try {
@@ -135,6 +136,11 @@ export const Instructions: React.FC = () => {
             if (typeof startData.remaining_seconds === 'number' && startData.remaining_seconds > 0) {
               setTimeRemaining(startData.remaining_seconds);
             }
+
+            // If exam was resumed, restore server answers and localStorage answers!
+            if (startData.resumed && startData.answers && Object.keys(startData.answers).length > 0) {
+              resumedAnswers = startData.answers;
+            }
           }
         } catch (lifecycleErr) {
           // Non-fatal: continue with local timer if lifecycle call fails
@@ -142,9 +148,22 @@ export const Instructions: React.FC = () => {
         }
       }
 
-      // 🔄 Reset previous session answers & flags for a fresh, clean attempt
+      // Check local storage backup if not already found
+      if (!resumedAnswers || Object.keys(resumedAnswers).length === 0) {
+        try {
+          const localStored = localStorage.getItem(`vigyan_response_${testId}`) || localStorage.getItem('vigyan_last_answers');
+          if (localStored) {
+            const parsed = JSON.parse(localStored);
+            if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+              resumedAnswers = parsed;
+            }
+          }
+        } catch {}
+      }
+
+      // 🔄 Initialize session state (preserving candidate answers if resumed)
       useExamStore.setState({
-        answers: {},
+        answers: resumedAnswers || {},
         markedForReview: [],
         visitedQuestions: [],
         currentQuestionIndex: 0,
