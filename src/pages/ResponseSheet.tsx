@@ -175,16 +175,20 @@ export const ResponseSheet: React.FC = () => {
 
   // 🚩 Report handler
   const handleSubmitReport = async () => {
-    if (!reportingQuestionId || reportReason.trim().length < 20) return;
+    if (!reportingQuestionId || !reportReason.trim() || reportReason.trim().length < 10) return;
     setReportSubmitting(true);
     try {
       const apiBase = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
-      const authToken = token || localStorage.getItem('auth_token') || localStorage.getItem('token') || '';
+      const authToken = token || getCookie('student_token') || localStorage.getItem('student_token') || getCookie('auth_token') || localStorage.getItem('auth_token') || localStorage.getItem('token') || '';
+      const targetTestId = activeTestId || testId;
       const res = await fetch(`${apiBase}/api/admin/question-reports/submit`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        headers: { 
+          'Content-Type': 'application/json', 
+          ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+        },
         body: JSON.stringify({
-          testId,
+          testId: targetTestId,
           questionId: reportingQuestionId,
           reason: `[${reportType.toUpperCase()}] ${reportReason.trim()}`
         })
