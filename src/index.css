@@ -30,3 +30,27 @@ button, a, input, select {
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
 }
+
+/* 🛡️ VigyanPrep Anti-Copy, Anti-Selection & Examination Content Protection */
+*, *::before, *::after {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+/* Allow text selection only in form text inputs if needed */
+input[type="text"], input[type="email"], input[type="password"], textarea {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+}
+
+/* 🛡️ Print & PDF Export Blackout Protection */
+@media print {
+  html, body {
+    display: none !important;
+    visibility: hidden !important;
+    background: #000000 !important;
+  }
+}

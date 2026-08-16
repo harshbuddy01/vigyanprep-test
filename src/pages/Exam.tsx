@@ -152,6 +152,8 @@ export default function Exam() {
     };
   }, [isSubmitted, incrementWarning, doSubmit]);
 
+  const [isWindowBlurred, setIsWindowBlurred] = useState(false);
+
   useEffect(() => {
     const isTouchOrTablet = () => {
       if (typeof window === 'undefined') return false;
@@ -162,10 +164,40 @@ export default function Exam() {
       return isIOS || isAndroidTablet || (hasTouch && window.innerWidth <= 1024);
     };
 
-    const preventDefault = (e: any) => e.preventDefault();
+    const preventDefault = (e: any) => {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    };
+
+    const handleBlur = () => {
+      if (!useExamStore.getState().isSubmitted && !isTouchOrTablet()) {
+        setIsWindowBlurred(true);
+      }
+    };
+
+    const handleFocus = () => {
+      setIsWindowBlurred(false);
+    };
+
     const preventKeys = (e: KeyboardEvent) => {
-      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I', 'C', 'J'].includes(e.key)) || (e.ctrlKey && e.key === 'u')) {
+      const isCmdOrCtrl = e.ctrlKey || e.metaKey;
+
+      // Intercept PrintScreen key & clear clipboard instantly
+      if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
+        try { navigator.clipboard.writeText(''); } catch (err) {}
+        setIsWindowBlurred(true);
+        setTimeout(() => setIsWindowBlurred(false), 2000);
+      }
+
+      // Block Copy, Select All, Save, Print, View Source, DevTools, Inspect
+      if (
+        e.key === 'F12' ||
+        (isCmdOrCtrl && e.shiftKey && ['I', 'C', 'J', 'S', '4', '3'].includes(e.key.toUpperCase())) ||
+        (isCmdOrCtrl && ['c', 'u', 's', 'p', 'a', 'x', 'v'].includes(e.key.toLowerCase()))
+      ) {
         e.preventDefault();
+        e.stopPropagation();
       }
     };
 
@@ -185,17 +217,27 @@ export default function Exam() {
       }
     };
 
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
     document.addEventListener('contextmenu', preventDefault);
     document.addEventListener('copy', preventDefault);
+    document.addEventListener('cut', preventDefault);
     document.addEventListener('paste', preventDefault);
+    document.addEventListener('dragstart', preventDefault);
+    document.addEventListener('selectstart', preventDefault);
     document.addEventListener('keydown', preventKeys);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
 
     return () => {
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
       document.removeEventListener('contextmenu', preventDefault);
       document.removeEventListener('copy', preventDefault);
+      document.removeEventListener('cut', preventDefault);
       document.removeEventListener('paste', preventDefault);
+      document.removeEventListener('dragstart', preventDefault);
+      document.removeEventListener('selectstart', preventDefault);
       document.removeEventListener('keydown', preventKeys);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
@@ -355,6 +397,35 @@ export default function Exam() {
 
   return (
     <div className="flex flex-col h-[100dvh] overflow-hidden bg-[#f4f6f9] font-sans text-gray-800 relative select-none">
+      
+      {/* 🛡️ Focus-Loss / Screenshot Blackout Shroud */}
+      {isWindowBlurred && !isSubmitted && (
+        <div className="fixed inset-0 z-[99999] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center text-center p-6 space-y-4 animate-fade-in">
+          <div className="w-16 h-16 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400">
+            <ShieldAlert size={36} />
+          </div>
+          <h2 className="text-xl font-black text-white tracking-wide">Examination Screen Protected</h2>
+          <p className="text-xs text-zinc-400 max-w-md">
+            Screen captures, snipping tools, and window switching are restricted during proctored CBT exams. Click below to return to your exam.
+          </p>
+          <button
+            onClick={() => setIsWindowBlurred(false)}
+            className="px-6 py-2.5 bg-amber-400 hover:bg-amber-300 text-black font-extrabold text-xs rounded-xl shadow transition cursor-pointer"
+          >
+            Resume Exam
+          </button>
+        </div>
+      )}
+
+      {/* 🛡️ Candidate Security Watermark */}
+      <div className="fixed inset-0 pointer-events-none z-[1] select-none opacity-[0.03] overflow-hidden flex flex-wrap gap-24 p-8 text-xs font-mono font-bold text-black uppercase transform -rotate-12">
+        {Array.from({ length: 30 }).map((_, i) => (
+          <span key={i}>
+            VIGYANPREP • {candidateName || 'STUDENT'} • {rollNumber || 'CBT'}
+          </span>
+        ))}
+      </div>
+
       {showCalculator && <ScientificCalculator onClose={() => setShowCalculator(false)} />}
       {showTabWarning && (
         <div className="fixed top-0 inset-x-0 z-50 bg-red-600 text-white text-center py-2 font-bold text-xs shadow-lg animate-pulse flex items-center justify-center gap-2 px-2">

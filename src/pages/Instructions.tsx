@@ -142,6 +142,16 @@ export const Instructions: React.FC = () => {
         }
       }
 
+      // 🔄 Reset previous session answers & flags for a fresh, clean attempt
+      useExamStore.setState({
+        answers: {},
+        markedForReview: [],
+        visitedQuestions: [],
+        currentQuestionIndex: 0,
+        isSubmitted: false,
+        warningCount: 0
+      });
+
       // Cross-browser & iPad fullscreen attempt with vendor prefixes
       try {
         const docEl = document.documentElement as any;
