@@ -466,6 +466,27 @@ export const ResponseSheet: React.FC = () => {
                     })}
                   </div>
                 </div>
+
+                {/* 📢 Official Answer Key Challenge & Grievance Policy Notice */}
+                <div className="p-4 bg-amber-50/90 border border-amber-300 rounded-2xl flex items-start gap-3.5 shadow-sm">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 text-amber-700 mt-0.5">
+                    <Flag size={18} />
+                  </div>
+                  <div className="space-y-1 text-xs text-amber-950 flex-1 leading-relaxed">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-extrabold text-amber-950 text-xs sm:text-sm">Question & Answer Key Discrepancy Reporting</h4>
+                      <span className="px-2 py-0.5 bg-amber-200 text-amber-900 text-[10px] font-bold rounded uppercase tracking-wider">
+                        Important
+                      </span>
+                    </div>
+                    <p className="text-amber-900">
+                      If you feel that any question statement, diagram, or answer option key is incorrect, please click the <strong className="text-amber-950">"Report"</strong> button located on that question card below to file an academic challenge.
+                    </p>
+                    <p className="font-bold text-red-700 pt-0.5 text-[11px]">
+                      ⚠️ <strong>Note:</strong> All question and answer key challenges must be submitted before the final merit rank declaration. No modifications will be entertained after the All-India Rank list is officially disclosed.
+                    </p>
+                  </div>
+                </div>
               </div>
             ) : (
               /* 🔒 Paid Live Test Series - Unreleased Response Sheet Card */
