@@ -73,6 +73,7 @@ export const ResponseSheet: React.FC = () => {
   const sections = ["Physics", "Chemistry", "Mathematics", "Biology"];
 
   const [fetchedQuestions, setFetchedQuestions] = useState<any[]>([]);
+  const [testData, setTestData] = useState<any>(null);
 
   useEffect(() => {
     const authToken = token || localStorage.getItem("auth_token") || localStorage.getItem("token") || "";
@@ -90,6 +91,7 @@ export const ResponseSheet: React.FC = () => {
             const data = await res.json();
             if (data.success) {
               setServerResult(data as AttemptResult);
+              if (data.test) setTestData(data.test);
               return;
             }
           }
@@ -112,6 +114,7 @@ export const ResponseSheet: React.FC = () => {
                   const data = await res.json();
                   if (data.success) {
                     setServerResult(data as AttemptResult);
+                    if (data.test) setTestData(data.test);
                     return;
                   }
                 }
@@ -120,11 +123,14 @@ export const ResponseSheet: React.FC = () => {
           } catch (e) {}
         }
 
-        // 3. Fallback: Fetch public questions / solutions
+        // 3. Fallback: Fetch public questions / solutions and test metadata
         if (activeTestId) {
           const pubRes = await fetch(`${apiBase}/api/public/tests/${activeTestId}`);
           if (pubRes.ok) {
             const pubData = await pubRes.json();
+            if (pubData.test) {
+              setTestData(pubData.test);
+            }
             if (pubData.questions && Array.isArray(pubData.questions)) {
               setFetchedQuestions(pubData.questions);
             }
@@ -196,12 +202,19 @@ export const ResponseSheet: React.FC = () => {
   const totalMaxScore = displayQuestions.length * 4;
 
   // 🛡️ STRICT DISTINCTION: Paid Test Series vs Free PYQs
-  // Paid Series hides results until admin releases it; PYQ practice shows instant full analytics & solutions
-  const isPaidSeries = Boolean(
-    isLiveTest === true ||
-    (serverResult as any)?.test?.content_type === 'test_series' ||
-    (serverResult as any)?.test?.is_paid === true
+  // Free PYQ mode ONLY applies if the test is explicitly a PYQ (content_type === 'pyq' or title contains 'PYQ' / 'Previous Year')
+  // ALL regular test series (IAT 01, IAT 02, NEST 01, CMI 01, live mocks, scheduled test series) are strictly PAID TEST SERIES (hidden answers & secret scoring until admin release!)
+  const activeTitle = (testData?.title || testTitle || (serverResult as any)?.test?.title || '').toUpperCase();
+  const contentType = (testData?.content_type || (serverResult as any)?.test?.content_type || '').toLowerCase();
+
+  const isExplicitPyq = Boolean(
+    contentType === 'pyq' ||
+    (activeTitle.includes('PYQ') && !activeTitle.includes('TEST SERIES') && !activeTitle.includes('MOCK') && !activeTitle.startsWith('IAT 0') && !activeTitle.startsWith('NEST 0')) ||
+    (activeTitle.includes('PREVIOUS YEAR') && !activeTitle.includes('TEST SERIES') && !activeTitle.includes('MOCK'))
   );
+
+  const isPaidSeries = !isExplicitPyq;
+  const hasServerResult = Boolean(serverResult && serverResult.resultReleased);
 
   const localScoring = React.useMemo(() => {
     let correctCount = 0, incorrectCount = 0, unattemptedCount = 0, totalScore = 0;
@@ -254,8 +267,6 @@ export const ResponseSheet: React.FC = () => {
       percentage
     };
   }, [displayQuestions, displayAnswers, totalMaxScore]);
-
-  const hasServerResult = !!(serverResult && serverResult.resultReleased);
 
   const handleReattempt = () => {
     const urlParams = new URLSearchParams(window.location.search);

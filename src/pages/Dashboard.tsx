@@ -442,6 +442,9 @@ ${studentName}`
       token
     });
 
+    const isLive = paper.content_type === 'test_series';
+    useExamStore.getState().setIsLiveTest(isLive);
+
     const myHallTicket = hallTickets.find(h => h.test_id === paper.id);
     if (myHallTicket) {
       navigate(`/instructions?testId=${paper.id}`);
