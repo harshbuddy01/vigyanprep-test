@@ -512,10 +512,11 @@ export default function Exam() {
       </div>
 
       <div className="flex flex-1 overflow-hidden relative">
-        <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden select-none opacity-[0.05] flex flex-wrap content-start justify-center gap-20 p-8 transform -rotate-12 scale-125">
-          {Array.from({ length: 30 }).map((_, i) => (
-            <div key={i} className="text-xl font-serif font-black tracking-widest text-[#1b365d] uppercase whitespace-nowrap">
-              VIGYAN PREP · {candidateName || 'CANDIDATE'} ({rollNumber || 'ID'})
+        {/* 🛡️ Visible Proctored CBT Security Watermark */}
+        <div className="fixed inset-0 pointer-events-none z-30 overflow-hidden select-none opacity-[0.08] flex flex-wrap content-start justify-center gap-24 p-8 transform -rotate-12 scale-110">
+          {Array.from({ length: 48 }).map((_, i) => (
+            <div key={i} className="text-base font-mono font-black tracking-widest text-[#1b365d] uppercase whitespace-nowrap">
+              VIGYAN PREP • {candidateName || 'CANDIDATE'} • {rollNumber || 'CBT'}
             </div>
           ))}
         </div>
@@ -528,6 +529,13 @@ export default function Exam() {
             </div>
           ) : currentQ ? (
             <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto w-full">
+              
+              {/* Proctored Candidate Header Stamp */}
+              <div className="flex items-center justify-between px-3 py-1.5 bg-amber-500/10 border border-amber-400/20 rounded-lg text-[10px] font-mono text-amber-900 font-bold">
+                <span>🔒 PROCTORED EXAM • CANDIDATE: {candidateName || 'STUDENT'} ({rollNumber || 'CBT'})</span>
+                <span className="hidden sm:inline">OFFICIAL QUESTION {currentQuestionIndex + 1} OF {questions.length}</span>
+              </div>
+
               <div className="flex items-center justify-between border-b pb-3 flex-wrap gap-2">
                 <span className="text-xs sm:text-sm font-bold text-[#1b365d] uppercase tracking-wider">
                   Question No. {currentSectionQIndex !== -1 ? currentSectionQIndex + 1 : 1} of {sectionQuestions.length} ({activeSection})

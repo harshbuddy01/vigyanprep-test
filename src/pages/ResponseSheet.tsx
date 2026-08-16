@@ -195,29 +195,65 @@ export const ResponseSheet: React.FC = () => {
   const answeredCount = Object.keys(displayAnswers).filter(k => !!displayAnswers[k]).length;
   const totalMaxScore = displayQuestions.length * 4;
 
-  const isPaidSeries = isLiveTest || examType === 'IAT' || examType === 'NEST' || (serverResult as any)?.test?.content_type === 'test_series';
+  // 🛡️ STRICT DISTINCTION: Paid Test Series vs Free PYQs
+  // Paid Series hides results until admin releases it; PYQ practice shows instant full analytics & solutions
+  const isPaidSeries = Boolean(
+    isLiveTest === true ||
+    (serverResult as any)?.test?.content_type === 'test_series' ||
+    (serverResult as any)?.test?.is_paid === true
+  );
 
   const localScoring = React.useMemo(() => {
     let correctCount = 0, incorrectCount = 0, unattemptedCount = 0, totalScore = 0;
     const sectionScores: Record<string, any> = {
-      Physics: { correct: 0, incorrect: 0, unattempted: 0, score: 0 },
-      Chemistry: { correct: 0, incorrect: 0, unattempted: 0, score: 0 },
-      Mathematics: { correct: 0, incorrect: 0, unattempted: 0, score: 0 },
-      Biology: { correct: 0, incorrect: 0, unattempted: 0, score: 0 },
+      Physics: { correct: 0, incorrect: 0, unattempted: 0, score: 0, total: 0 },
+      Chemistry: { correct: 0, incorrect: 0, unattempted: 0, score: 0, total: 0 },
+      Mathematics: { correct: 0, incorrect: 0, unattempted: 0, score: 0, total: 0 },
+      Biology: { correct: 0, incorrect: 0, unattempted: 0, score: 0, total: 0 },
     };
     displayQuestions.forEach(q => {
       const studentAns = displayAnswers[q.id];
       const sec = q.section && sections.includes(q.section) ? q.section : "Physics";
-      if (!sectionScores[sec]) sectionScores[sec] = { correct: 0, incorrect: 0, unattempted: 0, score: 0 };
-      const correctKey = q.correct_answer || (q as any).correctAnswer;
-      if (!studentAns) { unattemptedCount++; sectionScores[sec].unattempted++; }
-      else if (correctKey && studentAns === correctKey) { correctCount++; totalScore += 4; sectionScores[sec].correct++; sectionScores[sec].score += 4; }
-      else if (!correctKey) { sectionScores[sec].unattempted++; }
-      else { incorrectCount++; totalScore -= 1; sectionScores[sec].incorrect++; sectionScores[sec].score -= 1; }
+      if (!sectionScores[sec]) sectionScores[sec] = { correct: 0, incorrect: 0, unattempted: 0, score: 0, total: 0 };
+      sectionScores[sec].total++;
+
+      const correctKey = (q.correct_answer || (q as any).correctAnswer || '').trim().toUpperCase();
+      const studentKey = (studentAns || '').trim().toUpperCase();
+
+      if (!studentKey) {
+        unattemptedCount++;
+        sectionScores[sec].unattempted++;
+      } else if (correctKey && studentKey === correctKey) {
+        correctCount++;
+        totalScore += 4;
+        sectionScores[sec].correct++;
+        sectionScores[sec].score += 4;
+      } else if (!correctKey) {
+        unattemptedCount++;
+        sectionScores[sec].unattempted++;
+      } else {
+        incorrectCount++;
+        totalScore -= 1;
+        sectionScores[sec].incorrect++;
+        sectionScores[sec].score -= 1;
+      }
     });
-    const accuracy = (correctCount + incorrectCount) > 0 ? Math.round((correctCount / (correctCount + incorrectCount)) * 100) : 0;
-    return { correctCount, incorrectCount, unattemptedCount, totalScore, sectionScores, accuracy };
-  }, [displayQuestions, displayAnswers]);
+
+    const attemptedCount = correctCount + incorrectCount;
+    const accuracy = attemptedCount > 0 ? Math.round((correctCount / attemptedCount) * 100) : 0;
+    const percentage = totalMaxScore > 0 ? Math.max(0, Math.round((totalScore / totalMaxScore) * 100)) : 0;
+
+    return {
+      correctCount,
+      incorrectCount,
+      unattemptedCount,
+      attemptedCount,
+      totalScore,
+      sectionScores,
+      accuracy,
+      percentage
+    };
+  }, [displayQuestions, displayAnswers, totalMaxScore]);
 
   const hasServerResult = !!(serverResult && serverResult.resultReleased);
 
@@ -286,43 +322,132 @@ export const ResponseSheet: React.FC = () => {
 
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
 
-        {/* SUMMARY CARDS */}
+        {/* SUMMARY CARDS & PERFORMANCE SCORECARD */}
         {displayQuestions.length > 0 && (
-          <div className="no-print bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-100"><p className="text-2xl font-black text-[#1b365d]">{displayQuestions.length}</p><p className="text-xs text-gray-500 font-semibold mt-1">Total Questions</p></div>
-              <div className="text-center p-4 bg-emerald-50 rounded-xl border border-emerald-100"><p className="text-2xl font-black text-emerald-700">{answeredCount}</p><p className="text-xs text-gray-500 font-semibold mt-1">Answered</p></div>
-              <div className="text-center p-4 bg-red-50 rounded-xl border border-red-100"><p className="text-2xl font-black text-red-600">{displayQuestions.length - answeredCount}</p><p className="text-xs text-gray-500 font-semibold mt-1">Unattempted</p></div>
-              <div className="text-center p-4 bg-amber-50 rounded-xl border border-amber-100"><p className="text-2xl font-black text-amber-700">{(markedForReview || []).length}</p><p className="text-xs text-gray-500 font-semibold mt-1">Marked for Review</p></div>
-            </div>
+          <div className="no-print space-y-4">
+            
+            {/* 🌟 PYQ Instant Analytics Banner */}
+            {!isPaidSeries ? (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Trophy className="text-amber-500" size={22} />
+                      <h2 className="text-lg font-black text-[#1b365d] tracking-wide">Instant Practice Exam Scorecard</h2>
+                      <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full uppercase">
+                        PYQ Mode
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Detailed accuracy, section-wise marks breakdown, and verified question solutions
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleReattempt}
+                    className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow transition cursor-pointer self-start sm:self-auto"
+                  >
+                    <RotateCcw size={14} /> Re-Attempt Practice
+                  </button>
+                </div>
 
-            {isPaidSeries && !hasServerResult && (
-              <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
-                <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={20} />
+                {/* Score & KPI Strip */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100">
+                    <p className="text-3xl font-black text-[#1b365d]">{localScoring.totalScore} <span className="text-sm font-semibold text-gray-400">/ {totalMaxScore}</span></p>
+                    <p className="text-xs text-gray-500 font-bold mt-1">Score Obtained</p>
+                    <p className="text-[10px] text-indigo-600 font-semibold mt-0.5">{localScoring.percentage}% Marks</p>
+                  </div>
+                  <div className="text-center p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl border border-emerald-100">
+                    <p className="text-3xl font-black text-emerald-700">{localScoring.accuracy}%</p>
+                    <p className="text-xs text-gray-500 font-bold mt-1">Accuracy Rate</p>
+                    <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">{localScoring.correctCount} of {localScoring.attemptedCount} Correct</p>
+                  </div>
+                  <div className="text-center p-4 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100">
+                    <p className="text-3xl font-black text-amber-700">{localScoring.attemptedCount} <span className="text-sm font-semibold text-gray-400">/ {displayQuestions.length}</span></p>
+                    <p className="text-xs text-gray-500 font-bold mt-1">Questions Attempted</p>
+                    <p className="text-[10px] text-amber-600 font-semibold mt-0.5">{localScoring.unattemptedCount} Skipped</p>
+                  </div>
+                  <div className="text-center p-4 bg-gradient-to-br from-rose-50 to-pink-50 rounded-2xl border border-rose-100">
+                    <p className="text-3xl font-black text-rose-700">{localScoring.incorrectCount}</p>
+                    <p className="text-xs text-gray-500 font-bold mt-1">Incorrect Answers</p>
+                    <p className="text-[10px] text-rose-600 font-semibold mt-0.5">-{localScoring.incorrectCount} Negative Marks</p>
+                  </div>
+                </div>
+
+                {/* Subject-Wise Analysis Cards */}
                 <div>
-                  <p className="font-bold text-amber-800 text-sm">✅ Exam Submitted Successfully</p>
-                  <p className="text-xs text-amber-700 mt-1">Your responses have been recorded. Results including your <strong>All-India Rank, score, and correct answers</strong> will be declared by the administrator after the test window closes. You will be notified via email.</p>
+                  <div className="flex items-center gap-1.5 mb-3 text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    <BarChart3 size={15} className="text-indigo-600" /> Subject-wise Performance
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {sections.map(sec => {
+                      const s = localScoring.sectionScores[sec] || { correct: 0, incorrect: 0, unattempted: 0, score: 0, total: 0 };
+                      const secAttempted = s.correct + s.incorrect;
+                      const secAcc = secAttempted > 0 ? Math.round((s.correct / secAttempted) * 100) : 0;
+                      return (
+                        <div key={sec} className="bg-gray-50 rounded-2xl p-4 border border-gray-200 flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs font-bold text-[#1b365d]">{sec}</span>
+                              <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${s.score >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
+                                {s.score > 0 ? `+${s.score}` : s.score} Marks
+                              </span>
+                            </div>
+                            <div className="space-y-1 text-xs text-gray-600">
+                              <div className="flex justify-between"><span className="text-emerald-700">✓ Correct</span><span className="font-bold">{s.correct}</span></div>
+                              <div className="flex justify-between"><span className="text-rose-700">✗ Incorrect</span><span className="font-bold">{s.incorrect}</span></div>
+                              <div className="flex justify-between"><span className="text-gray-400">— Skipped</span><span>{s.unattempted}</span></div>
+                            </div>
+                          </div>
+                          <div className="mt-3 pt-2 border-t border-gray-200 flex items-center justify-between text-[11px]">
+                            <span className="text-gray-500 font-medium">Accuracy</span>
+                            <span className="font-bold text-indigo-700">{secAcc}%</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            )}
+            ) : (
+              /* 🔒 Paid Live Test Series Card */
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-100"><p className="text-2xl font-black text-[#1b365d]">{displayQuestions.length}</p><p className="text-xs text-gray-500 font-semibold mt-1">Total Questions</p></div>
+                  <div className="text-center p-4 bg-emerald-50 rounded-xl border border-emerald-100"><p className="text-2xl font-black text-emerald-700">{answeredCount}</p><p className="text-xs text-gray-500 font-semibold mt-1">Answered</p></div>
+                  <div className="text-center p-4 bg-red-50 rounded-xl border border-red-100"><p className="text-2xl font-black text-red-600">{displayQuestions.length - answeredCount}</p><p className="text-xs text-gray-500 font-semibold mt-1">Unattempted</p></div>
+                  <div className="text-center p-4 bg-amber-50 rounded-xl border border-amber-100"><p className="text-2xl font-black text-amber-700">{(markedForReview || []).length}</p><p className="text-xs text-gray-500 font-semibold mt-1">Marked for Review</p></div>
+                </div>
 
-            {!isPaidSeries && localScoring.correctCount + localScoring.incorrectCount > 0 && (
-              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="text-center p-3 bg-green-50 rounded-xl border border-green-100"><p className="text-xl font-black text-green-700">{localScoring.correctCount}</p><p className="text-xs text-gray-500 font-semibold">Correct</p></div>
-                <div className="text-center p-3 bg-red-50 rounded-xl border border-red-100"><p className="text-xl font-black text-red-600">{localScoring.incorrectCount}</p><p className="text-xs text-gray-500 font-semibold">Incorrect</p></div>
-                <div className="text-center p-3 bg-gray-50 rounded-xl border border-gray-100"><p className="text-xl font-black text-gray-600">{localScoring.unattemptedCount}</p><p className="text-xs text-gray-500 font-semibold">Unattempted</p></div>
-                <div className="text-center p-3 bg-blue-50 rounded-xl border border-blue-100"><p className="text-xl font-black text-[#1b365d]">{localScoring.totalScore} / {totalMaxScore}</p><p className="text-xs text-gray-500 font-semibold">Your Score</p></div>
+                {!hasServerResult && (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+                    <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={20} />
+                    <div>
+                      <p className="font-bold text-amber-800 text-sm">✅ Live Exam Submitted Successfully</p>
+                      <p className="text-xs text-amber-700 mt-1">Your responses have been recorded securely. Official Results, All-India Ranks, and Verified Answer Keys will be declared by the examination administrator after the test window closes.</p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
         )}
 
-        {/* RESPONSE TABLE */}
+        {/* RESPONSE TABLE & SOLUTIONS */}
         {displayQuestions.length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="no-print px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-bold text-[#1b365d] text-base">Your Response Sheet</h2>
-              <p className="text-xs text-gray-500">Shows your selected answers only • Correct answers not shown here</p>
+              <div>
+                <h2 className="font-bold text-[#1b365d] text-base">
+                  {!isPaidSeries ? "Official Question Paper Solutions & Answer Key" : "Your Official Response Sheet"}
+                </h2>
+                <p className="text-xs text-gray-500">
+                  {!isPaidSeries
+                    ? "Review candidate responses against official answer keys and step-by-step academic explanations"
+                    : "Shows your recorded candidate selections • Correct answers are released upon official declaration"
+                  }
+                </p>
+              </div>
             </div>
 
             <div className="no-print flex overflow-x-auto border-b bg-gray-50">
@@ -337,44 +462,142 @@ export const ResponseSheet: React.FC = () => {
               })}
             </div>
 
-            <div className="no-print divide-y divide-gray-50">
+            <div className="no-print divide-y divide-gray-100">
               {displayQuestions
                 .filter(q => q.section === activeTab || (!sections.includes(q.section) && activeTab === "Physics"))
                 .map((q, idx) => {
-                  const studentAns = displayAnswers[q.id];
-                  const opts = q.options && q.options.length === 4 ? q.options : ["Option A", "Option B", "Option C", "Option D"];
+                  const studentAns = (displayAnswers[q.id] || '').trim().toUpperCase();
+                  const correctKey = ((q.correct_answer || (q as any).correctAnswer) || '').trim().toUpperCase();
+                  const isCorrect = studentAns && correctKey && studentAns === correctKey;
+                  const isWrong = studentAns && correctKey && studentAns !== correctKey;
+                  const isUnattempted = !studentAns;
+                  const opts = q.options && q.options.length >= 2 ? q.options : ["Option A", "Option B", "Option C", "Option D"];
                   const optLabels = ["A", "B", "C", "D"];
+                  const isExpanded = expandedSolutions[q.id];
+
                   return (
-                    <div key={q.id} className="p-5 hover:bg-gray-50 transition">
+                    <div key={q.id} className="p-5 hover:bg-gray-50/50 transition">
                       <div className="flex items-start gap-4">
-                        <span className="w-7 h-7 rounded-full bg-gray-100 border border-gray-300 flex items-center justify-center text-xs font-bold text-gray-600 shrink-0 mt-0.5">{idx + 1}</span>
+                        <span className="w-8 h-8 rounded-full bg-gray-100 border border-gray-300 flex items-center justify-center text-xs font-bold text-gray-700 shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
                         <div className="flex-1">
-                          <div className="text-sm text-gray-800 font-medium mb-3 leading-relaxed"><MathText text={(q as any).question_text || q.text || ""} /></div>
-                          {(q.image_url || (q as any).imageUrl) && (
-                            <div className="mb-3"><img src={formatImageUrl(q.image_url || (q as any).imageUrl || "")} alt="diagram" className="max-h-40 object-contain rounded border" /></div>
+                          
+                          {/* Question Top Status Pill for PYQs */}
+                          {!isPaidSeries && (
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs font-bold text-gray-400">Question {idx + 1} ({q.section || activeTab})</span>
+                              {isCorrect && (
+                                <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-extrabold rounded-full flex items-center gap-1">
+                                  <CheckCircle2 size={12} /> Correct (+4)
+                                </span>
+                              )}
+                              {isWrong && (
+                                <span className="px-2.5 py-0.5 bg-rose-100 text-rose-800 border border-rose-200 text-xs font-extrabold rounded-full flex items-center gap-1">
+                                  <XCircle size={12} /> Incorrect (-1)
+                                </span>
+                              )}
+                              {isUnattempted && (
+                                <span className="px-2.5 py-0.5 bg-gray-100 text-gray-600 border border-gray-200 text-xs font-semibold rounded-full flex items-center gap-1">
+                                  <Minus size={12} /> Unattempted (0)
+                                </span>
+                              )}
+                            </div>
                           )}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+
+                          <div className="text-sm text-gray-900 font-medium mb-3 leading-relaxed">
+                            <MathText text={(q as any).question_text || q.text || ""} />
+                          </div>
+
+                          {(q.image_url || (q as any).imageUrl) && (
+                            <div className="mb-3">
+                              <img src={formatImageUrl(q.image_url || (q as any).imageUrl || "")} alt="diagram" className="max-h-48 object-contain rounded-xl border border-gray-200 bg-white p-1" />
+                            </div>
+                          )}
+
+                          {/* Options Grid */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
                             {opts.map((opt: string, oi: number) => {
                               const label = optLabels[oi];
-                              const isSelected = studentAns === label;
+                              const isStudentChoice = studentAns === label;
+                              const isOfficialCorrect = correctKey === label;
+
+                              let optStyle = "border-gray-200 bg-gray-50 text-gray-700";
+                              let badgeStyle = "bg-gray-200 text-gray-700";
+
+                              if (!isPaidSeries) {
+                                // 🌟 PYQ Mode: Show official answer in emerald and wrong student answer in rose
+                                if (isOfficialCorrect) {
+                                  optStyle = "border-emerald-500 bg-emerald-50/80 text-emerald-900 font-bold shadow-sm ring-1 ring-emerald-400";
+                                  badgeStyle = "bg-emerald-600 text-white";
+                                } else if (isStudentChoice && !isOfficialCorrect) {
+                                  optStyle = "border-rose-400 bg-rose-50 text-rose-900 font-bold";
+                                  badgeStyle = "bg-rose-600 text-white";
+                                }
+                              } else {
+                                // 🔒 Paid Series Mode: Only show what candidate picked in neutral blue
+                                if (isStudentChoice) {
+                                  optStyle = "border-[#1b365d] bg-blue-50 text-[#1b365d] font-bold";
+                                  badgeStyle = "bg-[#1b365d] text-white";
+                                }
+                              }
+
                               return (
-                                <div key={oi} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${isSelected ? "border-[#1b365d] bg-blue-50 text-[#1b365d] font-bold" : "border-gray-200 bg-gray-50 text-gray-500"}`}>
-                                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${isSelected ? "bg-[#1b365d] text-white" : "bg-gray-200 text-gray-600"}`}>{label}</span>
-                                  <MathText text={opt} />
+                                <div key={oi} className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-xs transition ${optStyle}`}>
+                                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${badgeStyle}`}>
+                                    {label}
+                                  </span>
+                                  <div className="flex-1"><MathText text={opt} /></div>
+                                  {!isPaidSeries && isOfficialCorrect && (
+                                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded shrink-0">
+                                      {isStudentChoice ? "Your Answer (Correct)" : "Correct Answer"}
+                                    </span>
+                                  )}
+                                  {!isPaidSeries && isStudentChoice && !isOfficialCorrect && (
+                                    <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded shrink-0">
+                                      Your Answer
+                                    </span>
+                                  )}
                                 </div>
                               );
                             })}
                           </div>
-                          {!studentAns && <p className="mt-2 text-xs text-gray-400 italic flex items-center gap-1"><Minus size={12} /> Not attempted</p>}
-                          <div className="mt-3 flex justify-end">
-                            <button
-                              onClick={() => { setReportingQuestionId(q.id); setShowReportModal(true); setReportSuccess(false); }}
-                              className="flex items-center gap-1 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-500 border border-red-200 rounded-lg text-[10px] font-bold transition"
-                              title="Report an issue with this question"
-                            >
-                              <Flag size={11} /> Report Issue
-                            </button>
+
+                          {/* Action Footer */}
+                          <div className="flex items-center justify-between text-xs pt-1">
+                            <div>
+                              {isUnattempted && <span className="text-gray-400 italic flex items-center gap-1"><Minus size={12} /> Not attempted</span>}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {!isPaidSeries && ((q as any).solution_explanation || (q as any).model_answer) && (
+                                <button
+                                  onClick={() => toggleSolution(q.id)}
+                                  className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition cursor-pointer"
+                                >
+                                  {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                                  {isExpanded ? "Hide Solution" : "View Explanation"}
+                                </button>
+                              )}
+                              <button
+                                onClick={() => { setReportingQuestionId(q.id); setShowReportModal(true); setReportSuccess(false); }}
+                                className="flex items-center gap-1 px-2.5 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-500 hover:text-red-500 border border-gray-200 rounded-lg text-xs font-medium transition cursor-pointer"
+                                title="Report an issue with this question"
+                              >
+                                <Flag size={11} /> Report
+                              </button>
+                            </div>
                           </div>
+
+                          {/* Expandable Model Solution */}
+                          {!isPaidSeries && isExpanded && ((q as any).solution_explanation || (q as any).model_answer) && (
+                            <div className="mt-3 p-4 bg-gradient-to-br from-indigo-50/70 to-blue-50/70 border border-indigo-200 rounded-xl text-xs text-indigo-950 space-y-2 leading-relaxed animate-fade-in">
+                              <p className="font-extrabold text-indigo-900 flex items-center gap-1.5">
+                                <BookOpen size={14} className="text-indigo-600" /> Academic Model Solution &amp; Explanation:
+                              </p>
+                              <div className="text-gray-800"><MathText text={(q as any).solution_explanation || (q as any).model_answer || ""} /></div>
+                            </div>
+                          )}
+
                         </div>
                       </div>
                     </div>
