@@ -47,6 +47,7 @@ export const ResponseSheet: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const testIdFromUrl = searchParams.get('testId');
+  const attemptIdFromUrl = searchParams.get('attemptId');
   const isSolutionsOnly = searchParams.get('viewSolutions') === 'true';
 
   const {
@@ -57,6 +58,7 @@ export const ResponseSheet: React.FC = () => {
   } = useExamStore();
 
   const activeTestId = testIdFromUrl || testId;
+  const activeAttemptId = attemptIdFromUrl || attemptId;
 
   const [activeTab, setActiveTab] = useState("Physics");
   const [serverResult, setServerResult] = useState<AttemptResult | null>(null);
@@ -84,17 +86,21 @@ export const ResponseSheet: React.FC = () => {
       setIsLoading(true);
       try {
         // 1. If attempt exists, load their personal attempt result
-        if (attemptId && !isSolutionsOnly && authToken) {
-          const res = await fetch(`${apiBase}/api/exam/lifecycle/result/${attemptId}`, {
-            headers: { "Authorization": `Bearer ${authToken}` }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.success && data.questions && data.questions.length > 0) {
-              setServerResult(data as AttemptResult);
-              if (data.test) setTestData(data.test);
-              return;
+        if (activeAttemptId && !isSolutionsOnly && authToken) {
+          try {
+            const res = await fetch(`${apiBase}/api/exam/lifecycle/result/${activeAttemptId}`, {
+              headers: { "Authorization": `Bearer ${authToken}` }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data.success && data.questions && data.questions.length > 0) {
+                setServerResult(data as AttemptResult);
+                if (data.test) setTestData(data.test);
+                return;
+              }
             }
+          } catch (e) {
+            console.warn("Direct attempt result fetch notice:", e);
           }
         }
 
@@ -165,7 +171,7 @@ export const ResponseSheet: React.FC = () => {
       }
     };
     fetchResult();
-  }, [attemptId, token, activeTestId, isSolutionsOnly]);
+  }, [activeAttemptId, token, activeTestId, isSolutionsOnly]);
 
   // 🚩 Report handler
   const handleSubmitReport = async () => {
@@ -239,9 +245,11 @@ export const ResponseSheet: React.FC = () => {
 
   const isPaidSeries = !isExplicitPyq;
   const hasServerResult = Boolean(serverResult && (serverResult.resultReleased || serverResult.totalScore !== null));
+  const hasAnswerKeys = displayQuestions.some(q => Boolean(q.correct_answer || (q as any).correctAnswer));
   const isResultDeclared = Boolean(
     !isPaidSeries ||
     hasServerResult ||
+    hasAnswerKeys ||
     testData?.status === 'completed' ||
     Boolean(testData?.response_released_at && new Date(testData.response_released_at) <= new Date())
   );
