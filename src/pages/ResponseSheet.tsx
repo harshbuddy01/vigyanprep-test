@@ -216,7 +216,8 @@ export const ResponseSheet: React.FC = () => {
   );
 
   const isPaidSeries = !isExplicitPyq;
-  const hasServerResult = Boolean(serverResult && serverResult.resultReleased);
+  const hasServerResult = Boolean(serverResult && (serverResult.resultReleased || serverResult.totalScore !== null));
+  const isResultDeclared = Boolean(!isPaidSeries || hasServerResult || (testData?.response_released_at && new Date(testData.response_released_at) <= new Date()));
 
   const localScoring = React.useMemo(() => {
     let correctCount = 0, incorrectCount = 0, unattemptedCount = 0, totalScore = 0;
@@ -339,41 +340,58 @@ export const ResponseSheet: React.FC = () => {
         {displayQuestions.length > 0 && (
           <div className="no-print space-y-4">
             
-            {/* 🌟 PYQ Instant Analytics Banner */}
-            {!isPaidSeries ? (
+            {/* 🌟 Result Declared: Show Comprehensive Scorecard & AIR Rank */}
+            {isResultDeclared ? (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-4">
                   <div>
                     <div className="flex items-center gap-2">
-                      <Trophy className="text-amber-500" size={22} />
-                      <h2 className="text-lg font-black text-[#1b365d] tracking-wide">Instant Practice Exam Scorecard</h2>
-                      <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full uppercase">
-                        PYQ Mode
+                      <Trophy className="text-amber-500" size={24} />
+                      <h2 className="text-lg sm:text-xl font-black text-[#1b365d] tracking-wide">
+                        {isPaidSeries ? "Official Examination Scorecard & AIR Rank" : "Instant Practice Exam Scorecard"}
+                      </h2>
+                      <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase ${
+                        isPaidSeries ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-emerald-100 text-emerald-800"
+                      }`}>
+                        {isPaidSeries ? "Official Result" : "PYQ Mode"}
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
-                      Detailed accuracy, section-wise marks breakdown, and verified question solutions
+                      {isPaidSeries 
+                        ? `Official merit analysis declared by academic board • ${testTitle || 'Live Test Series'}`
+                        : "Detailed accuracy, section-wise marks breakdown, and verified question solutions"}
                     </p>
                   </div>
-                  <button
-                    onClick={handleReattempt}
-                    className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow transition cursor-pointer self-start sm:self-auto"
-                  >
-                    <RotateCcw size={14} /> Re-Attempt Practice
-                  </button>
+                  {!isPaidSeries && (
+                    <button
+                      onClick={handleReattempt}
+                      className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow transition cursor-pointer self-start sm:self-auto"
+                    >
+                      <RotateCcw size={14} /> Re-Attempt Practice
+                    </button>
+                  )}
                 </div>
 
                 {/* Score & KPI Strip */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100">
-                    <p className="text-3xl font-black text-[#1b365d]">{localScoring.totalScore} <span className="text-sm font-semibold text-gray-400">/ {totalMaxScore}</span></p>
+                    <p className="text-3xl font-black text-[#1b365d]">
+                      {serverResult?.totalScore !== null && serverResult?.totalScore !== undefined ? serverResult.totalScore : localScoring.totalScore}
+                      <span className="text-sm font-semibold text-gray-400"> / {totalMaxScore}</span>
+                    </p>
                     <p className="text-xs text-gray-500 font-bold mt-1">Score Obtained</p>
                     <p className="text-[10px] text-indigo-600 font-semibold mt-0.5">{localScoring.percentage}% Marks</p>
                   </div>
                   <div className="text-center p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl border border-emerald-100">
-                    <p className="text-3xl font-black text-emerald-700">{localScoring.accuracy}%</p>
-                    <p className="text-xs text-gray-500 font-bold mt-1">Accuracy Rate</p>
-                    <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">{localScoring.correctCount} of {localScoring.attemptedCount} Correct</p>
+                    <p className="text-3xl font-black text-emerald-700">
+                      {serverResult?.rank ? `#${serverResult.rank}` : `${localScoring.accuracy}%`}
+                    </p>
+                    <p className="text-xs text-gray-500 font-bold mt-1">
+                      {serverResult?.rank ? "All-India Rank" : "Accuracy Rate"}
+                    </p>
+                    <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">
+                      {serverResult?.percentile ? `${serverResult.percentile.toFixed(1)}th percentile` : `${localScoring.correctCount} of ${localScoring.attemptedCount} Correct`}
+                    </p>
                   </div>
                   <div className="text-center p-4 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100">
                     <p className="text-3xl font-black text-amber-700">{localScoring.attemptedCount} <span className="text-sm font-semibold text-gray-400">/ {displayQuestions.length}</span></p>
@@ -394,7 +412,7 @@ export const ResponseSheet: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {sections.map(sec => {
-                      const s = localScoring.sectionScores[sec] || { correct: 0, incorrect: 0, unattempted: 0, score: 0, total: 0 };
+                      const s = (serverResult?.sectionScores && serverResult.sectionScores[sec]) || localScoring.sectionScores[sec] || { correct: 0, incorrect: 0, unattempted: 0, score: 0, total: 0 };
                       const secAttempted = s.correct + s.incorrect;
                       const secAcc = secAttempted > 0 ? Math.round((s.correct / secAttempted) * 100) : 0;
                       return (
@@ -423,7 +441,7 @@ export const ResponseSheet: React.FC = () => {
                 </div>
               </div>
             ) : (
-              /* 🔒 Paid Live Test Series Card */
+              /* 🔒 Paid Live Test Series - Unreleased Response Sheet Card */
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-100"><p className="text-2xl font-black text-[#1b365d]">{displayQuestions.length}</p><p className="text-xs text-gray-500 font-semibold mt-1">Total Questions</p></div>
@@ -432,15 +450,13 @@ export const ResponseSheet: React.FC = () => {
                   <div className="text-center p-4 bg-amber-50 rounded-xl border border-amber-100"><p className="text-2xl font-black text-amber-700">{(markedForReview || []).length}</p><p className="text-xs text-gray-500 font-semibold mt-1">Marked for Review</p></div>
                 </div>
 
-                {!hasServerResult && (
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
-                    <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={20} />
-                    <div>
-                      <p className="font-bold text-amber-800 text-sm">✅ Live Exam Submitted Successfully</p>
-                      <p className="text-xs text-amber-700 mt-1">Your responses have been recorded securely. Official Results, All-India Ranks, and Verified Answer Keys will be declared by the examination administrator after the test window closes.</p>
-                    </div>
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+                  <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={20} />
+                  <div>
+                    <p className="font-bold text-amber-800 text-sm">✅ Live Exam Submitted Successfully</p>
+                    <p className="text-xs text-amber-700 mt-1">Your responses have been recorded securely. Official Results, All-India Ranks, and Verified Answer Keys will be declared by the examination administrator after the test window closes.</p>
                   </div>
-                )}
+                </div>
               </div>
             )}
           </div>
@@ -452,10 +468,10 @@ export const ResponseSheet: React.FC = () => {
             <div className="no-print px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <div>
                 <h2 className="font-bold text-[#1b365d] text-base">
-                  {!isPaidSeries ? "Official Question Paper Solutions & Answer Key" : "Your Official Response Sheet"}
+                  {isResultDeclared ? "Official Question Paper Solutions & Answer Key" : "Your Official Response Sheet"}
                 </h2>
                 <p className="text-xs text-gray-500">
-                  {!isPaidSeries
+                  {isResultDeclared
                     ? "Review candidate responses against official answer keys and step-by-step academic explanations"
                     : "Shows your recorded candidate selections • Correct answers are released upon official declaration"
                   }
@@ -468,14 +484,28 @@ export const ResponseSheet: React.FC = () => {
                 const secQs = displayQuestions.filter(q => q.section === sec || (!sections.includes(q.section) && sec === "Physics"));
                 const secAns = secQs.filter(q => displayAnswers[q.id]).length;
                 return (
-                  <button key={sec} onClick={() => setActiveTab(sec)} className={`px-5 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition ${activeTab === sec ? "border-[#1b365d] text-[#1b365d] bg-white" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
-                    {sec} ({secAns}/{secQs.length})
+                  <button
+                    key={sec}
+                    onClick={() => setActiveTab(sec)}
+                    className={`px-5 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition flex items-center gap-2 cursor-pointer ${
+                      activeTab === sec
+                        ? "border-[#1b365d] text-[#1b365d] bg-white"
+                        : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                    }`}
+                  >
+                    <span>{sec}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                      activeTab === sec ? "bg-blue-100 text-[#1b365d]" : "bg-gray-200 text-gray-600"
+                    }`}>
+                      {secAns}/{secQs.length}
+                    </span>
                   </button>
                 );
               })}
             </div>
 
-            <div className="no-print divide-y divide-gray-100">
+            {/* Questions List */}
+            <div className="divide-y divide-gray-100">
               {displayQuestions
                 .filter(q => q.section === activeTab || (!sections.includes(q.section) && activeTab === "Physics"))
                 .map((q, idx) => {
@@ -496,8 +526,8 @@ export const ResponseSheet: React.FC = () => {
                         </span>
                         <div className="flex-1">
                           
-                          {/* Question Top Status Pill for PYQs */}
-                          {!isPaidSeries && (
+                          {/* Question Top Status Pill when Result is Declared */}
+                          {isResultDeclared && (
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-xs font-bold text-gray-400">Question {idx + 1} ({q.section || activeTab})</span>
                               {isCorrect && (
@@ -538,8 +568,8 @@ export const ResponseSheet: React.FC = () => {
                               let optStyle = "border-gray-200 bg-gray-50 text-gray-700";
                               let badgeStyle = "bg-gray-200 text-gray-700";
 
-                              if (!isPaidSeries) {
-                                // 🌟 PYQ Mode: Show official answer in emerald and wrong student answer in rose
+                              if (isResultDeclared) {
+                                // 🌟 Result Declared: Show official answer in emerald and wrong student answer in rose
                                 if (isOfficialCorrect) {
                                   optStyle = "border-emerald-500 bg-emerald-50/80 text-emerald-900 font-bold shadow-sm ring-1 ring-emerald-400";
                                   badgeStyle = "bg-emerald-600 text-white";
@@ -548,7 +578,7 @@ export const ResponseSheet: React.FC = () => {
                                   badgeStyle = "bg-rose-600 text-white";
                                 }
                               } else {
-                                // 🔒 Paid Series Mode: Only show what candidate picked in neutral blue
+                                // 🔒 Unreleased Live Mode: Only show what candidate picked in neutral blue
                                 if (isStudentChoice) {
                                   optStyle = "border-[#1b365d] bg-blue-50 text-[#1b365d] font-bold";
                                   badgeStyle = "bg-[#1b365d] text-white";
@@ -561,12 +591,12 @@ export const ResponseSheet: React.FC = () => {
                                     {label}
                                   </span>
                                   <div className="flex-1"><MathText text={opt} /></div>
-                                  {!isPaidSeries && isOfficialCorrect && (
+                                  {isResultDeclared && isOfficialCorrect && (
                                     <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded shrink-0">
                                       {isStudentChoice ? "Your Answer (Correct)" : "Correct Answer"}
                                     </span>
                                   )}
-                                  {!isPaidSeries && isStudentChoice && !isOfficialCorrect && (
+                                  {isResultDeclared && isStudentChoice && !isOfficialCorrect && (
                                     <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded shrink-0">
                                       Your Answer
                                     </span>
@@ -582,7 +612,7 @@ export const ResponseSheet: React.FC = () => {
                               {isUnattempted && <span className="text-gray-400 italic flex items-center gap-1"><Minus size={12} /> Not attempted</span>}
                             </div>
                             <div className="flex items-center gap-2">
-                              {!isPaidSeries && ((q as any).solution_explanation || (q as any).model_answer) && (
+                              {isResultDeclared && ((q as any).solution_explanation || (q as any).model_answer) && (
                                 <button
                                   onClick={() => toggleSolution(q.id)}
                                   className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition cursor-pointer"
@@ -602,7 +632,7 @@ export const ResponseSheet: React.FC = () => {
                           </div>
 
                           {/* Expandable Model Solution */}
-                          {!isPaidSeries && isExpanded && ((q as any).solution_explanation || (q as any).model_answer) && (
+                          {isResultDeclared && isExpanded && ((q as any).solution_explanation || (q as any).model_answer) && (
                             <div className="mt-3 p-4 bg-gradient-to-br from-indigo-50/70 to-blue-50/70 border border-indigo-200 rounded-xl text-xs text-indigo-950 space-y-2 leading-relaxed animate-fade-in">
                               <p className="font-extrabold text-indigo-900 flex items-center gap-1.5">
                                 <BookOpen size={14} className="text-indigo-600" /> Academic Model Solution &amp; Explanation:
