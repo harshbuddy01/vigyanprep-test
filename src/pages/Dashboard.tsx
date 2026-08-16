@@ -159,12 +159,12 @@ export function Dashboard() {
     setStudentName(name);
     setStudentEmail(email);
 
-    async function loadDashboardTests() {
-      setLoading(true);
+    async function loadDashboardTests(silent = false) {
+      if (!silent) setLoading(true);
       try {
         const [pyqRes, tsRes] = await Promise.all([
-          fetch('https://api.vigyanprep.com/api/public/pyq'),
-          fetch('https://api.vigyanprep.com/api/public/tests')
+          fetch(`https://api.vigyanprep.com/api/public/pyq?cb=${Date.now()}`),
+          fetch(`https://api.vigyanprep.com/api/public/tests?cb=${Date.now()}`)
         ]);
 
         let combined: TestPaper[] = [];
@@ -188,7 +188,7 @@ export function Dashboard() {
       } catch (err) {
         console.error('Failed to load dashboard tests:', err);
       } finally {
-        setLoading(false);
+        if (!silent) setLoading(false);
       }
     }
 
@@ -215,28 +215,22 @@ export function Dashboard() {
 
     async function loadSubscriptions(authToken: string) {
       setSubsLoading(true);
-      console.log('📡 [loadSubscriptions] Fetching subscriptions with token:', authToken);
       try {
         const res = await fetch(`https://api.vigyanprep.com/api/student/subscriptions?cb=${Date.now()}`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         });
-        console.log('📡 [loadSubscriptions] Response Status:', res.status, res.statusText);
         if (res.ok) {
           const data = await res.json();
-          console.log('📡 [loadSubscriptions] Parsed JSON Response:', data);
           if (data.success && data.subscriptions) {
-            console.log('📡 [loadSubscriptions] Setting subscriptions state:', data.subscriptions);
             setSubscriptions(data.subscriptions);
           } else {
-            console.warn('⚠️ [loadSubscriptions] Success or subscriptions missing, setting empty array');
             setSubscriptions([]);
           }
         } else {
-          console.warn('⚠️ [loadSubscriptions] Response not OK, setting empty array');
           setSubscriptions([]);
         }
       } catch (err) {
-        console.error('❌ [loadSubscriptions] Caught error during fetch:', err);
+        console.error('Failed to load subscriptions:', err);
         setSubscriptions([]);
       } finally {
         setSubsLoading(false);
@@ -263,6 +257,14 @@ export function Dashboard() {
     loadSubscriptions(token);
     loadHallTickets(token);
     loadAttempts(token);
+
+    // 🔄 Live Auto-Sync Every 15 Seconds
+    const syncInterval = setInterval(() => {
+      loadAttempts(token);
+      loadDashboardTests(true);
+    }, 15000);
+
+    return () => clearInterval(syncInterval);
   }, []);
 
   const triggerToast = (msg: string) => {
