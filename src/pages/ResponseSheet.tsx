@@ -5,7 +5,7 @@ import { getCookie } from "../lib/cookies";
 import { MathText } from "../components/MathText";
 import {
   CheckCircle2, XCircle, Download, Home, RotateCcw,
-  Trophy, BarChart3, Minus, AlertTriangle,
+  Trophy, BarChart3, Minus, AlertTriangle, Loader2,
   ChevronDown, ChevronUp, Flag, X, Send, CheckCircle, BookOpen
 } from "lucide-react";
 
@@ -60,6 +60,7 @@ export const ResponseSheet: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState("Physics");
   const [serverResult, setServerResult] = useState<AttemptResult | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [expandedSolutions, setExpandedSolutions] = useState<Record<string, boolean>>({});
 
   // 🚩 Report state
@@ -80,6 +81,7 @@ export const ResponseSheet: React.FC = () => {
     const apiBase = import.meta.env.VITE_API_URL || "https://api.vigyanprep.com";
 
     const fetchResult = async () => {
+      setIsLoading(true);
       try {
         // 1. If attempt exists, load their personal attempt result
         if (attemptId && !isSolutionsOnly && authToken) {
@@ -88,7 +90,7 @@ export const ResponseSheet: React.FC = () => {
           });
           if (res.ok) {
             const data = await res.json();
-            if (data.success) {
+            if (data.success && data.questions && data.questions.length > 0) {
               setServerResult(data as AttemptResult);
               if (data.test) setTestData(data.test);
               return;
@@ -112,7 +114,7 @@ export const ResponseSheet: React.FC = () => {
                 });
                 if (res.ok) {
                   const data = await res.json();
-                  if (data.success) {
+                  if (data.success && data.questions && data.questions.length > 0) {
                     setServerResult(data as AttemptResult);
                     if (data.test) setTestData(data.test);
                     return;
@@ -133,7 +135,7 @@ export const ResponseSheet: React.FC = () => {
             });
             if (solRes.ok) {
               const solData = await solRes.json();
-              if (solData.success && solData.questions) {
+              if (solData.success && solData.questions && solData.questions.length > 0) {
                 setFetchedQuestions(solData.questions);
                 if (solData.testTitle) {
                   setTestData((prev: any) => ({ ...prev, title: solData.testTitle, response_released_at: new Date().toISOString() }));
@@ -151,13 +153,15 @@ export const ResponseSheet: React.FC = () => {
             if (pubData.test) {
               setTestData((prev: any) => ({ ...pubData.test, ...(prev || {}) }));
             }
-            if (pubData.questions && Array.isArray(pubData.questions)) {
+            if (pubData.questions && Array.isArray(pubData.questions) && pubData.questions.length > 0) {
               setFetchedQuestions(prev => prev.length > 0 ? prev : pubData.questions);
             }
           }
         }
       } catch (err) {
         console.warn("Could not fetch server result or solutions:", err);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchResult();
@@ -363,9 +367,27 @@ export const ResponseSheet: React.FC = () => {
 
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
 
-        {/* SUMMARY CARDS & PERFORMANCE SCORECARD */}
-        {displayQuestions.length > 0 && (
-          <div className="no-print space-y-4">
+        {isLoading ? (
+          <div className="bg-white rounded-2xl border border-gray-200 p-16 text-center shadow-sm flex flex-col items-center justify-center gap-4">
+            <Loader2 className="animate-spin text-[#1b365d]" size={40} />
+            <div>
+              <p className="text-base font-extrabold text-[#1b365d]">Loading Your Scorecard & Performance Analysis...</p>
+              <p className="text-xs text-gray-500 mt-1">Retrieving official responses, marks breakdown, and verified answer keys</p>
+            </div>
+          </div>
+        ) : displayQuestions.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center shadow-sm space-y-4">
+            <AlertTriangle className="text-amber-500 mx-auto" size={40} />
+            <h3 className="text-base font-bold text-gray-800">No Response Data Found</h3>
+            <p className="text-xs text-gray-500 max-w-md mx-auto">We could not find an attempt record for this test paper. If you recently submitted, please ensure you are logged into your student account.</p>
+            <a href="/dashboard" className="inline-block px-5 py-2.5 bg-[#1b365d] text-white text-xs font-bold rounded-xl shadow hover:bg-[#152a48] transition">
+              Back to Dashboard
+            </a>
+          </div>
+        ) : (
+          <>
+            {/* SUMMARY CARDS & PERFORMANCE SCORECARD */}
+            <div className="no-print space-y-4">
             
             {/* 🌟 Result Declared: Show Comprehensive Scorecard & AIR Rank */}
             {isResultDeclared ? (
@@ -508,10 +530,8 @@ export const ResponseSheet: React.FC = () => {
               </div>
             )}
           </div>
-        )}
 
-        {/* RESPONSE TABLE & SOLUTIONS */}
-        {displayQuestions.length > 0 && (
+          {/* RESPONSE TABLE & SOLUTIONS */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="no-print px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <div>
@@ -725,7 +745,8 @@ export const ResponseSheet: React.FC = () => {
                 <strong>Summary:</strong> Total: {displayQuestions.length} | Answered: {answeredCount} | Not Attempted: {displayQuestions.length - answeredCount}
               </div>
             </div>
-          </div>
+            </div>
+          </>
         )}
 
       </div>
