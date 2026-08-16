@@ -1276,7 +1276,11 @@ ${studentName}`
                                   status.isAttempted ? (
                                     <div className="space-y-2">
                                       <button
-                                        onClick={() => navigate(`/response-sheet?testId=${paper.id}`)}
+                                        onClick={() => {
+                                          const matchAttempt = (analyticsData?.trendData || []).find((t: any) => t.testId === paper.id);
+                                          const attemptParam = matchAttempt?.attemptId ? `&attemptId=${matchAttempt.attemptId}` : '';
+                                          navigate(`/response-sheet?testId=${paper.id}${attemptParam}`);
+                                        }}
                                         className="w-full py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-md border border-amber-400/40 cursor-pointer transition"
                                       >
                                         <Award size={16} />
@@ -1426,7 +1430,11 @@ ${studentName}`
                           status.isAttempted ? (
                             <div className="space-y-2">
                               <button
-                                onClick={() => navigate(`/response-sheet?testId=${paper.id}`)}
+                                onClick={() => {
+                                  const matchAttempt = (analyticsData?.trendData || []).find((t: any) => t.testId === paper.id);
+                                  const attemptParam = matchAttempt?.attemptId ? `&attemptId=${matchAttempt.attemptId}` : '';
+                                  navigate(`/response-sheet?testId=${paper.id}${attemptParam}`);
+                                }}
                                 className="w-full py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-md border border-amber-400/40 cursor-pointer transition"
                               >
                                 <Award size={16} />
