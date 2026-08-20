@@ -53,6 +53,8 @@ export function AdaptiveRevision() {
   const [isPaidUser, setIsPaidUser] = useState<boolean | null>(null);
   const [checkingAccess, setCheckingAccess] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [countdown, setCountdown] = useState<number>(10);
+  const [loadingPhase, setLoadingPhase] = useState<number>(0);
 
   const {
     selectedExamType, selectedSubject, selectedChapter,
@@ -85,6 +87,26 @@ export function AdaptiveRevision() {
     };
     checkAccess();
   }, [selectedExamType]);
+
+  useEffect(() => {
+    let timer: any = null;
+    if (generating) {
+      setCountdown(10);
+      setLoadingPhase(0);
+      timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) return 1;
+          const next = prev - 1;
+          if (next <= 3) setLoadingPhase(2);
+          else if (next <= 7) setLoadingPhase(1);
+          return next;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [generating]);
 
   const handleStart = async () => {
     if (isPaidUser === false) { window.open('https://vigyanprep.com/tests', '_blank'); return; }
@@ -527,25 +549,41 @@ export function AdaptiveRevision() {
             <button
               onClick={handleStart}
               disabled={generating || selectedSubTopics.length === 0}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-3 shadow-xl shadow-indigo-500/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-sm uppercase tracking-wider flex items-center justify-center shadow-xl shadow-indigo-500/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {generating ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Generating {questionCount} Questions with AI...</span>
-                </>
+                <div className="flex flex-col items-center justify-center gap-1 w-full py-0.5">
+                  <div className="flex items-center justify-center gap-2.5">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
+                    <span className="font-bold text-sm tracking-wide normal-case">
+                      {countdown > 1
+                        ? `Please wait... preparing ${questionCount} questions`
+                        : 'Almost ready, launching your test...'}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-white/20 text-white font-mono text-xs font-black">
+                      {countdown}s
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-white/80 font-medium normal-case tracking-normal">
+                    {loadingPhase === 0
+                      ? 'Fetching concepts & syllabus parameters...'
+                      : loadingPhase === 1
+                      ? 'Compiling questions, options & scientific notations...'
+                      : 'Finalizing KaTeX equations and step-by-step solutions...'}
+                  </p>
+                </div>
               ) : isPaidUser === false ? (
-                <>
+                <div className="flex items-center justify-center gap-2">
                   <Lock size={18} />
                   <span>Unlock with Test Pass</span>
                   <ExternalLink size={16} />
-                </>
+                </div>
               ) : (
-                <>
+                <div className="flex items-center justify-center gap-3">
                   <Sparkles size={18} />
                   <span>Start Practice ({questionCount} Qs · {durationMinutes}m)</span>
                   <ArrowRight size={18} />
-                </>
+                </div>
               )}
             </button>
           </div>
