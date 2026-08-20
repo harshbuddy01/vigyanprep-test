@@ -55,6 +55,7 @@ export function AdaptiveRevision() {
   const [searchQuery, setSearchQuery] = useState('');
   const [countdown, setCountdown] = useState<number>(10);
   const [loadingPhase, setLoadingPhase] = useState<number>(0);
+  const [loadingAttemptId, setLoadingAttemptId] = useState<string | null>(null);
 
   const {
     selectedExamType, selectedSubject, selectedChapter,
@@ -64,7 +65,8 @@ export function AdaptiveRevision() {
     mastery, history,
     setExamType, setSubject, setChapter,
     setQuestionCount, setDurationMinutes, setDifficulty,
-    fetchChapters, generateTest, fetchMastery, resetTest
+    fetchChapters, generateTest, fetchMastery, resetTest,
+    loadAttemptDetails
   } = useAdaptiveStore();
 
   useEffect(() => {
@@ -112,6 +114,13 @@ export function AdaptiveRevision() {
     if (isPaidUser === false) { window.open('https://vigyanprep.com/tests', '_blank'); return; }
     const success = await generateTest();
     if (success) navigate('/adaptive-test');
+  };
+
+  const handleViewAttempt = async (attemptId: string) => {
+    setLoadingAttemptId(attemptId);
+    const success = await loadAttemptDetails(attemptId);
+    setLoadingAttemptId(null);
+    if (success) navigate('/adaptive-diagnosis');
   };
 
   const getChapterMastery = (subject: string, chapterName: string) => {
@@ -389,25 +398,52 @@ export function AdaptiveRevision() {
             {/* Recent Sessions */}
             {history.length > 0 && (
               <div className="pt-6 space-y-4">
-                <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                  <BarChart3 size={16} className="text-gray-400" />
-                  <span>Recent Practice Sessions</span>
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                    <BarChart3 size={16} className="text-gray-400" />
+                    <span>Recent Practice Sessions</span>
+                  </h3>
+                  <span className="text-[11px] text-gray-400 font-medium">Click any session to view solutions & concept diagnosis</span>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {history.slice(0, 4).map(h => (
-                    <div key={h.id} className="p-4 rounded-2xl bg-white border border-gray-200 flex items-center justify-between">
-                      <div>
-                        <p className="font-bold text-sm text-gray-900">{h.chapter_name}</p>
-                        <p className="text-[11px] text-gray-400 font-medium">{h.subject} · {new Date(h.created_at).toLocaleDateString()}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className={`font-black text-lg ${h.accuracy >= 80 ? 'text-emerald-600' : h.accuracy >= 50 ? 'text-amber-600' : 'text-red-500'}`}>
-                          {h.accuracy}%
-                        </p>
-                        <p className="text-[10px] text-gray-400 font-medium">{h.correct_count}/{h.question_count}</p>
-                      </div>
-                    </div>
-                  ))}
+                  {history.slice(0, 6).map(h => {
+                    const isLoading = loadingAttemptId === h.id;
+                    return (
+                      <button
+                        key={h.id}
+                        type="button"
+                        onClick={() => handleViewAttempt(h.id)}
+                        disabled={isLoading}
+                        className="p-4 rounded-2xl bg-white border border-gray-200 hover:border-indigo-300 hover:shadow-md transition flex items-center justify-between text-left cursor-pointer group disabled:opacity-50"
+                      >
+                        <div className="min-w-0 pr-3">
+                          <p className="font-bold text-sm text-gray-900 group-hover:text-indigo-600 transition truncate">
+                            {h.chapter_name}
+                          </p>
+                          <p className="text-[11px] text-gray-400 font-medium mt-0.5">
+                            {h.subject} · {new Date(h.created_at).toLocaleDateString()}
+                          </p>
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 mt-1 opacity-0 group-hover:opacity-100 transition">
+                            <span>View Concept Solutions</span>
+                            <ArrowRight size={10} />
+                          </span>
+                        </div>
+                        <div className="text-right shrink-0 flex items-center gap-3">
+                          <div>
+                            <p className={`font-black text-lg ${h.accuracy >= 80 ? 'text-emerald-600' : h.accuracy >= 50 ? 'text-amber-600' : 'text-red-500'}`}>
+                              {h.accuracy}%
+                            </p>
+                            <p className="text-[10px] text-gray-400 font-medium">{h.correct_count}/{h.question_count} Correct</p>
+                          </div>
+                          {isLoading ? (
+                            <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <ChevronRight size={16} className="text-gray-300 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition" />
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}

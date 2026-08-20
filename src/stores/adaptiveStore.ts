@@ -57,12 +57,16 @@ export interface TestSummary {
   score: number;
   accuracy: number;
   timeTaken: number;
+  chapterName?: string;
+  subject?: string;
+  examType?: string;
 }
 
 export interface Diagnosis {
   weakSubTopics: string[];
   strongSubTopics: string[];
-  recommendation: string;
+  recommendation?: string;
+  remediationRecommended?: boolean;
 }
 
 export interface SubTopicMastery {
@@ -159,6 +163,7 @@ interface AdaptiveState {
   generateCheckYourselfTest: (subject: string, chapterName: string, subTopic: string) => Promise<boolean>;
   submitTest: () => Promise<boolean>;
   fetchMastery: () => Promise<void>;
+  loadAttemptDetails: (attemptId: string) => Promise<boolean>;
   resetTest: () => void;
 
   // Bookmarks
@@ -484,6 +489,57 @@ export const useAdaptiveStore = create<AdaptiveState>()((set, get) => ({
       }
     } catch {
       set({ loadingMastery: false });
+    }
+  },
+
+  // ─── Load historical attempt details ──
+  loadAttemptDetails: async (attemptId: string) => {
+    set({ loadingMastery: true, error: null });
+    const token = resolveToken();
+    try {
+      const res = await fetch(`${API_URL}/api/adaptive/attempt/${attemptId}`, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' }
+      });
+      const data = await res.json();
+      if (data.success && data.attempt) {
+        const att = data.attempt;
+        set({
+          attemptId: att.id,
+          selectedExamType: att.examType || 'iat',
+          selectedSubject: att.subject,
+          selectedChapter: { name: att.chapterName, subTopics: [] },
+          summary: {
+            chapterName: att.chapterName,
+            subject: att.subject,
+            examType: att.examType,
+            totalQuestions: att.questionCount,
+            answered: att.totalAnswered || 0,
+            correct: att.correct || 0,
+            wrong: att.wrong || 0,
+            skipped: att.skipped || 0,
+            score: att.score || 0,
+            accuracy: att.accuracy || 0,
+            timeTaken: att.timeTaken || 0
+          },
+          diagnosis: {
+            weakSubTopics: att.weakSubTopics || [],
+            strongSubTopics: att.strongSubTopics || [],
+            remediationRecommended: (att.weakSubTopics || []).length > 0,
+            recommendation: (att.weakSubTopics || []).length > 0
+              ? 'Focus on targeted practice drills for your weak sub-topics.'
+              : 'Excellent mastery! Keep practicing.'
+          },
+          results: att.results || [],
+          loadingMastery: false
+        });
+        return true;
+      } else {
+        set({ error: data.error || 'Failed to load test review', loadingMastery: false });
+        return false;
+      }
+    } catch (err: any) {
+      set({ error: err.message, loadingMastery: false });
+      return false;
     }
   },
 
