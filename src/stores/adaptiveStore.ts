@@ -290,9 +290,16 @@ export const useAdaptiveStore = create<AdaptiveState>()((set, get) => ({
       const res = await fetch(`${API_URL}/api/adaptive/chapters?examType=${examType}`);
       const data = await res.json();
       if (data.success) {
+        const availableSubjects = data.subjects || Object.keys(data.chapters);
+        const currentSubject = get().selectedSubject;
+        const fallbackSubject = (currentSubject && availableSubjects.includes(currentSubject))
+          ? currentSubject
+          : availableSubjects[0] || null;
+
         set({
           chapters: data.chapters,
-          subjects: data.subjects || Object.keys(data.chapters),
+          subjects: availableSubjects,
+          selectedSubject: fallbackSubject,
           loadingChapters: false
         });
       } else {

@@ -389,7 +389,7 @@ export function AdaptiveTest() {
                 </div>
               </div>
               <p className="text-center text-gray-700 pt-2 font-medium">
-                Are you sure you want to submit? You will receive an instant AI concept diagnosis and detailed KaTeX solutions.
+                Are you sure you want to submit? You will receive an instant concept diagnosis report and detailed step-by-step solutions.
               </p>
             </div>
 
