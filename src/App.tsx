@@ -6,6 +6,9 @@ import Exam from './pages/Exam';
 import { Results } from './pages/Results';
 import { Feedback } from './pages/Feedback';
 import { ResponseSheet } from './pages/ResponseSheet';
+import { AdaptiveRevision } from './pages/AdaptiveRevision';
+import { AdaptiveTest } from './pages/AdaptiveTest';
+import { AdaptiveDiagnosis } from './pages/AdaptiveDiagnosis';
 
 function App() {
   return (
@@ -18,6 +21,9 @@ function App() {
       <Route path="/results" element={<Results />} />
       <Route path="/feedback" element={<Feedback />} />
       <Route path="/response-sheet" element={<ResponseSheet />} />
+      <Route path="/adaptive-revision" element={<AdaptiveRevision />} />
+      <Route path="/adaptive-test" element={<AdaptiveTest />} />
+      <Route path="/adaptive-diagnosis" element={<AdaptiveDiagnosis />} />
     </Routes>
   );
 }

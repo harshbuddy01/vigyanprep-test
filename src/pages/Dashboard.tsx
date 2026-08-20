@@ -5,7 +5,7 @@ import {
   Settings, Search, Bell, Award, Sparkles,
   ArrowRight, PlayCircle, Lock, Key, X, AlertCircle, CheckCircle2,
   RefreshCw, HelpCircle, Download, ChevronRight, Menu, Home, Mail,
-  Edit3, GraduationCap, Trophy
+  Edit3, GraduationCap, Trophy, Brain
 } from 'lucide-react';
 import { getCookie, deleteCookie } from '../lib/cookies';
 import { useExamStore, generateRollNumber } from '../stores/examStore';
@@ -1049,6 +1049,14 @@ ${studentName}`
               >
                 <BookOpen size={14} />
                 <span>FREE PRACTICE PYQS ({pyqPapers.length})</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/adaptive-revision')}
+                className="px-5 py-2.5 rounded-full text-xs font-extrabold tracking-wider uppercase transition flex items-center gap-2 bg-gradient-to-r from-amber-400 to-amber-500 text-neutral-950 hover:opacity-95 shadow-md shadow-amber-500/20 border-2 border-amber-600/30"
+              >
+                <Brain size={14} className="text-neutral-950" />
+                <span>🧠 SMART AI REVISION</span>
               </button>
             </div>
 
