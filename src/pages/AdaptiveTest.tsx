@@ -9,31 +9,8 @@ import {
   Clock, ChevronLeft, ChevronRight, Send, CheckCircle2,
   X
 } from 'lucide-react';
-import { useAdaptiveStore } from '../stores/adaptiveStore';
-import katex from 'katex';
-import 'katex/dist/katex.min.css';
-
-// ─── KaTeX MathText Renderer ──────────────────────────────────────
-function renderMath(text: string): string {
-  if (!text) return '';
-  // Display math: $$...$$
-  let rendered = text.replace(/\$\$(.*?)\$\$/gs, (_, math) => {
-    try { return katex.renderToString(math.trim(), { displayMode: true, throwOnError: false }); }
-    catch { return `<span class="text-red-500 font-mono">${math}</span>`; }
-  });
-  // Inline math: $...$
-  rendered = rendered.replace(/\$([^$]+?)\$/g, (_, math) => {
-    try { return katex.renderToString(math.trim(), { displayMode: false, throwOnError: false }); }
-    catch { return `<span class="text-red-500 font-mono">${math}</span>`; }
-  });
-  // Newlines
-  rendered = rendered.replace(/\n/g, '<br/>');
-  return rendered;
-}
-
-function MathText({ text, className = '' }: { text: string; className?: string }) {
-  return <span className={className} dangerouslySetInnerHTML={{ __html: renderMath(text) }} />;
-}
+import { MathText } from '../components/MathText';
+import { useAdaptiveStore, type AdaptiveQuestion } from '../stores/adaptiveStore';
 
 export function AdaptiveTest() {
   const navigate = useNavigate();
@@ -231,7 +208,7 @@ export function AdaptiveTest() {
 
             {/* Options List */}
             <div className="space-y-3 pt-4">
-              {currentQ.options.map((opt, i) => {
+              {currentQ.options.map((opt: string, i: number) => {
                 const label = String.fromCharCode(65 + i);
                 const isSelected = answers[currentQ.id] === label;
 
@@ -305,7 +282,7 @@ export function AdaptiveTest() {
 
               {/* Grid of Question Numbers */}
               <div className="grid grid-cols-5 gap-2">
-                {questions.map((q, i) => {
+                {questions.map((q: AdaptiveQuestion, i: number) => {
                   const isAnswered = !!answers[q.id];
                   const isCurrent = i === currentQuestionIndex;
 

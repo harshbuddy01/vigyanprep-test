@@ -11,28 +11,8 @@ import {
   ChevronDown, Minus
 } from 'lucide-react';
 import { useAdaptiveStore, type QuestionResult } from '../stores/adaptiveStore';
-import katex from 'katex';
-import 'katex/dist/katex.min.css';
+import { MathText } from '../components/MathText';
 import { useState } from 'react';
-
-// ─── KaTeX Renderer ──────────────────────────────────────
-function renderMath(text: string): string {
-  if (!text) return '';
-  let rendered = text.replace(/\$\$(.*?)\$\$/gs, (_, math) => {
-    try { return katex.renderToString(math.trim(), { displayMode: true, throwOnError: false }); }
-    catch { return `<span class="text-red-400">${math}</span>`; }
-  });
-  rendered = rendered.replace(/\$([^$]+?)\$/g, (_, math) => {
-    try { return katex.renderToString(math.trim(), { displayMode: false, throwOnError: false }); }
-    catch { return `<span class="text-red-400">${math}</span>`; }
-  });
-  rendered = rendered.replace(/\n/g, '<br/>');
-  return rendered;
-}
-
-function MathText({ text, className = '' }: { text: string; className?: string }) {
-  return <span className={className} dangerouslySetInnerHTML={{ __html: renderMath(text) }} />;
-}
 
 export function AdaptiveDiagnosis() {
   const navigate = useNavigate();

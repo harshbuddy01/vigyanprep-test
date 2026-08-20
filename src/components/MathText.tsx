@@ -41,11 +41,17 @@ export const MathText: React.FC<Props> = ({ text, className = '' }) => {
     );
   }
 
-  // Clean common PDF encoding artifacts
+  // Clean common PDF encoding artifacts & corrupted form-feed/escaped LaTeX tokens
   const sanitized = text
     .replace(/5Õ|5Ö|5Ô/g, "5'")
     .replace(/3Õ|3Ö|3Ô/g, "3'")
-    .replace(/Õ|Ö|Ô/g, "'");
+    .replace(/Õ|Ö|Ô/g, "'")
+    // Fix \frac corruption where \f becomes form-feed (\x0c) or gets stripped into "rac{"
+    .replace(/[\x0c\u000c]rac\{/g, "\\frac{")
+    .replace(/(^|[^a-zA-Z\\])rac\{/g, "$1\\frac{")
+    .replace(/(^|[^a-zA-Z\\])qrt\{/g, "$1\\sqrt{")
+    .replace(/[\x08\u0008]eta/g, "\\beta")
+    .replace(/[\x0b\u000b]eta/g, "\\theta");
 
   // First split by inline markdown images: ![alt](url) or [img:url] or {{url}}
   const imageRegex = /(!\[.*?\]\(.*?\)|\[img:.*?\]|\{\{https?:\/\/.*?\}\})/gs;
