@@ -9,7 +9,8 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
 
 function resolveToken(): string {
   if (typeof document === 'undefined') return '';
-  const match = document.cookie.match(/(^| )student_token=([^;]+)/);
+  const match = document.cookie.match(/(^| )student_token=([^;]+)/) ||
+                document.cookie.match(/(^| )auth_token=([^;]+)/);
   if (match) return decodeURIComponent(match[2]);
   return localStorage.getItem('student_token') ||
     localStorage.getItem('auth_token') ||

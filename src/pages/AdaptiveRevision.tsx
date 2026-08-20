@@ -39,7 +39,8 @@ const SUBJECT_META: Record<string, { icon: typeof Atom; gradient: string; lightB
 
 function resolveToken(): string {
   if (typeof document === 'undefined') return '';
-  const match = document.cookie.match(/(^| )student_token=([^;]+)/);
+  const match = document.cookie.match(/(^| )student_token=([^;]+)/) ||
+                document.cookie.match(/(^| )auth_token=([^;]+)/);
   if (match) return decodeURIComponent(match[2]);
   return localStorage.getItem('student_token') ||
     localStorage.getItem('auth_token') ||
