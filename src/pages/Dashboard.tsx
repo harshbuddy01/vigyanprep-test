@@ -10,10 +10,6 @@ import {
 import { getCookie, deleteCookie } from '../lib/cookies';
 import { useExamStore, generateRollNumber } from '../stores/examStore';
 import {
-  RayOpticsSketch,
-  BenzeneOrbitalSketch,
-  CalculusIntegralSketch,
-  DNAHelixSketch,
   StudentDeskSketch
 } from '../components/ScienceSketches';
 
