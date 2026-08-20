@@ -674,7 +674,7 @@ ${studentName}`
             >
               <div className="flex items-center gap-3">
                 <Brain size={18} className="text-amber-900 group-hover:text-amber-950" />
-                <span>AI Revision</span>
+                <span>Chapter Revision</span>
               </div>
               <span className="px-2 py-0.5 rounded-full bg-amber-500/25 border border-amber-600/30 text-amber-950 text-[9px] font-black uppercase">NEW</span>
             </button>
@@ -816,7 +816,7 @@ ${studentName}`
                 >
                   <div className="flex items-center gap-3">
                     <Brain size={18} className="text-amber-900" />
-                    <span>AI Revision</span>
+                    <span>Chapter Revision</span>
                   </div>
                   <span className="px-2 py-0.5 rounded-full bg-amber-500/25 border border-amber-600/30 text-amber-950 text-[9px] font-black uppercase">NEW</span>
                 </button>
@@ -1556,10 +1556,9 @@ ${studentName}`
                       </div>
                       <div>
                         <p className="text-xs font-extrabold text-[#1c1815] flex items-center gap-1.5">
-                          <span>Smart AI Revision</span>
-                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-950 text-amber-200 font-mono font-bold">AI</span>
+                          <span>Chapter Revision Drills</span>
                         </p>
-                        <p className="text-[10px] text-[#1c1815]/80 font-bold">Topic practice &amp; mistake remediation</p>
+                        <p className="text-[10px] text-[#1c1815]/80 font-bold">Topic practice &amp; concept mastery</p>
                       </div>
                     </div>
                     <ChevronRight size={16} className="text-[#1c1815] group-hover:translate-x-1 transition" />
@@ -1567,7 +1566,7 @@ ${studentName}`
 
                   <button
                     onClick={() => setShowPerformanceModal(true)}
-                    className="w-full p-3.5 rounded-2xl bg-white/40 hover:bg-white/70 border-2 border-amber-950/25 text-left flex items-center justify-between transition group shadow-xs"
+                    className="w-full p-3.5 rounded-2xl bg-white/40 hover:bg-white/70 border-2 border-amber-950/25 text-left flex items-center justify-between transition group shadow-xs cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-xl bg-amber-950/15 text-amber-950 flex items-center justify-center border border-amber-950/20">
@@ -1582,16 +1581,16 @@ ${studentName}`
                   </button>
 
                   <button
-                    onClick={() => triggerToast('🔖 Bookmarks feature coming soon!')}
-                    className="w-full p-3.5 rounded-2xl bg-white/40 hover:bg-white/70 border-2 border-amber-950/25 text-left flex items-center justify-between transition group shadow-xs"
+                    onClick={() => navigate('/bookmarks')}
+                    className="w-full p-3.5 rounded-2xl bg-white/40 hover:bg-white/70 border-2 border-amber-950/25 text-left flex items-center justify-between transition group shadow-xs cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-xl bg-amber-950/15 text-amber-950 flex items-center justify-center border border-amber-950/20">
                         <Bookmark size={16} />
                       </div>
                       <div>
-                        <p className="text-xs font-extrabold text-[#1c1815]">Bookmark a Test</p>
-                        <p className="text-[10px] text-[#1c1815]/80 font-bold">Save tests for later</p>
+                        <p className="text-xs font-extrabold text-[#1c1815]">Saved Question Bookmarks</p>
+                        <p className="text-[10px] text-[#1c1815]/80 font-bold">Review bookmarked questions</p>
                       </div>
                     </div>
                     <ChevronRight size={16} className="text-[#1c1815] group-hover:translate-x-1 transition" />
