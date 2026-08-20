@@ -190,31 +190,40 @@ ${studentName}`
     let name = getCookie('student_name') || localStorage.getItem('student_name') || localStorage.getItem('full_name') || 'Student';
     let email = getCookie('student_email') || localStorage.getItem('student_email') || localStorage.getItem('email') || '';
 
-    // Check token exists
-    if (!token) {
+    const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+    // Check token exists — on localhost provide preview mock session
+    if (!token && isLocalhost) {
+      token = 'mock_local_preview_token';
+      name = name === 'Student' ? 'Harsh Anand' : name;
+      email = email || 'anandharsh437@gmail.com';
+    } else if (!token) {
       console.warn('No auth token found. Redirecting to login.');
       window.location.href = 'https://auth.vigyanprep.com';
       return;
     }
 
-    // Validate JWT expiry — force re-login if expired
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      if (payload.exp && payload.exp * 1000 < Date.now()) {
-        console.warn('⚠️ Student token expired. Clearing session.');
-        localStorage.removeItem('student_token');
-        localStorage.removeItem('student_name');
-        localStorage.removeItem('student_email');
-        deleteCookie('student_token');
-        window.location.href = 'https://auth.vigyanprep.com';
-        return;
+    // Validate JWT expiry — force re-login if expired (skip for local mock)
+    if (token && token !== 'mock_local_preview_token') {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
+          console.warn('⚠️ Student token expired. Clearing session.');
+          localStorage.removeItem('student_token');
+          localStorage.removeItem('student_name');
+          localStorage.removeItem('student_email');
+          deleteCookie('student_token');
+          window.location.href = 'https://auth.vigyanprep.com';
+          return;
+        }
+      } catch {
+        if (!isLocalhost) {
+          localStorage.removeItem('student_token');
+          deleteCookie('student_token');
+          window.location.href = 'https://auth.vigyanprep.com';
+          return;
+        }
       }
-    } catch {
-      // Invalid token format — force re-login
-      localStorage.removeItem('student_token');
-      deleteCookie('student_token');
-      window.location.href = 'https://auth.vigyanprep.com';
-      return;
     }
 
     localStorage.setItem('student_token', token);
@@ -286,17 +295,79 @@ ${studentName}`
         });
         if (res.ok) {
           const data = await res.json();
-          if (data.success && data.subscriptions) {
+          if (data.success && data.subscriptions && data.subscriptions.length > 0) {
             setSubscriptions(data.subscriptions);
+          } else if (isLocalhost) {
+            setSubscriptions([
+              {
+                id: 'sub_mock_iat_nest',
+                plan_id: 'plan_bundle',
+                student_email: email,
+                student_name: name,
+                starts_at: new Date().toISOString(),
+                expires_at: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(),
+                status: 'active',
+                amount_paid: 1499,
+                plan: {
+                  id: 'plan_bundle',
+                  name: 'IAT + NEST Pass',
+                  exam_type: 'BUNDLE',
+                  duration_days: 45,
+                  bundle_includes: ['IAT', 'NEST']
+                }
+              }
+            ]);
           } else {
             setSubscriptions([]);
           }
+        } else if (isLocalhost) {
+          setSubscriptions([
+            {
+              id: 'sub_mock_iat_nest',
+              plan_id: 'plan_bundle',
+              student_email: email,
+              student_name: name,
+              starts_at: new Date().toISOString(),
+              expires_at: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(),
+              status: 'active',
+              amount_paid: 1499,
+              plan: {
+                id: 'plan_bundle',
+                name: 'IAT + NEST Pass',
+                exam_type: 'BUNDLE',
+                duration_days: 45,
+                bundle_includes: ['IAT', 'NEST']
+              }
+            }
+          ]);
         } else {
           setSubscriptions([]);
         }
       } catch (err) {
         console.error('Failed to load subscriptions:', err);
-        setSubscriptions([]);
+        if (isLocalhost) {
+          setSubscriptions([
+            {
+              id: 'sub_mock_iat_nest',
+              plan_id: 'plan_bundle',
+              student_email: email,
+              student_name: name,
+              starts_at: new Date().toISOString(),
+              expires_at: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(),
+              status: 'active',
+              amount_paid: 1499,
+              plan: {
+                id: 'plan_bundle',
+                name: 'IAT + NEST Pass',
+                exam_type: 'BUNDLE',
+                duration_days: 45,
+                bundle_includes: ['IAT', 'NEST']
+              }
+            }
+          ]);
+        } else {
+          setSubscriptions([]);
+        }
       } finally {
         setSubsLoading(false);
       }
@@ -562,20 +633,22 @@ ${studentName}`
   });
 
   return (
-    <div className="min-h-screen bg-[#faf5eb] text-[#1c1815] font-sans flex selection:bg-amber-400 selection:text-black relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#fbf9f5] text-[#1c1815] font-sans flex selection:bg-amber-400 selection:text-black relative overflow-x-hidden">
       
       {/* ═══════════════════════════════════════════════════════════════════════
-          FULL-CLARITY AERIAL DRONE VIEW SKETCH BACKGROUND (100% VISIBLE THROUGH GLASS)
+          FRESH, CLEAN ARCHITECTURAL SKETCH BACKGROUND (AIRY & DELICATE WATERMARK)
          ═══════════════════════════════════════════════════════════════════════ */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        {/* Crisp Aerial Drone Sketch of University Campus */}
+        {/* Soft Ambient Light Backdrop */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,#ffffff_0%,#faf6ef_45%,#f1e9dd_100%)]" />
+        {/* Fresh, Delicate Modern Science Campus Architectural Line Sketch */}
         <img
-          src="/images/university_drone_view_sketch.jpg"
-          alt="Aerial Drone View University Campus Architectural Sketch Watermark"
-          className="w-full h-full object-cover opacity-[0.55] mix-blend-multiply filter contrast-130 sepia-[0.10]"
+          src="/images/modern_campus_clean_sketch.jpg"
+          alt="Fresh Modern Science Research Campus Architectural Line Sketch"
+          className="w-full h-full object-cover opacity-[0.24] mix-blend-multiply filter contrast-110"
         />
-        {/* Very Light Parchment Tint (Does Not Mask the Sketch) */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#faf5eb]/30 via-transparent to-[#f1e6d3]/40" />
+        {/* Soft Contrast Gradient to keep all cards crystal-clear */}
+        <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-transparent to-[#f1e9dd]/50" />
       </div>
 
       {/* Toast Notification */}
@@ -975,16 +1048,8 @@ ${studentName}`
             </div>
           )}
 
-          {/* HERO WELCOME BANNER (Ultra-Transparent Glass Frame - 100% Background Visibility) */}
-          <div className="relative overflow-hidden p-8 sm:p-10 rounded-3xl bg-white/15 backdrop-blur-2xl border-2 border-amber-950/35 shadow-2xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center shadow-[inset_0_1px_2px_0_rgba(255,255,255,0.6)]">
-            
-            {/* Handcrafted Technical Science Sketches Overlay */}
-            <div className="absolute right-4 top-4 opacity-20 pointer-events-none hidden lg:flex gap-6">
-              <RayOpticsSketch className="w-32 h-32 text-amber-950" />
-              <BenzeneOrbitalSketch className="w-32 h-32 text-amber-900" />
-              <CalculusIntegralSketch className="w-32 h-32 text-amber-950" />
-              <DNAHelixSketch className="w-32 h-32 text-emerald-950" />
-            </div>
+          {/* HERO WELCOME BANNER (Clean, Solid, Modern Scientific Aesthetic) */}
+          <div className="relative overflow-hidden p-8 sm:p-10 rounded-3xl bg-white/85 backdrop-blur-xl border border-stone-200 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
 
             {/* Left Welcome Copy */}
             <div className="lg:col-span-6 space-y-4 relative z-10">
