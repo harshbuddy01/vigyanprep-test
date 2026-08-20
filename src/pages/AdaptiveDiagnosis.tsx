@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Brain, Target, CheckCircle2, XCircle,
   BookOpen, Sparkles, Minus, ChevronDown,
-  RotateCcw, ShieldCheck, AlertCircle
+  RotateCcw, ShieldCheck, AlertCircle, Bookmark
 } from 'lucide-react';
 import { useAdaptiveStore, type QuestionResult } from '../stores/adaptiveStore';
 import { MathText } from '../components/MathText';
@@ -22,7 +22,8 @@ export function AdaptiveDiagnosis() {
     summary, diagnosis, results,
     selectedChapter, selectedSubject, selectedExamType,
     generateCheckYourselfTest, generating,
-    resetTest
+    resetTest,
+    toggleBookmark, isBookmarked
   } = useAdaptiveStore();
 
   const handleCheckYourself = async (subTopic: string) => {
@@ -334,10 +335,31 @@ export function AdaptiveDiagnosis() {
                         </div>
                       )}
 
-                      {/* Bottom Concept Action: Check Yourself Drill */}
+                      {/* Bottom Concept Action: Check Yourself Drill + Bookmark */}
                       <div className="pt-3 border-t border-amber-950/10 flex items-center justify-between flex-wrap gap-3">
-                        <div className="text-xs text-amber-950/80 font-bold">
-                          <span>Concept Area: <strong className="text-[#1c1815]">{r.subTopic}</strong></span>
+                        <div className="flex items-center gap-3">
+                          <div className="text-xs text-amber-950/80 font-bold">
+                            <span>Concept: <strong className="text-[#1c1815]">{r.subTopic}</strong></span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => toggleBookmark({
+                              questionId: r.questionId,
+                              questionText: r.questionText,
+                              options: r.options,
+                              correctAnswer: r.correctAnswer,
+                              explanation: r.explanation,
+                              subTopic: r.subTopic,
+                            })}
+                            className={`p-1.5 rounded-lg transition cursor-pointer ${
+                              isBookmarked(r.questionId)
+                                ? 'bg-amber-200 text-amber-700'
+                                : 'bg-white/60 text-amber-950/40 hover:bg-amber-100 hover:text-amber-700'
+                            }`}
+                            title={isBookmarked(r.questionId) ? 'Remove bookmark' : 'Bookmark for later'}
+                          >
+                            <Bookmark size={16} fill={isBookmarked(r.questionId) ? 'currentColor' : 'none'} />
+                          </button>
                         </div>
 
                         {r.subTopic && (

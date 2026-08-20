@@ -159,6 +159,42 @@ interface AdaptiveState {
   submitTest: () => Promise<boolean>;
   fetchMastery: () => Promise<void>;
   resetTest: () => void;
+
+  // Bookmarks
+  bookmarkedIds: Set<string>;
+  bookmarks: BookmarkItem[];
+  loadingBookmarks: boolean;
+  toggleBookmark: (q: BookmarkQuestionData) => Promise<void>;
+  fetchBookmarks: (filters?: { subject?: string; chapterName?: string }) => Promise<void>;
+  isBookmarked: (questionId: string) => boolean;
+}
+
+export interface BookmarkItem {
+  id: string;
+  questionId: string;
+  questionText: string;
+  options: string[];
+  correctAnswer: string;
+  explanation: string;
+  subTopic: string;
+  chapterName: string;
+  subject: string;
+  examType: string;
+  difficulty: string;
+  createdAt: string;
+}
+
+export interface BookmarkQuestionData {
+  questionId: string;
+  questionText: string;
+  options: string[];
+  correctAnswer?: string;
+  explanation?: string;
+  subTopic?: string;
+  chapterName?: string;
+  subject?: string;
+  examType?: string;
+  difficulty?: string;
 }
 
 // ─── Store ───────────────────────────────────────────────
@@ -466,5 +502,98 @@ export const useAdaptiveStore = create<AdaptiveState>()((set, get) => ({
     results: [],
     error: null,
     generating: false
-  })
+  }),
+
+  // ─── Bookmarks ────────────────────────
+  bookmarkedIds: new Set<string>(),
+  bookmarks: [],
+  loadingBookmarks: false,
+
+  isBookmarked: (questionId: string) => {
+    return get().bookmarkedIds.has(questionId);
+  },
+
+  toggleBookmark: async (q: BookmarkQuestionData) => {
+    const state = get();
+    const token = resolveToken();
+    const isCurrentlyBookmarked = state.bookmarkedIds.has(q.questionId);
+
+    // Optimistic UI update
+    const newIds = new Set(state.bookmarkedIds);
+    if (isCurrentlyBookmarked) {
+      newIds.delete(q.questionId);
+    } else {
+      newIds.add(q.questionId);
+    }
+    set({ bookmarkedIds: newIds });
+
+    try {
+      if (isCurrentlyBookmarked) {
+        // Remove bookmark
+        await fetch(`${API_URL}/api/adaptive/bookmark/${encodeURIComponent(q.questionId)}`, {
+          method: 'DELETE',
+          headers: { Authorization: token ? `Bearer ${token}` : '' }
+        });
+        // Remove from bookmarks array
+        set({ bookmarks: get().bookmarks.filter(b => b.questionId !== q.questionId) });
+      } else {
+        // Add bookmark
+        await fetch(`${API_URL}/api/adaptive/bookmark`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: token ? `Bearer ${token}` : ''
+          },
+          body: JSON.stringify({
+            questionId: q.questionId,
+            questionText: q.questionText,
+            options: q.options,
+            correctAnswer: q.correctAnswer || '',
+            explanation: q.explanation || '',
+            subTopic: q.subTopic || '',
+            chapterName: q.chapterName || state.selectedChapter?.name || '',
+            subject: q.subject || state.selectedSubject || '',
+            examType: q.examType || state.selectedExamType || 'iat',
+            difficulty: q.difficulty || state.difficulty || 'medium'
+          })
+        });
+      }
+    } catch (err) {
+      // Revert optimistic update on error
+      const revertIds = new Set(state.bookmarkedIds);
+      set({ bookmarkedIds: revertIds });
+      console.error('[Bookmarks] Toggle error:', err);
+    }
+  },
+
+  fetchBookmarks: async (filters?: { subject?: string; chapterName?: string }) => {
+    set({ loadingBookmarks: true });
+    const token = resolveToken();
+    const state = get();
+
+    try {
+      const params = new URLSearchParams();
+      if (filters?.subject) params.set('subject', filters.subject);
+      if (filters?.chapterName) params.set('chapterName', filters.chapterName);
+      params.set('examType', state.selectedExamType);
+
+      const res = await fetch(`${API_URL}/api/adaptive/bookmarks?${params.toString()}`, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' }
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        const ids = new Set<string>(data.bookmarks.map((b: BookmarkItem) => b.questionId));
+        set({
+          bookmarks: data.bookmarks,
+          bookmarkedIds: ids,
+          loadingBookmarks: false
+        });
+      } else {
+        set({ loadingBookmarks: false });
+      }
+    } catch {
+      set({ loadingBookmarks: false });
+    }
+  }
 }));

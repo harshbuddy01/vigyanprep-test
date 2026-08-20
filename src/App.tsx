@@ -9,6 +9,7 @@ import { ResponseSheet } from './pages/ResponseSheet';
 import { AdaptiveRevision } from './pages/AdaptiveRevision';
 import { AdaptiveTest } from './pages/AdaptiveTest';
 import { AdaptiveDiagnosis } from './pages/AdaptiveDiagnosis';
+import { Bookmarks } from './pages/Bookmarks';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
       <Route path="/adaptive-revision" element={<AdaptiveRevision />} />
       <Route path="/adaptive-test" element={<AdaptiveTest />} />
       <Route path="/adaptive-diagnosis" element={<AdaptiveDiagnosis />} />
+      <Route path="/bookmarks" element={<Bookmarks />} />
     </Routes>
   );
 }

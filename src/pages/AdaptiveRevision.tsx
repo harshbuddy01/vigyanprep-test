@@ -1,6 +1,6 @@
 // ============================================================================
-// ADAPTIVE REVISION LAUNCHER — Warm Parchment / Cream Theme
-// Matches official VigyanPrep Dashboard & Scientific Editorial Design
+// ADAPTIVE REVISION LAUNCHER — Modern Clean Design
+// Inspired by Khan Academy / Unacademy subject-wise chapter navigation
 // ============================================================================
 
 import { useEffect, useState } from 'react';
@@ -8,26 +8,34 @@ import { useNavigate } from 'react-router-dom';
 import {
   Brain, BookOpen, ArrowRight, Target, Clock, Hash,
   ChevronRight, Sparkles, BarChart3, AlertTriangle,
-  ArrowLeft, Flame, Shield, Lock, CheckCircle2, ExternalLink
+  ArrowLeft, Flame, Shield, Lock, CheckCircle2, ExternalLink,
+  Search, Atom, FlaskConical, Calculator, Dna
 } from 'lucide-react';
 import { useAdaptiveStore } from '../stores/adaptiveStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
 
 const EXAM_OPTIONS = [
-  { value: 'iat', label: 'IISER IAT', badge: '60 Qs • 180m' },
-  { value: 'nest', label: 'NISER NEST', badge: '80 Qs • 210m' },
-  { value: 'isi', label: 'ISI Entrance', badge: '30 Qs • 120m' },
+  { value: 'iat', label: 'IISER IAT', desc: '60 Qs · 3 hrs · PCMB' },
+  { value: 'nest', label: 'NISER NEST', desc: '80 Qs · 3.5 hrs · Best 3 of 4' },
+  { value: 'isi', label: 'ISI Entrance', desc: '30 Qs · 2 hrs · Math Only' },
 ];
 
 const DIFFICULTY_OPTIONS = [
-  { value: 'easy', label: 'Foundation', icon: Shield, color: '#15803d', desc: 'Core concept clarity & basics' },
-  { value: 'medium', label: 'Standard Exam', icon: Target, color: '#b45309', desc: 'Real IAT / NEST level rigor' },
-  { value: 'hard', label: 'Advanced Challenge', icon: Flame, color: '#b91c1c', desc: 'Multi-concept Olympiad level' },
+  { value: 'easy', label: 'Foundation', icon: Shield, color: '#16a34a', bg: 'bg-emerald-50', border: 'border-emerald-200', desc: 'Core concepts & basics' },
+  { value: 'medium', label: 'Standard Exam', icon: Target, color: '#d97706', bg: 'bg-amber-50', border: 'border-amber-200', desc: 'Real IAT / NEST level' },
+  { value: 'hard', label: 'Advanced', icon: Flame, color: '#dc2626', bg: 'bg-red-50', border: 'border-red-200', desc: 'Multi-concept Olympiad' },
 ];
 
 const QUESTION_COUNTS = [5, 10, 15, 20, 25, 30];
 const DURATION_OPTIONS = [5, 10, 15, 20, 30, 45, 60];
+
+const SUBJECT_META: Record<string, { icon: typeof Atom; gradient: string; lightBg: string; accent: string; emoji: string }> = {
+  'Physics': { icon: Atom, gradient: 'from-blue-600 to-indigo-700', lightBg: 'bg-blue-50', accent: 'text-blue-700', emoji: '⚛️' },
+  'Chemistry': { icon: FlaskConical, gradient: 'from-emerald-600 to-teal-700', lightBg: 'bg-emerald-50', accent: 'text-emerald-700', emoji: '⚗️' },
+  'Mathematics': { icon: Calculator, gradient: 'from-violet-600 to-purple-700', lightBg: 'bg-violet-50', accent: 'text-violet-700', emoji: '📐' },
+  'Biology': { icon: Dna, gradient: 'from-rose-500 to-pink-700', lightBg: 'bg-rose-50', accent: 'text-rose-700', emoji: '🧬' },
+};
 
 function resolveToken(): string {
   if (typeof document === 'undefined') return '';
@@ -43,6 +51,7 @@ export function AdaptiveRevision() {
   const [step, setStep] = useState<'select' | 'configure'>('select');
   const [isPaidUser, setIsPaidUser] = useState<boolean | null>(null);
   const [checkingAccess, setCheckingAccess] = useState<boolean>(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const {
     selectedExamType, selectedSubject, selectedChapter,
@@ -60,127 +69,116 @@ export function AdaptiveRevision() {
     fetchMastery();
     resetTest();
 
-    // Check paid access status
     const checkAccess = async () => {
       setCheckingAccess(true);
       const token = resolveToken();
-      if (!token) {
-        setIsPaidUser(false);
-        setCheckingAccess(false);
-        return;
-      }
+      if (!token) { setIsPaidUser(false); setCheckingAccess(false); return; }
       try {
         const res = await fetch(`${API_URL}/api/adaptive/check-access`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
         setIsPaidUser(data.isPaid === true);
-      } catch {
-        setIsPaidUser(true);
-      } finally {
-        setCheckingAccess(false);
-      }
+      } catch { setIsPaidUser(true); }
+      finally { setCheckingAccess(false); }
     };
     checkAccess();
   }, [selectedExamType]);
 
   const handleStart = async () => {
-    if (isPaidUser === false) {
-      window.open('https://vigyanprep.com/tests', '_blank');
-      return;
-    }
+    if (isPaidUser === false) { window.open('https://vigyanprep.com/tests', '_blank'); return; }
     const success = await generateTest();
-    if (success) {
-      navigate('/adaptive-test');
-    }
+    if (success) navigate('/adaptive-test');
   };
 
   const getChapterMastery = (subject: string, chapterName: string) => {
     return mastery.find(m => m.subject === subject && m.chapterName === chapterName);
   };
 
-  return (
-    <div className="min-h-screen bg-[#f4ecd8] text-[#1c1815] font-sans relative overflow-x-hidden selection:bg-amber-950 selection:text-amber-200">
-      
-      {/* Background Graphic Accent Watermark */}
-      <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-0 flex items-center justify-center font-serif text-[18vw] font-black text-amber-950 uppercase select-none">
-        VIGYAN
-      </div>
+  const filteredChapters = selectedSubject && chapters[selectedSubject]
+    ? chapters[selectedSubject].filter(ch =>
+        searchQuery.trim() === '' ||
+        ch.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        ch.subTopics.some(st => st.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    : [];
 
-      {/* ─── Top Header ─── */}
-      <header className="sticky top-0 z-40 bg-[#f4ecd8]/90 backdrop-blur-xl border-b-2 border-amber-950/20 px-4 sm:px-8 py-3.5 shadow-xs">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+  const subjectMeta = (subj: string) => SUBJECT_META[subj] || SUBJECT_META['Physics'];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-gray-100 text-gray-900 font-sans">
+
+      {/* ─── Header ─── */}
+      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200/80 px-4 sm:px-8 py-3 shadow-sm">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => {
-                if (step === 'configure') setStep('select');
-                else navigate('/dashboard');
-              }}
-              className="p-2 rounded-xl bg-white/40 hover:bg-white/80 border-2 border-amber-950/25 text-amber-950 transition cursor-pointer shadow-xs"
-              title="Go Back"
+              onClick={() => { if (step === 'configure') setStep('select'); else navigate('/dashboard'); }}
+              className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 transition cursor-pointer"
             >
               <ArrowLeft size={18} />
             </button>
             <div>
-              <div className="flex items-center gap-2">
-                <Brain size={20} className="text-amber-900" />
-                <h1 className="font-serif text-xl sm:text-2xl font-bold text-[#1c1815]">Smart Topic Revision</h1>
-              </div>
-              <p className="text-[11px] text-amber-950/70 font-semibold hidden sm:block">
-                Daily adaptive chapter-wise practice &amp; mistake remediation
+              <h1 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2">
+                <Brain size={22} className="text-indigo-600" />
+                <span>Smart Topic Revision</span>
+              </h1>
+              <p className="text-[11px] text-gray-500 font-medium hidden sm:block">
+                AI-powered chapter-wise practice with step-by-step solutions
               </p>
             </div>
           </div>
 
-          {/* Exam Type Selector */}
-          <div className="flex items-center gap-1.5 p-1 bg-white/40 border-2 border-amber-950/20 rounded-2xl">
+          {/* Exam Selector — Clean Segmented Control */}
+          <div className="flex items-center bg-gray-100 rounded-2xl p-1 gap-0.5">
             {EXAM_OPTIONS.map(opt => (
               <button
                 key={opt.value}
-                onClick={() => setExamType(opt.value)}
-                className={`px-3 sm:px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer ${
+                onClick={() => { setExamType(opt.value); setSearchQuery(''); }}
+                className={`px-3.5 sm:px-5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   selectedExamType === opt.value
-                    ? 'bg-[#1c1815] text-amber-300 shadow-md border border-amber-500/30'
-                    : 'text-[#1c1815] hover:bg-white/50'
+                    ? 'bg-white text-gray-900 shadow-md ring-1 ring-gray-200'
+                    : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                {opt.label}
+                <span className="hidden sm:inline">{opt.label}</span>
+                <span className="sm:hidden">{opt.value.toUpperCase()}</span>
               </button>
             ))}
           </div>
         </div>
       </header>
 
-      {/* ─── Main Content ─── */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-8 py-8 relative z-10 space-y-8">
-        
-        {/* Error Alert */}
+      {/* ─── Main ─── */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-8 py-6 space-y-6">
+
+        {/* Error */}
         {error && (
-          <div className="p-4 rounded-2xl bg-red-100 border-2 border-red-300 text-red-900 flex items-center gap-3 text-xs font-bold shadow-xs">
-            <AlertTriangle size={18} className="shrink-0 text-red-600" />
+          <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-800 flex items-center gap-3 text-sm font-medium">
+            <AlertTriangle size={18} className="shrink-0 text-red-500" />
             <p>{error}</p>
           </div>
         )}
 
-        {/* 🔒 Paid Student Lock Banner */}
+        {/* 🔒 Paid Lock Banner */}
         {!checkingAccess && isPaidUser === false && (
-          <div className="p-6 rounded-3xl bg-gradient-to-r from-amber-200/90 via-amber-300/80 to-amber-200/90 border-2 border-amber-600/50 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-amber-950/10">
+          <div className="p-6 rounded-3xl bg-gradient-to-r from-indigo-50 via-violet-50 to-purple-50 border border-indigo-200 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-amber-950 text-amber-300 flex items-center justify-center shrink-0 shadow-md">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0">
                 <Lock size={22} />
               </div>
-              <div className="space-y-1">
-                <h3 className="text-lg font-serif font-bold text-amber-950 flex items-center gap-2">
-                  <span>Exclusive Feature for Enrolled Test Series Students</span>
-                  <span className="text-[9px] px-2 py-0.5 rounded-md bg-amber-950 text-amber-200 font-mono font-bold uppercase">PRO</span>
+              <div className="space-y-1.5">
+                <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                  <span>Unlock Smart AI Revision</span>
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold uppercase">PRO</span>
                 </h3>
-                <p className="text-xs text-amber-950/80 max-w-xl font-medium leading-relaxed">
-                  Smart AI Chapter Revision analyzes your mistakes in real-time, generates tailored question sets, and gives step-by-step KaTeX solutions. Unlock with any test pass.
+                <p className="text-xs text-gray-600 max-w-lg leading-relaxed">
+                  AI-generated chapter tests with step-by-step KaTeX solutions, mistake tracking, and adaptive remediation. Available with any test pass.
                 </p>
-                <div className="flex flex-wrap gap-3 pt-1 text-[11px] text-amber-950 font-bold">
-                  <span className="flex items-center gap-1"><CheckCircle2 size={13} className="text-emerald-700" /> Unlimited Chapter Practice</span>
-                  <span className="flex items-center gap-1"><CheckCircle2 size={13} className="text-emerald-700" /> Mistake Tracking &amp; Retests</span>
-                  <span className="flex items-center gap-1"><CheckCircle2 size={13} className="text-emerald-700" /> KaTeX Step-by-Step Derivations</span>
+                <div className="flex flex-wrap gap-3 pt-1 text-[11px] text-gray-700 font-medium">
+                  <span className="flex items-center gap-1"><CheckCircle2 size={13} className="text-emerald-600" /> Unlimited Practice</span>
+                  <span className="flex items-center gap-1"><CheckCircle2 size={13} className="text-emerald-600" /> Mistake Tracking</span>
+                  <span className="flex items-center gap-1"><CheckCircle2 size={13} className="text-emerald-600" /> KaTeX Solutions</span>
                 </div>
               </div>
             </div>
@@ -188,36 +186,41 @@ export function AdaptiveRevision() {
               href="https://vigyanprep.com/tests"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-6 py-3.5 rounded-2xl bg-[#1c1815] hover:bg-black text-amber-300 font-extrabold text-xs uppercase tracking-wider flex items-center gap-2 shrink-0 transition-all shadow-lg border border-amber-500/30 cursor-pointer"
+              className="px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shrink-0 transition shadow-lg cursor-pointer"
             >
-              <span>Unlock with Test Pass</span>
+              <span>Get Test Pass</span>
               <ExternalLink size={14} />
             </a>
           </div>
         )}
 
         {step === 'select' ? (
-          /* ─── STEP 1: Select Subject & Chapter ─── */
-          <div className="space-y-8">
-            
-            {/* Subject Filter Pills */}
-            <div className="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-none">
+          /* ═══════════ STEP 1: Subject & Chapter Selection ═══════════ */
+          <div className="space-y-6">
+
+            {/* Subject Tabs — Icon + Color */}
+            <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-none">
               {subjects.map(subj => {
+                const meta = subjectMeta(subj);
                 const isActive = selectedSubject === subj;
+                const Icon = meta.icon;
                 return (
                   <button
                     key={subj}
                     type="button"
-                    onClick={() => setSubject(subj)}
-                    className={`px-5 py-2.5 rounded-2xl font-serif text-sm font-bold transition cursor-pointer flex items-center gap-2 shrink-0 ${
+                    onClick={() => { setSubject(subj); setSearchQuery(''); }}
+                    className={`flex items-center gap-2.5 px-5 py-3 rounded-2xl text-sm font-bold transition-all cursor-pointer shrink-0 ${
                       isActive
-                        ? 'bg-[#1c1815] text-amber-300 shadow-xl shadow-amber-950/20 border-2 border-amber-500/40'
-                        : 'bg-white/40 hover:bg-white/80 border-2 border-amber-950/25 text-[#1c1815] shadow-xs'
+                        ? `bg-gradient-to-r ${meta.gradient} text-white shadow-lg shadow-${subj === 'Physics' ? 'blue' : subj === 'Chemistry' ? 'emerald' : subj === 'Mathematics' ? 'violet' : 'rose'}-500/20`
+                        : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-300 hover:shadow-sm'
                     }`}
                   >
+                    <Icon size={18} className={isActive ? 'text-white/90' : ''} />
                     <span>{subj}</span>
                     {chapters[subj] && (
-                      <span className={`px-2 py-0.2 rounded-full text-[10px] font-mono ${isActive ? 'bg-amber-500/30 text-amber-200' : 'bg-amber-950/10 text-amber-950'}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
+                      }`}>
                         {chapters[subj].length}
                       </span>
                     )}
@@ -226,62 +229,103 @@ export function AdaptiveRevision() {
               })}
             </div>
 
-            {/* Chapter Cards Grid */}
-            {selectedSubject && chapters[selectedSubject] && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {chapters[selectedSubject].map((ch) => {
+            {/* Search Bar */}
+            {selectedSubject && (
+              <div className="relative max-w-md">
+                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder={`Search ${selectedSubject} chapters...`}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-300 transition shadow-sm"
+                />
+              </div>
+            )}
+
+            {/* Chapter Cards */}
+            {selectedSubject && filteredChapters.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredChapters.map((ch, idx) => {
                   const cm = getChapterMastery(selectedSubject, ch.name);
+                  const meta = subjectMeta(selectedSubject);
+                  const masteryPct = cm?.overallMastery || 0;
 
                   return (
                     <div
                       key={ch.name}
                       onClick={() => { setChapter(ch); setStep('configure'); }}
-                      className="p-6 rounded-3xl bg-white/40 hover:bg-white/80 backdrop-blur-xl border-2 border-amber-950/25 hover:border-amber-950/60 transition-all duration-200 text-left flex flex-col justify-between space-y-4 shadow-sm hover:shadow-xl group cursor-pointer"
+                      className="group relative p-5 rounded-2xl bg-white border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all duration-200 cursor-pointer overflow-hidden"
                     >
-                      <div className="space-y-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-amber-950/10 text-amber-950 flex items-center justify-center group-hover:bg-amber-950 group-hover:text-amber-300 transition shrink-0">
-                              <BookOpen size={16} />
+                      {/* Top accent bar */}
+                      <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${meta.gradient} opacity-60 group-hover:opacity-100 transition`} />
+
+                      <div className="space-y-3 pt-1">
+                        {/* Chapter Header */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 min-w-0">
+                            <div className={`w-9 h-9 rounded-xl ${meta.lightBg} ${meta.accent} flex items-center justify-center text-sm font-black shrink-0`}>
+                              {idx + 1}
                             </div>
-                            <h3 className="font-serif font-bold text-base text-[#1c1815] group-hover:text-amber-950 transition-colors line-clamp-1">
-                              {ch.name}
-                            </h3>
+                            <div className="min-w-0">
+                              <h3 className="font-bold text-sm text-gray-900 group-hover:text-gray-950 leading-tight line-clamp-2">
+                                {ch.name}
+                              </h3>
+                              <p className="text-[11px] text-gray-400 font-medium mt-0.5">
+                                {ch.subTopics.length} sub-topics
+                              </p>
+                            </div>
                           </div>
-                          <ChevronRight size={18} className="text-amber-950/40 group-hover:text-amber-950 group-hover:translate-x-1 transition shrink-0" />
+                          <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500 group-hover:translate-x-0.5 transition shrink-0 mt-1" />
                         </div>
 
-                        {/* Subtopics Preview */}
-                        <div className="flex flex-wrap gap-1.5 pt-1">
+                        {/* Sub-topic Chips (first 3) */}
+                        <div className="flex flex-wrap gap-1.5">
                           {ch.subTopics.slice(0, 3).map(st => (
-                            <span key={st} className="px-2.5 py-0.5 rounded-lg bg-amber-950/10 text-amber-950 text-[10px] font-bold">
-                              {st}
+                            <span key={st} className="px-2 py-0.5 rounded-lg bg-gray-50 border border-gray-100 text-gray-500 text-[10px] font-medium truncate max-w-[160px]">
+                              {st.split('(')[0].trim()}
                             </span>
                           ))}
                           {ch.subTopics.length > 3 && (
-                            <span className="px-2 py-0.5 rounded-lg bg-amber-950/5 text-amber-950/60 text-[10px] font-bold">
-                              +{ch.subTopics.length - 3} more
+                            <span className="px-2 py-0.5 rounded-lg bg-gray-50 text-gray-400 text-[10px] font-medium">
+                              +{ch.subTopics.length - 3}
                             </span>
                           )}
                         </div>
-                      </div>
 
-                      {/* Mastery Progress Bar */}
-                      <div className="pt-3 border-t border-amber-950/15 space-y-1.5">
-                        <div className="flex items-center justify-between text-[11px] font-bold">
-                          <span className="text-amber-950/60 uppercase text-[9px] tracking-wider">Concept Mastery</span>
-                          <span className={cm && cm.overallMastery >= 80 ? 'text-emerald-700' : cm && cm.overallMastery >= 50 ? 'text-amber-800' : 'text-neutral-500'}>
-                            {cm ? `${cm.overallMastery}%` : 'Not Practiced'}
-                          </span>
-                        </div>
-                        <div className="h-2 rounded-full bg-amber-950/10 overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{
-                              width: cm ? `${cm.overallMastery}%` : '0%',
-                              backgroundColor: cm && cm.overallMastery >= 80 ? '#15803d' : cm && cm.overallMastery >= 50 ? '#d97706' : '#b91c1c'
-                            }}
-                          />
+                        {/* Mastery — Mini Ring + Bar */}
+                        <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
+                          {/* Mini circular ring */}
+                          <div className="relative w-10 h-10 shrink-0">
+                            <svg viewBox="0 0 36 36" className="w-10 h-10 -rotate-90">
+                              <circle cx="18" cy="18" r="15" fill="none" stroke="#f3f4f6" strokeWidth="3" />
+                              <circle
+                                cx="18" cy="18" r="15" fill="none"
+                                stroke={masteryPct >= 80 ? '#16a34a' : masteryPct >= 40 ? '#d97706' : '#e5e7eb'}
+                                strokeWidth="3"
+                                strokeDasharray={`${masteryPct * 0.9425} 94.25`}
+                                strokeLinecap="round"
+                                className="transition-all duration-700"
+                              />
+                            </svg>
+                            <span className={`absolute inset-0 flex items-center justify-center text-[9px] font-black ${
+                              masteryPct > 0 ? (masteryPct >= 80 ? 'text-emerald-700' : 'text-amber-700') : 'text-gray-300'
+                            }`}>
+                              {masteryPct > 0 ? `${masteryPct}%` : '—'}
+                            </span>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Mastery</p>
+                            <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden mt-1">
+                              <div
+                                className="h-full rounded-full transition-all duration-700"
+                                style={{
+                                  width: `${masteryPct}%`,
+                                  backgroundColor: masteryPct >= 80 ? '#16a34a' : masteryPct >= 40 ? '#d97706' : '#e5e7eb'
+                                }}
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -290,39 +334,54 @@ export function AdaptiveRevision() {
               </div>
             )}
 
-            {!selectedSubject && (
-              <div className="text-center py-24 space-y-3 bg-white/20 rounded-3xl border-2 border-dashed border-amber-950/20">
-                <Brain size={48} className="text-amber-950/30 mx-auto" />
-                <p className="font-serif text-lg text-amber-950/70 font-bold">Select a subject above to view chapters</p>
+            {/* Empty State — No Subject Selected */}
+            {!selectedSubject && !loadingChapters && (
+              <div className="text-center py-20 space-y-4">
+                <div className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center">
+                  <BookOpen size={36} className="text-indigo-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-700">Select a Subject</h3>
+                  <p className="text-sm text-gray-400 mt-1">Choose Physics, Chemistry, Mathematics, or Biology to browse chapters</p>
+                </div>
+              </div>
+            )}
+
+            {/* Empty State — Search No Results */}
+            {selectedSubject && filteredChapters.length === 0 && searchQuery && (
+              <div className="text-center py-16 space-y-3">
+                <Search size={36} className="text-gray-300 mx-auto" />
+                <p className="text-gray-500 font-medium">No chapters match "{searchQuery}"</p>
+                <button onClick={() => setSearchQuery('')} className="text-indigo-600 text-sm font-bold cursor-pointer hover:underline">Clear search</button>
               </div>
             )}
 
             {loadingChapters && (
-              <div className="text-center py-24 space-y-3">
-                <div className="w-10 h-10 border-4 border-amber-950 border-t-transparent rounded-full animate-spin mx-auto" />
-                <p className="text-xs font-bold text-amber-950/70 uppercase tracking-wider">Loading syllabus matrix...</p>
+              <div className="text-center py-20 space-y-3">
+                <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                <p className="text-sm font-medium text-gray-500">Loading syllabus...</p>
               </div>
             )}
 
-            {/* Recent History */}
+            {/* Recent Sessions */}
             {history.length > 0 && (
               <div className="pt-6 space-y-4">
-                <h3 className="font-serif text-lg font-bold text-[#1c1815] flex items-center gap-2">
-                  <BarChart3 size={18} className="text-amber-900" />
-                  <span>Recent Topic Practice Sessions</span>
+                <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                  <BarChart3 size={16} className="text-gray-400" />
+                  <span>Recent Practice Sessions</span>
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {history.slice(0, 4).map(h => (
-                    <div key={h.id} className="p-4 rounded-2xl bg-white/40 border-2 border-amber-950/20 flex items-center justify-between shadow-xs">
+                    <div key={h.id} className="p-4 rounded-2xl bg-white border border-gray-200 flex items-center justify-between">
                       <div>
-                        <p className="font-serif font-bold text-sm text-[#1c1815]">{h.chapter_name}</p>
-                        <p className="text-[11px] text-amber-950/60 font-semibold">{h.subject} • {new Date(h.created_at).toLocaleDateString()}</p>
+                        <p className="font-bold text-sm text-gray-900">{h.chapter_name}</p>
+                        <p className="text-[11px] text-gray-400 font-medium">{h.subject} · {new Date(h.created_at).toLocaleDateString()}</p>
                       </div>
                       <div className="text-right">
-                        <p className={`font-black text-lg ${h.accuracy >= 80 ? 'text-emerald-700' : h.accuracy >= 50 ? 'text-amber-800' : 'text-red-700'}`}>
+                        <p className={`font-black text-lg ${h.accuracy >= 80 ? 'text-emerald-600' : h.accuracy >= 50 ? 'text-amber-600' : 'text-red-500'}`}>
                           {h.accuracy}%
                         </p>
-                        <p className="text-[10px] text-amber-950/60 font-bold">{h.correct_count}/{h.question_count} Correct</p>
+                        <p className="text-[10px] text-gray-400 font-medium">{h.correct_count}/{h.question_count}</p>
                       </div>
                     </div>
                   ))}
@@ -331,72 +390,57 @@ export function AdaptiveRevision() {
             )}
           </div>
         ) : (
-          /* ─── STEP 2: Configure Test & Granular Sub-Topics ─── */
-          <div className="max-w-2xl mx-auto space-y-8">
-            
-            {/* Selected Chapter & Interactive Sub-Topic Selector */}
-            <div className="p-6 sm:p-8 rounded-3xl bg-white/70 backdrop-blur-2xl border-2 border-amber-950/30 space-y-6 shadow-xl shadow-amber-950/10">
-              <div className="flex items-center justify-between flex-wrap gap-4 border-b border-amber-950/15 pb-4">
+          /* ═══════════ STEP 2: Configure Test ═══════════ */
+          <div className="max-w-2xl mx-auto space-y-6">
+
+            {/* Chapter Header + Sub-Topic Selector */}
+            <div className="p-6 sm:p-8 rounded-3xl bg-white border border-gray-200 shadow-sm space-y-6">
+              <div className="flex items-center justify-between flex-wrap gap-4 border-b border-gray-100 pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-950 text-amber-300 flex items-center justify-center shadow-md shrink-0">
+                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${subjectMeta(selectedSubject || 'Physics').gradient} text-white flex items-center justify-center shadow shrink-0`}>
                     <BookOpen size={22} />
                   </div>
                   <div>
-                    <h2 className="font-serif text-xl sm:text-2xl font-bold text-[#1c1815]">{selectedChapter?.name}</h2>
-                    <p className="text-xs text-amber-950/70 font-semibold">{selectedSubject} • {selectedExamType.toUpperCase()}</p>
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{selectedChapter?.name}</h2>
+                    <p className="text-xs text-gray-500 font-medium">{selectedSubject} · {selectedExamType.toUpperCase()}</p>
                   </div>
                 </div>
-
-                {/* Select All / Clear All Buttons */}
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={selectAllSubTopics}
-                    className="px-3.5 py-1.5 rounded-xl bg-amber-950 text-amber-200 text-xs font-bold hover:bg-black transition cursor-pointer shadow-xs"
-                  >
-                    Select All
-                  </button>
-                  <button
-                    type="button"
-                    onClick={clearAllSubTopics}
-                    className="px-3.5 py-1.5 rounded-xl bg-white/60 hover:bg-white text-xs font-bold text-amber-950 border border-amber-950/30 transition cursor-pointer shadow-xs"
-                  >
-                    Clear
-                  </button>
+                  <button type="button" onClick={selectAllSubTopics}
+                    className="px-3.5 py-1.5 rounded-xl bg-gray-900 text-white text-xs font-bold hover:bg-black transition cursor-pointer"
+                  >Select All</button>
+                  <button type="button" onClick={clearAllSubTopics}
+                    className="px-3.5 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-bold text-gray-700 transition cursor-pointer"
+                  >Clear</button>
                 </div>
               </div>
 
-              {/* Sub-topics Checkbox Grid */}
+              {/* Sub-topic Pills */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-extrabold uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
-                    <span>Select Specific Sub-Topics to Practice</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-950/10 text-amber-950 font-mono">
-                      {selectedSubTopics.length} of {selectedChapter?.subTopics.length || 0}
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>Select Sub-Topics</span>
+                    <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-mono text-[10px] font-bold">
+                      {selectedSubTopics.length}/{selectedChapter?.subTopics.length || 0}
                     </span>
                   </p>
-                  <span className="text-[11px] text-amber-950/60 italic font-medium">Click to select/unselect</span>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {selectedChapter?.subTopics.map(st => {
                     const isChecked = selectedSubTopics.includes(st);
                     return (
                       <button
-                        key={st}
-                        type="button"
+                        key={st} type="button"
                         onClick={() => toggleSubTopic(st)}
-                        className={`p-3.5 rounded-2xl border-2 text-left flex items-center justify-between gap-3 transition cursor-pointer ${
+                        className={`p-3.5 rounded-xl border text-left flex items-center justify-between gap-3 transition cursor-pointer text-xs font-semibold leading-tight ${
                           isChecked
-                            ? 'bg-amber-200/70 border-amber-600/70 text-amber-950 font-bold shadow-xs'
-                            : 'bg-white/40 border-amber-950/20 text-[#1c1815] hover:bg-white/80'
+                            ? 'bg-indigo-50 border-indigo-300 text-indigo-900'
+                            : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-white hover:border-gray-300'
                         }`}
                       >
-                        <span className="text-xs font-bold leading-tight">{st}</span>
-                        <div className={`w-5 h-5 rounded-lg flex items-center justify-center text-xs shrink-0 transition ${
-                          isChecked
-                            ? 'bg-amber-950 text-amber-200 font-black'
-                            : 'border-2 border-amber-950/30 bg-white/60'
+                        <span>{st}</span>
+                        <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition text-[10px] font-black ${
+                          isChecked ? 'bg-indigo-600 text-white' : 'border-2 border-gray-300'
                         }`}>
                           {isChecked ? '✓' : ''}
                         </div>
@@ -404,87 +448,75 @@ export function AdaptiveRevision() {
                     );
                   })}
                 </div>
-
                 {selectedSubTopics.length === 0 && (
-                  <p className="text-xs text-red-700 font-bold mt-2 bg-red-100 p-2.5 rounded-xl border border-red-200">
-                    ⚠️ Please select at least 1 topic above or click &quot;Select All&quot;
+                  <p className="text-xs text-red-600 font-medium bg-red-50 p-2.5 rounded-xl border border-red-100">
+                    ⚠️ Select at least 1 topic or click "Select All"
                   </p>
                 )}
               </div>
             </div>
 
-            {/* Difficulty Selector */}
-            <div className="p-6 rounded-3xl bg-white/70 backdrop-blur-2xl border-2 border-amber-950/30 space-y-3 shadow-sm">
-              <label className="text-xs font-extrabold uppercase tracking-wider text-amber-950 block">Difficulty Level</label>
+            {/* Difficulty */}
+            <div className="p-6 rounded-3xl bg-white border border-gray-200 shadow-sm space-y-3">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Difficulty Level</label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {DIFFICULTY_OPTIONS.map(d => {
                   const Icon = d.icon;
                   const isSelected = difficulty === d.value;
                   return (
                     <button
-                      key={d.value}
-                      type="button"
+                      key={d.value} type="button"
                       onClick={() => setDifficulty(d.value)}
-                      className={`p-4 rounded-2xl border-2 text-center transition cursor-pointer ${
+                      className={`p-4 rounded-2xl border text-center transition cursor-pointer ${
                         isSelected
-                          ? 'bg-[#1c1815] text-white border-amber-500 shadow-md'
-                          : 'bg-white/40 hover:bg-white border-amber-950/20 text-[#1c1815]'
+                          ? `${d.bg} ${d.border} border-2 shadow-sm`
+                          : 'bg-gray-50 border-gray-200 hover:bg-white'
                       }`}
                     >
-                      <Icon className="w-5 h-5 mx-auto mb-1.5" style={{ color: isSelected ? '#fbbf24' : d.color }} />
-                      <p className="font-bold text-xs">{d.label}</p>
-                      <p className={`text-[10px] mt-1 ${isSelected ? 'text-amber-200/80' : 'text-neutral-600'}`}>{d.desc}</p>
+                      <Icon className="w-5 h-5 mx-auto mb-1.5" style={{ color: d.color }} />
+                      <p className={`font-bold text-xs ${isSelected ? 'text-gray-900' : 'text-gray-600'}`}>{d.label}</p>
+                      <p className="text-[10px] mt-0.5 text-gray-400">{d.desc}</p>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Questions & Duration Row */}
+            {/* Questions & Duration */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              
-              {/* Question Count */}
-              <div className="p-5 rounded-3xl bg-white/70 border-2 border-amber-950/30 space-y-3">
-                <label className="text-xs font-extrabold uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
-                  <Hash size={15} /> <span>Questions</span>
+              <div className="p-5 rounded-3xl bg-white border border-gray-200 shadow-sm space-y-3">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Hash size={14} /> <span>Questions</span>
                 </label>
                 <div className="flex gap-1.5 flex-wrap">
                   {QUESTION_COUNTS.map(n => (
                     <button
-                      key={n}
-                      type="button"
+                      key={n} type="button"
                       onClick={() => setQuestionCount(n)}
                       className={`px-3.5 py-1.5 rounded-xl font-mono font-bold text-xs transition cursor-pointer ${
                         questionCount === n
-                          ? 'bg-[#1c1815] text-amber-300 shadow-md border border-amber-500/30'
-                          : 'bg-white/50 border border-amber-950/20 text-[#1c1815] hover:bg-white'
+                          ? 'bg-gray-900 text-white shadow-md'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}
-                    >
-                      {n}
-                    </button>
+                    >{n}</button>
                   ))}
                 </div>
               </div>
-
-              {/* Duration */}
-              <div className="p-5 rounded-3xl bg-white/70 border-2 border-amber-950/30 space-y-3">
-                <label className="text-xs font-extrabold uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
-                  <Clock size={15} /> <span>Duration (Mins)</span>
+              <div className="p-5 rounded-3xl bg-white border border-gray-200 shadow-sm space-y-3">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Clock size={14} /> <span>Duration (Mins)</span>
                 </label>
                 <div className="flex gap-1.5 flex-wrap">
                   {DURATION_OPTIONS.map(m => (
                     <button
-                      key={m}
-                      type="button"
+                      key={m} type="button"
                       onClick={() => setDurationMinutes(m)}
                       className={`px-3.5 py-1.5 rounded-xl font-mono font-bold text-xs transition cursor-pointer ${
                         durationMinutes === m
-                          ? 'bg-[#1c1815] text-amber-300 shadow-md border border-amber-500/30'
-                          : 'bg-white/50 border border-amber-950/20 text-[#1c1815] hover:bg-white'
+                          ? 'bg-gray-900 text-white shadow-md'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}
-                    >
-                      {m}m
-                    </button>
+                    >{m}m</button>
                   ))}
                 </div>
               </div>
@@ -494,23 +526,23 @@ export function AdaptiveRevision() {
             <button
               onClick={handleStart}
               disabled={generating || selectedSubTopics.length === 0}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-neutral-950 font-black text-sm uppercase tracking-wider flex items-center justify-center gap-3 shadow-xl shadow-amber-950/15 border-2 border-amber-600/40 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-3 shadow-xl shadow-indigo-500/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {generating ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-neutral-950/30 border-t-neutral-950 rounded-full animate-spin" />
-                  <span>Generating {questionCount} Exam Questions with AI...</span>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Generating {questionCount} Questions with AI...</span>
                 </>
               ) : isPaidUser === false ? (
                 <>
                   <Lock size={18} />
-                  <span>Unlock Full Access with Test Pass</span>
+                  <span>Unlock with Test Pass</span>
                   <ExternalLink size={16} />
                 </>
               ) : (
                 <>
                   <Sparkles size={18} />
-                  <span>Start Practice Test ({questionCount} Qs • {durationMinutes}m)</span>
+                  <span>Start Practice ({questionCount} Qs · {durationMinutes}m)</span>
                   <ArrowRight size={18} />
                 </>
               )}

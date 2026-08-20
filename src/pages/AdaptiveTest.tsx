@@ -7,7 +7,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Clock, ChevronLeft, ChevronRight, Send, CheckCircle2,
-  X
+  X, Bookmark
 } from 'lucide-react';
 import { MathText } from '../components/MathText';
 import { useAdaptiveStore, type AdaptiveQuestion } from '../stores/adaptiveStore';
@@ -24,7 +24,8 @@ export function AdaptiveTest() {
     selectedChapter, selectedSubject, selectedExamType,
     difficulty,
     setAnswer, clearAnswer, goToQuestion, nextQuestion, prevQuestion,
-    decrementTimer, submitTest
+    decrementTimer, submitTest,
+    toggleBookmark, isBookmarked
   } = useAdaptiveStore();
 
   const currentQ = questions[currentQuestionIndex];
@@ -196,9 +197,32 @@ export function AdaptiveTest() {
                   Sub-Topic: <strong className="text-gray-900">{currentQ.subTopic}</strong>
                 </span>
               </div>
-              <span className="px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold text-xs rounded-full">
-                Marks: +4 | -1
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold text-xs rounded-full">
+                  Marks: +4 | -1
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleBookmark({
+                      questionId: currentQ.id,
+                      questionText: currentQ.questionText,
+                      options: currentQ.options,
+                      subTopic: currentQ.subTopic,
+                      difficulty: currentQ.difficulty
+                    });
+                  }}
+                  className={`p-1.5 rounded-lg transition cursor-pointer ${
+                    isBookmarked(currentQ.id)
+                      ? 'bg-amber-100 text-amber-600'
+                      : 'bg-gray-100 text-gray-400 hover:bg-amber-50 hover:text-amber-500'
+                  }`}
+                  title={isBookmarked(currentQ.id) ? 'Remove bookmark' : 'Bookmark this question'}
+                >
+                  <Bookmark size={16} fill={isBookmarked(currentQ.id) ? 'currentColor' : 'none'} />
+                </button>
+              </div>
             </div>
 
             {/* Question Text */}

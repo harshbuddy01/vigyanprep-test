@@ -686,6 +686,15 @@ ${studentName}`
 
             <button
               type="button"
+              onClick={() => navigate('/bookmarks')}
+              className="w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition cursor-pointer text-[#1c1815] hover:text-amber-950 hover:bg-white/40"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-700"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+              <span>Bookmarks</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => { setActiveNav('performance'); setShowPerformanceModal(true); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition cursor-pointer ${
                 activeNav === 'performance'
