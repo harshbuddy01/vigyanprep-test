@@ -46,6 +46,7 @@ export function AdaptiveRevision() {
 
   const {
     selectedExamType, selectedSubject, selectedChapter,
+    selectedSubTopics, toggleSubTopic, selectAllSubTopics, clearAllSubTopics,
     questionCount, durationMinutes, difficulty,
     chapters, subjects, loadingChapters, generating, error,
     mastery, history,
@@ -316,23 +317,82 @@ export function AdaptiveRevision() {
         ) : (
           /* ─── STEP 2: Configure Test ─── */
           <div className="max-w-2xl mx-auto space-y-8">
-            {/* Selected Chapter Card */}
-            <div className="p-6 rounded-2xl bg-gradient-to-br from-[var(--gold)]/5 to-transparent border border-[var(--gold)]/20">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-[var(--gold)]/10 flex items-center justify-center">
-                  <BookOpen className="w-6 h-6 text-[var(--gold)]" />
+            {/* Selected Chapter Card & Interactive Topic Selector */}
+            <div className="p-6 rounded-2xl bg-gradient-to-br from-[var(--gold)]/10 via-[var(--gold)]/5 to-transparent border-2 border-[var(--gold)]/30 space-y-5 shadow-xl">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-[var(--gold)]/20 flex items-center justify-center border border-[var(--gold)]/30">
+                    <BookOpen className="w-6 h-6 text-[var(--gold)]" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">{selectedChapter?.name}</h2>
+                    <p className="text-xs text-[var(--ivory)]/60">{selectedSubject} • {selectedExamType.toUpperCase()}</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold">{selectedChapter?.name}</h2>
-                  <p className="text-xs text-[var(--ivory)]/50">{selectedSubject} • {selectedExamType.toUpperCase()}</p>
+
+                {/* Select All / Clear All Buttons */}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={selectAllSubTopics}
+                    className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-bold text-[var(--ivory)] transition"
+                  >
+                    Select All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearAllSubTopics}
+                    className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] font-semibold text-[var(--ivory)]/50 transition"
+                  >
+                    Clear
+                  </button>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {selectedChapter?.subTopics.map(st => (
-                  <span key={st} className="px-2.5 py-1 text-[11px] rounded-lg bg-[var(--gold)]/10 text-[var(--gold)] border border-[var(--gold)]/20">
-                    {st}
-                  </span>
-                ))}
+
+              {/* Sub-topics Interactive Checkbox Grid */}
+              <div>
+                <div className="flex items-center justify-between mb-2.5">
+                  <p className="text-xs font-extrabold uppercase tracking-wider text-[var(--gold)] flex items-center gap-1.5">
+                    <span>Select Specific Topics to Practice</span>
+                    <span className="text-[10px] px-2 py-0.2 rounded-full bg-[var(--gold)]/20 text-[var(--gold)]">
+                      {selectedSubTopics.length} of {selectedChapter?.subTopics.length || 0}
+                    </span>
+                  </p>
+                  <span className="text-[10px] text-[var(--ivory)]/40 italic">Click to select/unselect</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {selectedChapter?.subTopics.map(st => {
+                    const isChecked = selectedSubTopics.includes(st);
+                    return (
+                      <button
+                        key={st}
+                        type="button"
+                        onClick={() => toggleSubTopic(st)}
+                        className={`p-3 rounded-xl border text-left flex items-center justify-between gap-3 transition cursor-pointer ${
+                          isChecked
+                            ? 'bg-[var(--gold)]/15 border-[var(--gold)]/60 text-[var(--ivory)] shadow-sm'
+                            : 'bg-white/[0.03] border-white/10 text-[var(--ivory)]/50 hover:bg-white/[0.06] hover:text-[var(--ivory)]/80'
+                        }`}
+                      >
+                        <span className="text-xs font-semibold">{st}</span>
+                        <div className={`w-5 h-5 rounded-md flex items-center justify-center text-xs shrink-0 transition ${
+                          isChecked
+                            ? 'bg-[var(--gold)] text-[var(--bg-deep)] font-black'
+                            : 'border border-white/20'
+                        }`}>
+                          {isChecked ? '✓' : ''}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {selectedSubTopics.length === 0 && (
+                  <p className="text-[11px] text-amber-400 font-semibold mt-2 flex items-center gap-1">
+                    ⚠️ Please select at least 1 topic above or click &quot;Select All&quot;
+                  </p>
+                )}
               </div>
             </div>
 

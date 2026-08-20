@@ -99,6 +99,7 @@ interface AdaptiveState {
   selectedExamType: string;
   selectedSubject: string | null;
   selectedChapter: ChapterDef | null;
+  selectedSubTopics: string[];
   questionCount: number;
   durationMinutes: number;
   difficulty: string;
@@ -137,6 +138,10 @@ interface AdaptiveState {
   setExamType: (examType: string) => void;
   setSubject: (subject: string) => void;
   setChapter: (chapter: ChapterDef | null) => void;
+  setSelectedSubTopics: (topics: string[]) => void;
+  toggleSubTopic: (topic: string) => void;
+  selectAllSubTopics: () => void;
+  clearAllSubTopics: () => void;
   setQuestionCount: (count: number) => void;
   setDurationMinutes: (mins: number) => void;
   setDifficulty: (diff: string) => void;
@@ -150,6 +155,7 @@ interface AdaptiveState {
   // API calls
   fetchChapters: (examType: string) => Promise<void>;
   generateTest: () => Promise<boolean>;
+  generateCheckYourselfTest: (subject: string, chapterName: string, subTopic: string) => Promise<boolean>;
   submitTest: () => Promise<boolean>;
   fetchMastery: () => Promise<void>;
   resetTest: () => void;
@@ -160,6 +166,7 @@ export const useAdaptiveStore = create<AdaptiveState>()((set, get) => ({
   selectedExamType: 'iat',
   selectedSubject: null,
   selectedChapter: null,
+  selectedSubTopics: [],
   questionCount: 10,
   durationMinutes: 15,
   difficulty: 'medium',
@@ -190,11 +197,27 @@ export const useAdaptiveStore = create<AdaptiveState>()((set, get) => ({
   generating: false,
 
   // ─── Simple setters ────────────────────
-  setExamType: (examType) => set({ selectedExamType: examType, selectedSubject: null, selectedChapter: null }),
-  setSubject: (subject) => set({ selectedSubject: subject, selectedChapter: null }),
-  setChapter: (chapter) => set({ selectedChapter: chapter }),
-  setQuestionCount: (count) => set({ questionCount: Math.min(Math.max(count, 5), 30) }),
-  setDurationMinutes: (mins) => set({ durationMinutes: Math.min(Math.max(mins, 5), 120) }),
+  setExamType: (examType) => set({ selectedExamType: examType, selectedSubject: null, selectedChapter: null, selectedSubTopics: [] }),
+  setSubject: (subject) => set({ selectedSubject: subject, selectedChapter: null, selectedSubTopics: [] }),
+  setChapter: (chapter) => set({
+    selectedChapter: chapter,
+    selectedSubTopics: chapter ? [...chapter.subTopics] : []
+  }),
+  setSelectedSubTopics: (topics) => set({ selectedSubTopics: topics }),
+  toggleSubTopic: (topic) => set(state => {
+    const exists = state.selectedSubTopics.includes(topic);
+    const updated = exists
+      ? state.selectedSubTopics.filter(t => t !== topic)
+      : [...state.selectedSubTopics, topic];
+    return { selectedSubTopics: updated };
+  }),
+  selectAllSubTopics: () => set(state => ({
+    selectedSubTopics: state.selectedChapter ? [...state.selectedChapter.subTopics] : []
+  })),
+  clearAllSubTopics: () => set({ selectedSubTopics: [] }),
+
+  setQuestionCount: (count) => set({ questionCount: Math.min(Math.max(count, 3), 30) }),
+  setDurationMinutes: (mins) => set({ durationMinutes: Math.min(Math.max(mins, 3), 120) }),
   setDifficulty: (diff) => set({ difficulty: diff }),
 
   setAnswer: (questionId, answer) => set(state => ({
@@ -249,6 +272,10 @@ export const useAdaptiveStore = create<AdaptiveState>()((set, get) => ({
     set({ generating: true, error: null });
     const token = resolveToken();
 
+    const activeTopics = state.selectedSubTopics.length > 0
+      ? state.selectedSubTopics
+      : state.selectedChapter.subTopics;
+
     try {
       const res = await fetch(`${API_URL}/api/adaptive/generate-test`, {
         method: 'POST',
@@ -260,6 +287,7 @@ export const useAdaptiveStore = create<AdaptiveState>()((set, get) => ({
           examType: state.selectedExamType,
           subject: state.selectedSubject,
           chapterName: state.selectedChapter.name,
+          selectedSubTopics: activeTopics,
           questionCount: state.questionCount,
           durationMinutes: state.durationMinutes,
           difficulty: state.difficulty
@@ -286,6 +314,63 @@ export const useAdaptiveStore = create<AdaptiveState>()((set, get) => ({
         return true;
       } else {
         set({ error: data.error || 'Failed to generate test', generating: false });
+        return false;
+      }
+    } catch (err: any) {
+      set({ error: err.message, generating: false });
+      return false;
+    }
+  },
+
+  // ─── Check Yourself (2-3 targeted questions on 1 concept) ───
+  generateCheckYourselfTest: async (subject: string, chapterName: string, subTopic: string) => {
+    const state = get();
+    set({ generating: true, error: null });
+    const token = resolveToken();
+
+    try {
+      const res = await fetch(`${API_URL}/api/adaptive/generate-test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({
+          examType: state.selectedExamType,
+          subject,
+          chapterName,
+          selectedSubTopics: [subTopic],
+          questionCount: 3,
+          durationMinutes: 6,
+          difficulty: 'medium'
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        set({
+          selectedSubject: subject,
+          selectedChapter: { name: chapterName, subTopics: [subTopic] },
+          selectedSubTopics: [subTopic],
+          questionCount: 3,
+          durationMinutes: 6,
+          attemptId: data.attemptId,
+          questions: data.questions,
+          answers: {},
+          currentQuestionIndex: 0,
+          timeRemaining: data.durationSeconds || 360,
+          isTestActive: true,
+          isRemediation: true,
+          weakAreasTargeted: [subTopic],
+          generating: false,
+          summary: null,
+          diagnosis: null,
+          results: []
+        });
+        return true;
+      } else {
+        set({ error: data.error || 'Failed to generate practice test', generating: false });
         return false;
       }
     } catch (err: any) {

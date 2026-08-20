@@ -674,6 +674,18 @@ ${studentName}`
 
             <button
               type="button"
+              onClick={() => navigate('/adaptive-revision')}
+              className="w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center justify-between transition cursor-pointer text-[#1c1815] hover:text-amber-950 hover:bg-white/40 group"
+            >
+              <div className="flex items-center gap-3">
+                <Brain size={18} className="text-amber-900 group-hover:text-amber-950" />
+                <span>AI Revision</span>
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-amber-500/25 border border-amber-600/30 text-amber-950 text-[9px] font-black uppercase">NEW</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => { setActiveNav('performance'); setShowPerformanceModal(true); }}
               className={`w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center gap-3 transition cursor-pointer ${
                 activeNav === 'performance'
@@ -791,6 +803,18 @@ ${studentName}`
                 >
                   <BookOpen size={18} />
                   <span>Practice Tests</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setMobileNavOpen(false); navigate('/adaptive-revision'); }}
+                  className="w-full px-4 py-3 rounded-2xl text-xs font-bold flex items-center justify-between transition text-[#1c1815] hover:bg-white/60"
+                >
+                  <div className="flex items-center gap-3">
+                    <Brain size={18} className="text-amber-900" />
+                    <span>AI Revision</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/25 border border-amber-600/30 text-amber-950 text-[9px] font-black uppercase">NEW</span>
                 </button>
 
                 <button
@@ -1049,14 +1073,6 @@ ${studentName}`
               >
                 <BookOpen size={14} />
                 <span>FREE PRACTICE PYQS ({pyqPapers.length})</span>
-              </button>
-
-              <button
-                onClick={() => navigate('/adaptive-revision')}
-                className="px-5 py-2.5 rounded-full text-xs font-extrabold tracking-wider uppercase transition flex items-center gap-2 bg-gradient-to-r from-amber-400 to-amber-500 text-neutral-950 hover:opacity-95 shadow-md shadow-amber-500/20 border-2 border-amber-600/30"
-              >
-                <Brain size={14} className="text-neutral-950" />
-                <span>🧠 SMART AI REVISION</span>
               </button>
             </div>
 
@@ -1526,6 +1542,25 @@ ${studentName}`
                 </div>
 
                 <div className="space-y-2">
+                  <button
+                    onClick={() => navigate('/adaptive-revision')}
+                    className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-amber-200/70 to-amber-300/50 hover:from-amber-200 hover:to-amber-300/80 border-2 border-amber-600/40 text-left flex items-center justify-between transition group shadow-sm cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-amber-950 text-amber-300 flex items-center justify-center shadow-xs">
+                        <Brain size={16} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-extrabold text-[#1c1815] flex items-center gap-1.5">
+                          <span>Smart AI Revision</span>
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-950 text-amber-200 font-mono font-bold">AI</span>
+                        </p>
+                        <p className="text-[10px] text-[#1c1815]/80 font-bold">Topic practice &amp; mistake remediation</p>
+                      </div>
+                    </div>
+                    <ChevronRight size={16} className="text-[#1c1815] group-hover:translate-x-1 transition" />
+                  </button>
+
                   <button
                     onClick={() => setShowPerformanceModal(true)}
                     className="w-full p-3.5 rounded-2xl bg-white/40 hover:bg-white/70 border-2 border-amber-950/25 text-left flex items-center justify-between transition group shadow-xs"

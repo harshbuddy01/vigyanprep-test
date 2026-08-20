@@ -41,8 +41,17 @@ export function AdaptiveDiagnosis() {
   const {
     summary, diagnosis, results,
     selectedChapter, selectedSubject, selectedExamType,
+    generateCheckYourselfTest, generating,
     resetTest
   } = useAdaptiveStore();
+
+  const handleCheckYourself = async (subTopic: string) => {
+    if (!selectedSubject || !selectedChapter) return;
+    const success = await generateCheckYourselfTest(selectedSubject, selectedChapter.name, subTopic);
+    if (success) {
+      navigate('/adaptive-test');
+    }
+  };
 
   useEffect(() => {
     if (!summary) {
@@ -351,10 +360,24 @@ export function AdaptiveDiagnosis() {
                         </div>
                       )}
 
-                      {/* User's answer summary */}
-                      <div className="mt-3 flex items-center gap-4 text-xs text-[var(--ivory)]/40">
-                        <span>Your answer: <strong className={r.status === 'correct' ? 'text-emerald-400' : r.status === 'wrong' ? 'text-red-400' : ''}>{r.userAnswer || '—'}</strong></span>
-                        <span>Correct: <strong className="text-emerald-400">{r.correctAnswer}</strong></span>
+                      {/* User's answer summary & Check Yourself Action */}
+                      <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between flex-wrap gap-3">
+                        <div className="flex items-center gap-4 text-xs text-[var(--ivory)]/50">
+                          <span>Your answer: <strong className={r.status === 'correct' ? 'text-emerald-400 font-bold' : r.status === 'wrong' ? 'text-red-400 font-bold' : ''}>{r.userAnswer || '—'}</strong></span>
+                          <span>Correct: <strong className="text-emerald-400 font-bold">{r.correctAnswer}</strong></span>
+                        </div>
+
+                        {r.subTopic && (
+                          <button
+                            type="button"
+                            onClick={() => handleCheckYourself(r.subTopic)}
+                            disabled={generating}
+                            className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-neutral-950 font-extrabold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition cursor-pointer disabled:opacity-50"
+                          >
+                            <Target size={14} />
+                            <span>Check Yourself (2-3 Similar Qs)</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}
