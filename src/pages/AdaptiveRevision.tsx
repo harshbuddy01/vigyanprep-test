@@ -8,9 +8,11 @@ import { useNavigate } from 'react-router-dom';
 import {
   Brain, BookOpen, ArrowRight, Target, Clock, Hash,
   ChevronRight, Sparkles, BarChart3, AlertTriangle,
-  ArrowLeft, Flame, Shield
+  ArrowLeft, Flame, Shield, Lock, CheckCircle2, ExternalLink
 } from 'lucide-react';
 import { useAdaptiveStore } from '../stores/adaptiveStore';
+
+const API_URL = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
 
 const EXAM_OPTIONS = [
   { value: 'iat', label: 'IISER IAT', color: '#d4a520' },
@@ -27,9 +29,20 @@ const DIFFICULTY_OPTIONS = [
 const QUESTION_COUNTS = [5, 10, 15, 20, 25, 30];
 const DURATION_OPTIONS = [5, 10, 15, 20, 30, 45, 60];
 
+function resolveToken(): string {
+  if (typeof document === 'undefined') return '';
+  const match = document.cookie.match(/(^| )student_token=([^;]+)/);
+  if (match) return decodeURIComponent(match[2]);
+  return localStorage.getItem('student_token') ||
+    localStorage.getItem('auth_token') ||
+    localStorage.getItem('token') || '';
+}
+
 export function AdaptiveRevision() {
   const navigate = useNavigate();
   const [step, setStep] = useState<'select' | 'configure'>('select');
+  const [isPaidUser, setIsPaidUser] = useState<boolean | null>(null);
+  const [checkingAccess, setCheckingAccess] = useState<boolean>(true);
 
   const {
     selectedExamType, selectedSubject, selectedChapter,
@@ -45,9 +58,37 @@ export function AdaptiveRevision() {
     fetchChapters(selectedExamType);
     fetchMastery();
     resetTest();
+
+    // Check paid access status
+    const checkAccess = async () => {
+      setCheckingAccess(true);
+      const token = resolveToken();
+      if (!token) {
+        setIsPaidUser(false);
+        setCheckingAccess(false);
+        return;
+      }
+      try {
+        const res = await fetch(`${API_URL}/api/adaptive/check-access`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        setIsPaidUser(data.isPaid === true);
+      } catch {
+        // Fallback: assume paid if check fails
+        setIsPaidUser(true);
+      } finally {
+        setCheckingAccess(false);
+      }
+    };
+    checkAccess();
   }, [selectedExamType]);
 
   const handleStart = async () => {
+    if (isPaidUser === false) {
+      window.open('https://vigyanprep.com/tests', '_blank');
+      return;
+    }
     const success = await generateTest();
     if (success) {
       navigate('/adaptive-test');
@@ -108,6 +149,40 @@ export function AdaptiveRevision() {
           <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3 text-red-400">
             <AlertTriangle className="w-5 h-5 shrink-0" />
             <p className="text-sm">{error}</p>
+          </div>
+        )}
+
+        {/* 🔒 PAID STUDENT UNLOCK GATE BANNER */}
+        {!checkingAccess && isPaidUser === false && (
+          <div className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-600/15 to-amber-500/5 border-2 border-amber-500/30 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-amber-950/20">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0 border border-amber-500/30">
+                <Lock className="w-6 h-6 text-amber-400" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-bold text-amber-200 flex items-center gap-2">
+                  <span>Exclusive Feature for Enrolled Test Series Students</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-extrabold uppercase">PRO</span>
+                </h3>
+                <p className="text-xs text-[var(--ivory)]/70 max-w-xl leading-relaxed">
+                  Smart Daily AI Chapter Revision analyzes your concept errors in real-time and generates targeted practice sets. Buy any test pass or full test series to unlock unlimited AI revisions.
+                </p>
+                <div className="flex flex-wrap gap-3 pt-1 text-[11px] text-amber-300/80 font-medium">
+                  <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Unlimited AI Practice</span>
+                  <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Sub-Topic Weakness Tracking</span>
+                  <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Instant KaTeX Derivations</span>
+                </div>
+              </div>
+            </div>
+            <a
+              href="https://vigyanprep.com/tests"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-neutral-950 font-extrabold text-sm flex items-center gap-2 shrink-0 transition-all shadow-lg shadow-amber-500/25 cursor-pointer"
+            >
+              <span>Unlock with Test Pass</span>
+              <ExternalLink className="w-4 h-4" />
+            </a>
           </div>
         )}
 
@@ -335,12 +410,18 @@ export function AdaptiveRevision() {
             <button
               onClick={handleStart}
               disabled={generating}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-[var(--gold)] to-[var(--saffron)] text-[var(--bg-deep)] font-bold text-lg flex items-center justify-center gap-3 hover:shadow-lg hover:shadow-[var(--gold)]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-[var(--gold)] to-[var(--saffron)] text-[var(--bg-deep)] font-bold text-lg flex items-center justify-center gap-3 hover:shadow-lg hover:shadow-[var(--gold)]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {generating ? (
                 <>
                   <div className="w-5 h-5 border-2 border-[var(--bg-deep)]/30 border-t-[var(--bg-deep)] rounded-full animate-spin" />
                   Generating Questions with AI...
+                </>
+              ) : isPaidUser === false ? (
+                <>
+                  <Lock className="w-5 h-5" />
+                  Unlock Full Access with Test Pass
+                  <ExternalLink className="w-4 h-4" />
                 </>
               ) : (
                 <>
