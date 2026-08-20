@@ -17,17 +17,12 @@ import {
   StudentDeskSketch
 } from '../components/ScienceSketches';
 
-export const SCIENTIST_AVATARS = [
-  { id: 'einstein', name: 'Albert Einstein', field: 'Theoretical Physics', emoji: '⚛️', bio: 'Theory of Relativity & Photoelectric Effect' },
-  { id: 'curie', name: 'Marie Curie', field: 'Nuclear Chemistry', emoji: '🧪', bio: 'Pioneer of Radioactivity & 2x Nobel Laureate' },
-  { id: 'ramanujan', name: 'Srinivasa Ramanujan', field: 'Pure Mathematics', emoji: '📐', bio: 'Infinite Series & Modular Forms Genius' },
-  { id: 'feynman', name: 'Richard Feynman', field: 'Quantum Physics', emoji: '🌌', bio: 'Quantum Electrodynamics & Path Integrals' },
-  { id: 'raman', name: 'C. V. Raman', field: 'Optics & Light', emoji: '🧮', bio: 'Discovery of the Raman Scattering Effect' },
-  { id: 'franklin', name: 'Rosalind Franklin', field: 'Biophysics & DNA', emoji: '🧬', bio: 'X-ray Crystallography & DNA Structure' },
-  { id: 'kalam', name: 'A. P. J. Abdul Kalam', field: 'Aerospace Science', emoji: '🚀', bio: 'Missile Technology & India Space Vision' },
-  { id: 'galileo', name: 'Galileo Galilei', field: 'Astronomy', emoji: '🔭', bio: 'Father of Observational Science' },
-  { id: 'newton', name: 'Isaac Newton', field: 'Classical Mechanics', emoji: '🍎', bio: 'Gravitation & Calculus Pioneer' }
-];
+import {
+  ScientistAvatar,
+  SCIENTIST_PERSONAS
+} from '../components/ScientistPortraitAvatars';
+
+export const SCIENTIST_AVATARS = SCIENTIST_PERSONAS;
 
 interface TestPaper {
   id: string;
@@ -151,7 +146,7 @@ export function Dashboard() {
     localStorage.setItem('student_avatar_id', id);
     const scientist = SCIENTIST_AVATARS.find(a => a.id === id);
     if (scientist) {
-      setToastMessage(`🎭 Persona set to ${scientist.name} (${scientist.emoji})`);
+      setToastMessage(`✨ Persona set to ${scientist.name}`);
       setTimeout(() => setToastMessage(null), 3000);
     }
   };
@@ -942,16 +937,16 @@ ${studentName}`
               <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-amber-600 animate-ping" />
             </button>
 
-            {/* Student Scientist Avatar Button (No redundant plain text repetition) */}
+            {/* Student Scientist Avatar Button (Editorial Sketch Portrait) */}
             <div className="flex items-center gap-2 pl-2">
               <button
                 type="button"
                 onClick={() => setShowSettingsModal(true)}
-                className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1c1815] to-amber-950 text-amber-300 font-bold flex items-center justify-center text-lg shadow-md border-2 border-amber-500/40 hover:scale-105 hover:border-amber-400 transition cursor-pointer relative group"
-                title={`${studentName} • ${currentScientist.name} (${currentScientist.emoji}) • Click for Profile & Settings`}
+                className="w-10 h-10 rounded-2xl overflow-hidden hover:scale-105 transition cursor-pointer relative group border-2 border-amber-900/30 shadow-md bg-amber-100"
+                title={`${studentName} • ${currentScientist.name} (${currentScientist.field}) • Click for Profile & Settings`}
               >
-                <span>{currentScientist.emoji}</span>
-                <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full shadow-xs" />
+                <ScientistAvatar id={currentScientist.id} size={36} className="w-full h-full" />
+                <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full shadow-xs" />
               </button>
             </div>
           </div>
@@ -1009,8 +1004,8 @@ ${studentName}`
                   <GraduationCap size={15} className="text-amber-900" />
                   <span>Candidate ID: <strong className="font-mono text-amber-950">{generateRollNumber(studentEmail, studentName)}</strong></span>
                 </div>
-                <div className="px-3 py-1.5 rounded-xl bg-amber-950/10 border border-amber-950/20 text-amber-950 text-[10px] font-bold flex items-center gap-1.5 shadow-xs">
-                  <span>{currentScientist.emoji}</span>
+                <div className="px-3.5 py-1.5 rounded-xl bg-amber-950/10 border border-amber-950/20 text-amber-950 text-[10px] font-bold flex items-center gap-2 shadow-xs">
+                  <ScientistAvatar id={currentScientist.id} size={18} className="rounded-md" />
                   <span>Persona: {currentScientist.name}</span>
                 </div>
               </div>
@@ -1962,13 +1957,14 @@ ${studentName}`
             </button>
 
             {/* Header */}
-            <div className="flex items-center gap-3 border-b border-amber-950/15 pb-4">
-              <div className="w-12 h-12 rounded-2xl bg-amber-950 text-amber-300 flex items-center justify-center text-2xl shadow-md border border-amber-500/30">
-                {currentScientist.emoji}
-              </div>
+            <div className="flex items-center gap-3.5 border-b border-amber-950/15 pb-4">
+              <ScientistAvatar id={currentScientist.id} size={54} className="rounded-2xl shadow-md border-2 border-amber-950/30" />
               <div>
                 <h3 className="font-serif text-xl font-bold text-[#1c1815]">Student Profile &amp; Settings</h3>
-                <p className="text-xs text-neutral-600 font-semibold">Active Persona: <strong className="text-amber-900">{currentScientist.name}</strong> ({currentScientist.field})</p>
+                <p className="text-xs text-neutral-600 font-semibold mt-0.5">
+                  Active Persona: <strong className="text-amber-950 font-serif text-sm">{currentScientist.name}</strong> • <span className="text-amber-800 font-medium">{currentScientist.field}</span>
+                </p>
+                <p className="text-[10px] text-neutral-500 font-medium italic">{currentScientist.bio}</p>
               </div>
             </div>
 
@@ -1978,9 +1974,9 @@ ${studentName}`
                 <label className="text-xs font-extrabold uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
                   <Sparkles size={14} className="text-amber-800" /> Choose Your Scientist Persona
                 </label>
-                <span className="text-[10px] text-neutral-500 font-bold">9 Science Icons</span>
+                <span className="text-[10px] text-neutral-500 font-bold">{SCIENTIST_AVATARS.length} Editorial Sketches</span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-56 overflow-y-auto pr-1">
                 {SCIENTIST_AVATARS.map(avatar => {
                   const isSelected = selectedAvatarId === avatar.id;
                   return (
@@ -1988,16 +1984,17 @@ ${studentName}`
                       key={avatar.id}
                       type="button"
                       onClick={() => handleSelectAvatar(avatar.id)}
-                      className={`p-2 rounded-2xl border-2 text-left transition flex items-center gap-2 cursor-pointer ${
+                      className={`p-2.5 rounded-2xl border-2 text-left transition flex items-center gap-2.5 cursor-pointer ${
                         isSelected
                           ? 'border-amber-950 bg-amber-100/90 shadow-sm ring-2 ring-amber-950/20'
                           : 'border-amber-950/15 bg-white/70 hover:bg-white hover:border-amber-950/40'
                       }`}
                     >
-                      <span className="text-xl shrink-0">{avatar.emoji}</span>
+                      <ScientistAvatar id={avatar.id} size={38} className="rounded-xl shrink-0 shadow-xs" />
                       <div className="min-w-0">
-                        <p className="text-[11px] font-bold text-[#1c1815] truncate">{avatar.name.split(' ').slice(-1)[0]}</p>
+                        <p className="text-[11px] font-bold text-[#1c1815] truncate font-serif">{avatar.name.split(' ').slice(-1)[0]}</p>
                         <p className="text-[9px] text-neutral-500 truncate">{avatar.field}</p>
+                        <p className="text-[8px] font-mono text-amber-800/80 truncate">{avatar.era}</p>
                       </div>
                     </button>
                   );
