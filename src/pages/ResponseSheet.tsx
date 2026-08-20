@@ -6,7 +6,8 @@ import { MathText } from "../components/MathText";
 import {
   CheckCircle2, XCircle, Download, Home, RotateCcw,
   Trophy, BarChart3, Minus, AlertTriangle, Loader2,
-  ChevronDown, ChevronUp, Flag, X, Send, CheckCircle, BookOpen
+  ChevronDown, ChevronUp, Flag, X, Send, CheckCircle, BookOpen,
+  Lock, ShieldCheck
 } from "lucide-react";
 
 function formatImageUrl(url: string): string {
@@ -78,6 +79,12 @@ export const ResponseSheet: React.FC = () => {
   const [fetchedQuestions, setFetchedQuestions] = useState<any[]>([]);
   const [testData, setTestData] = useState<any>(null);
 
+  const [accessDenied, setAccessDenied] = useState<{
+    denied: boolean;
+    reason: 'unauthenticated' | 'forbidden' | null;
+    message?: string;
+  }>({ denied: false, reason: null });
+
   useEffect(() => {
     const authToken = token || getCookie('student_token') || localStorage.getItem('student_token') || getCookie('auth_token') || localStorage.getItem('auth_token') || localStorage.getItem('token') || '';
     const apiBase = import.meta.env.VITE_API_URL || "https://api.vigyanprep.com";
@@ -85,17 +92,38 @@ export const ResponseSheet: React.FC = () => {
     const fetchResult = async () => {
       setIsLoading(true);
       try {
+        // 🔒 Strict Auth Guard: Unauthenticated users cannot view candidate response sheets
+        if (!authToken && (activeAttemptId || !isSolutionsOnly)) {
+          setAccessDenied({
+            denied: true,
+            reason: 'unauthenticated',
+            message: 'You must be logged in to view your candidate response sheet and examination scores.'
+          });
+          setIsLoading(false);
+          return;
+        }
+
         // 1. If attempt exists, load their personal attempt result
         if (activeAttemptId && !isSolutionsOnly && authToken) {
           try {
             const res = await fetch(`${apiBase}/api/exam/lifecycle/result/${activeAttemptId}`, {
               headers: { "Authorization": `Bearer ${authToken}` }
             });
+            if (res.status === 401 || res.status === 403) {
+              setAccessDenied({
+                denied: true,
+                reason: 'forbidden',
+                message: 'Access Denied (403): You do not have permission to view this candidate response sheet. Candidate response sheets are private to the registered student.'
+              });
+              setIsLoading(false);
+              return;
+            }
             if (res.ok) {
               const data = await res.json();
               if (data.success && data.questions && data.questions.length > 0) {
                 setServerResult(data as AttemptResult);
                 if (data.test) setTestData(data.test);
+                setIsLoading(false);
                 return;
               }
             }
@@ -118,11 +146,21 @@ export const ResponseSheet: React.FC = () => {
                 const res = await fetch(`${apiBase}/api/exam/lifecycle/result/${match.id}`, {
                   headers: { "Authorization": `Bearer ${authToken}` }
                 });
+                if (res.status === 401 || res.status === 403) {
+                  setAccessDenied({
+                    denied: true,
+                    reason: 'forbidden',
+                    message: 'Access Denied (403): You do not have permission to view this candidate response sheet.'
+                  });
+                  setIsLoading(false);
+                  return;
+                }
                 if (res.ok) {
                   const data = await res.json();
                   if (data.success && data.questions && data.questions.length > 0) {
                     setServerResult(data as AttemptResult);
                     if (data.test) setTestData(data.test);
+                    setIsLoading(false);
                     return;
                   }
                 }
@@ -133,8 +171,8 @@ export const ResponseSheet: React.FC = () => {
           }
         }
 
-        // 2.5 Try fetching paper solutions if released
-        if (activeTestId) {
+        // 3. Try fetching paper solutions if released
+        if (activeTestId && isSolutionsOnly) {
           try {
             const solRes = await fetch(`${apiBase}/api/exam/lifecycle/solutions/${activeTestId}`, {
               headers: authToken ? { "Authorization": `Bearer ${authToken}` } : {}
@@ -146,24 +184,28 @@ export const ResponseSheet: React.FC = () => {
                 if (solData.testTitle) {
                   setTestData((prev: any) => ({ ...prev, title: solData.testTitle, response_released_at: new Date().toISOString() }));
                 }
+                setIsLoading(false);
+                return;
               }
             }
           } catch (e) {}
         }
 
-        // 3. Fallback: Fetch public questions / solutions and test metadata
-        if (activeTestId) {
-          const pubRes = await fetch(`${apiBase}/api/public/tests/${activeTestId}`);
-          if (pubRes.ok) {
-            const pubData = await pubRes.json();
-            if (pubData.test) {
-              setTestData((prev: any) => ({ ...pubData.test, ...(prev || {}) }));
-            }
-            if (pubData.questions && Array.isArray(pubData.questions) && pubData.questions.length > 0) {
-              setFetchedQuestions(prev => prev.length > 0 ? prev : pubData.questions);
-            }
+        // If nothing was found from the server and local state doesn't have an active session, deny access
+        if (!isSolutionsOnly && (!serverResult || !serverResult.questions || serverResult.questions.length === 0)) {
+          if (localQuestions && localQuestions.length > 0 && localAnswers && Object.keys(localAnswers).length > 0) {
+            setIsLoading(false);
+            return;
           }
+          setAccessDenied({
+            denied: true,
+            reason: 'forbidden',
+            message: 'No submitted examination attempt found for your account on this test paper.'
+          });
+          setIsLoading(false);
+          return;
         }
+
       } catch (err) {
         console.warn("Could not fetch server result or solutions:", err);
       } finally {
@@ -320,6 +362,68 @@ export const ResponseSheet: React.FC = () => {
   };
 
   const toggleSolution = (id: string) => setExpandedSolutions(prev => ({ ...prev, [id]: !prev[id] }));
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center space-y-4">
+        <Loader2 className="w-10 h-10 text-amber-400 animate-spin" />
+        <p className="text-sm font-mono text-slate-300">Verifying candidate credentials &amp; loading response sheet...</p>
+      </div>
+    );
+  }
+
+  if (accessDenied.denied) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-4 font-sans">
+        <div className="max-w-md w-full p-8 rounded-3xl bg-slate-900 border border-slate-800 text-center space-y-6 shadow-2xl">
+          <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto shadow-inner">
+            <Lock size={32} />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold text-white">
+              {accessDenied.reason === 'unauthenticated' ? 'Authentication Required' : 'Access Restricted'}
+            </h2>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              {accessDenied.message || 'Candidate response sheets are strictly confidential and private to the registered student.'}
+            </p>
+          </div>
+
+          <div className="space-y-2.5 pt-2">
+            {accessDenied.reason === 'unauthenticated' ? (
+              <button
+                onClick={() => {
+                  window.location.href = `https://auth.vigyanprep.com/?redirect=${encodeURIComponent(window.location.href)}`;
+                }}
+                className="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs uppercase tracking-wider transition shadow-lg cursor-pointer"
+              >
+                Log In to Access Response Sheet
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs uppercase tracking-wider transition shadow-lg cursor-pointer"
+              >
+                Go to My Dashboard
+              </button>
+            )}
+
+            <button
+              onClick={() => window.location.href = 'https://vigyanprep.com'}
+              className="w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition cursor-pointer"
+            >
+              Return to Homepage
+            </button>
+          </div>
+
+          <div className="pt-4 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-center gap-1.5">
+            <ShieldCheck size={13} className="text-emerald-400" />
+            <span>VigyanPrep Academic Integrity Protocol</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f4f6f9] text-gray-800 font-sans">
