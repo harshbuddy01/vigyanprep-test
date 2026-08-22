@@ -185,7 +185,7 @@ export const MathText: React.FC<Props> = ({ text, className = '' }) => {
         <img
           src={formattedUrl}
           alt="Option Diagram"
-          className="max-h-48 mx-auto object-contain rounded-xl border border-gray-200 shadow-sm bg-white p-1"
+          className="max-h-48 mx-auto object-contain rounded-xl border border-gray-200 shadow-sm bg-white p-2.5 rounded-xl border border-gray-200 shadow-sm"
           onError={(e) => {
             (e.target as HTMLElement).style.display = 'none';
           }}
@@ -244,7 +244,7 @@ export const MathText: React.FC<Props> = ({ text, className = '' }) => {
               <img
                 src={formattedUrl}
                 alt={alt}
-                className="max-h-80 mx-auto object-contain rounded-xl border-2 border-amber-950/20 shadow-md bg-white p-1.5"
+                className="max-h-80 mx-auto object-contain rounded-xl border-2 border-amber-950/20 shadow-md bg-white p-2.5 rounded-xl border border-gray-200 shadow-sm.5"
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';
                 }}
