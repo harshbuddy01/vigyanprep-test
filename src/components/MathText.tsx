@@ -7,8 +7,8 @@ interface Props {
   className?: string;
 }
 
-function formatImageUrl(url: string): string {
-  if (!url) return '';
+function formatImageUrl(url?: string): string {
+  if (!url || typeof url !== 'string') return '';
   const trimmed = url.trim();
   if (trimmed.startsWith('/uploads/')) {
     const apiBase = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
@@ -16,7 +16,7 @@ function formatImageUrl(url: string): string {
   }
   const driveMatch = trimmed.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
   if (driveMatch && driveMatch[1]) {
-    return 'https://lh3.googleusercontent.com/d/' + driveMatch[1];
+    return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
   }
   return trimmed;
 }
