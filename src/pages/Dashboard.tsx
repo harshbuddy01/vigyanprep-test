@@ -193,38 +193,26 @@ ${studentName}`
       token = 'mock_local_preview_token';
       name = name === 'Student' ? 'Harsh Anand' : name;
       email = email || 'anandharsh437@gmail.com';
-    } else if (!token) {
+    } else if (!token && !email) {
       console.warn('No auth token found. Redirecting to login.');
       window.location.href = 'https://auth.vigyanprep.com';
       return;
     }
 
-    // Validate JWT expiry — force re-login if expired (skip for local mock)
+    // Extract student identity gracefully
     if (token && token !== 'mock_local_preview_token') {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        if (payload.exp && payload.exp * 1000 < Date.now()) {
-          console.warn('⚠️ Student token expired. Clearing session.');
-          localStorage.removeItem('student_token');
-          localStorage.removeItem('student_name');
-          localStorage.removeItem('student_email');
-          deleteCookie('student_token');
-          window.location.href = 'https://auth.vigyanprep.com';
-          return;
-        }
+        if (payload.email && !email) email = payload.email;
+        if ((payload.name || payload.full_name) && name === 'Student') name = payload.name || payload.full_name;
       } catch {
-        if (!isLocalhost) {
-          localStorage.removeItem('student_token');
-          deleteCookie('student_token');
-          window.location.href = 'https://auth.vigyanprep.com';
-          return;
-        }
+        // Token is opaque or custom, maintain session
       }
     }
 
-    localStorage.setItem('student_token', token);
-    localStorage.setItem('student_name', name);
-    localStorage.setItem('student_email', email);
+    if (token) localStorage.setItem('student_token', token);
+    if (name) localStorage.setItem('student_name', name);
+    if (email) localStorage.setItem('student_email', email);
 
     setStudentName(name);
     setStudentEmail(email);
@@ -401,17 +389,18 @@ ${studentName}`
       }
     }
 
+    const activeToken = token || '';
     loadDashboardTests();
-    loadSubscriptions(token);
-    loadHallTickets(token);
-    loadAttempts(token);
-    loadAnalytics(token);
+    loadSubscriptions(activeToken);
+    loadHallTickets(activeToken);
+    loadAttempts(activeToken);
+    loadAnalytics(activeToken);
 
     // 🔄 Live Auto-Sync Every 15 Seconds
     const syncInterval = setInterval(() => {
-      loadAttempts(token);
+      loadAttempts(activeToken);
       loadDashboardTests(true);
-      loadAnalytics(token);
+      loadAnalytics(activeToken);
     }, 15000);
 
     return () => clearInterval(syncInterval);
