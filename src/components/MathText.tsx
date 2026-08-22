@@ -99,6 +99,69 @@ function renderTableBlock(tableText: string, keyPrefix: string | number) {
   );
 }
 
+// Render formatted line/text chunk with inline math & bold text
+function renderInlineContent(rawChunk: string) {
+  if (!rawChunk) return null;
+
+  const parts = rawChunk.split(/(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\]|\*\*.*?\*\*)/gs);
+
+  return parts.map((part, index) => {
+    if (!part) return null;
+    let isMath = false;
+    let isDisplay = false;
+    let mathContent = part;
+
+    if (part.startsWith('$$') && part.endsWith('$$')) {
+      isMath = true;
+      isDisplay = true;
+      mathContent = part.slice(2, -2);
+    } else if (part.startsWith('\\[') && part.endsWith('\\]')) {
+      isMath = true;
+      isDisplay = true;
+      mathContent = part.slice(2, -2);
+    } else if (part.startsWith('$') && part.endsWith('$')) {
+      isMath = true;
+      isDisplay = false;
+      mathContent = part.slice(1, -1);
+    } else if (part.startsWith('\\(') && part.endsWith('\\)')) {
+      isMath = true;
+      isDisplay = false;
+      mathContent = part.slice(2, -2);
+    } else if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+      const boldContent = part.slice(2, -2);
+      return (
+        <strong key={index} className="font-bold text-gray-900 dark:text-amber-200">
+          {renderInlineContent(boldContent)}
+        </strong>
+      );
+    }
+
+    if (isMath) {
+      try {
+        const html = katex.renderToString(mathContent.trim(), {
+          displayMode: isDisplay,
+          throwOnError: false,
+        });
+        return (
+          <span
+            key={index}
+            className={isDisplay ? 'block my-2 text-center overflow-x-auto py-1' : 'inline-block px-0.5'}
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        );
+      } catch {
+        return (
+          <span key={index} className="text-amber-600 font-mono text-xs">
+            {part}
+          </span>
+        );
+      }
+    }
+
+    return <span key={index}>{part}</span>;
+  });
+}
+
 export const MathText: React.FC<Props> = ({ text, className = '' }) => {
   if (!text) return null;
 
@@ -150,115 +213,62 @@ export const MathText: React.FC<Props> = ({ text, className = '' }) => {
     );
   }
 
-  // Split by images
-  const imageRegex = /(!\[.*?\]\(.*?\)|\[(?:img|image):.*?\]|\{\{https?:\/\/.*?\}\})/gis;
-  const blocks = sanitized.split(imageRegex);
+  // Process line by line for structured statements & clean paragraphs
+  const lines = sanitized.split(/\r?\n/);
 
   return (
-    <span className={'inline-wrap whitespace-pre-wrap leading-relaxed ' + className}>
-      {blocks.map((block, bIdx) => {
-        if (!block) return null;
+    <div className={'space-y-2 leading-relaxed ' + className}>
+      {lines.map((line: string, lIdx: number) => {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) {
+          return <div key={lIdx} className="h-1.5" />;
+        }
 
-        const mdMatch = block.match(/^!\[(.*?)\]\((.*?)\)$/i);
-        const imgTagMatch = block.match(/^\[(?:img|image):\s*(.*?)\]$/i);
-        const curlyMatch = block.match(/^\{\{(https?:\/\/.*?)\}\}/i);
-
-        const imgUrl = mdMatch ? mdMatch[2] : imgTagMatch ? imgTagMatch[1] : curlyMatch ? curlyMatch[1] : null;
-        const altText = mdMatch ? mdMatch[1] : 'Diagram';
-
-        if (imgUrl) {
-          const formattedUrl = formatImageUrl(imgUrl);
+        // Check if line is an image
+        const imageRegex = /^(!\[(.*?)\]\((.*?)\)|\[(?:img|image):\s*(.*?)\]|\{\{(https?:\/\/.*?)\}\}|https?:\/\/[^\s]+\.(?:png|jpe?g|gif|webp|svg))$/i;
+        const imgMatch = trimmedLine.match(imageRegex);
+        if (imgMatch) {
+          const rawUrl = imgMatch[3] || imgMatch[4] || imgMatch[5] || imgMatch[0];
+          const alt = imgMatch[2] || 'Diagram';
+          const formattedUrl = formatImageUrl(rawUrl);
           return (
-            <span key={bIdx} className="block my-3 text-center">
+            <div key={lIdx} className="my-3 text-center">
               <img
                 src={formattedUrl}
-                alt={altText}
+                alt={alt}
                 className="max-h-80 mx-auto object-contain rounded-xl border-2 border-amber-950/20 shadow-md bg-white p-1.5"
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';
                 }}
               />
-            </span>
+            </div>
           );
         }
 
-        // Parse math & bold
-        const parts = block.split(/(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\]|\*\*.*?\*\*)/gs);
+        // Check if line is a numbered statement
+        const statementMatch = trimmedLine.match(/^(\([0-9ivxIVX]+\)|[0-9ivxIVX]+[\.\)]|Statement\s+[0-9IVX]+:?|Assertion\s*\([A-Z]\):?|Reason\s*\([A-Z]\):?|\b[1-9]\b(?=\s+[A-Za-z]))\s*([\s\S]*)$/i);
+
+        if (statementMatch) {
+          const badge = statementMatch[1].trim();
+          const content = statementMatch[2].trim();
+          return (
+            <div key={lIdx} className="flex items-start gap-3 my-2.5 pl-2 sm:pl-3.5 group">
+              <span className="px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-500/15 text-amber-900 dark:text-amber-300 font-extrabold font-mono text-xs shrink-0 border border-amber-300 dark:border-amber-500/25 shadow-xs">
+                {badge.endsWith(':') || badge.endsWith('.') || badge.endsWith(')') ? badge : badge + '.'}
+              </span>
+              <div className="flex-1 leading-relaxed text-gray-900 dark:text-zinc-200">
+                {renderInlineContent(content)}
+              </div>
+            </div>
+          );
+        }
 
         return (
-          <React.Fragment key={bIdx}>
-            {parts.map((part, index) => {
-              if (!part) return null;
-              let isMath = false;
-              let isDisplay = false;
-              let mathContent = part;
-
-              if (part.startsWith('$$') && part.endsWith('$$')) {
-                isMath = true;
-                isDisplay = true;
-                mathContent = part.slice(2, -2);
-              } else if (part.startsWith('\\[') && part.endsWith('\\]')) {
-                isMath = true;
-                isDisplay = true;
-                mathContent = part.slice(2, -2);
-              } else if (part.startsWith('$') && part.endsWith('$')) {
-                isMath = true;
-                isDisplay = false;
-                mathContent = part.slice(1, -1);
-              } else if (part.startsWith('\\(') && part.endsWith('\\)')) {
-                isMath = true;
-                isDisplay = false;
-                mathContent = part.slice(2, -2);
-              } else if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
-                const boldContent = part.slice(2, -2);
-                return (
-                  <strong key={index} className="font-bold text-gray-900 dark:text-amber-200">
-                    <MathText text={boldContent} />
-                  </strong>
-                );
-              }
-
-              if (isMath) {
-                try {
-                  const html = katex.renderToString(mathContent.trim(), {
-                    displayMode: isDisplay,
-                    throwOnError: false,
-                  });
-                  return (
-                    <span
-                      key={index}
-                      className={isDisplay ? 'block my-2 text-center overflow-x-auto py-1' : 'inline-block px-0.5'}
-                      dangerouslySetInnerHTML={{ __html: html }}
-                    />
-                  );
-                } catch {
-                  return (
-                    <span key={index} className="text-amber-600 font-mono text-xs">
-                      {part}
-                    </span>
-                  );
-                }
-              }
-
-              if (part.includes('\n')) {
-                const lines = part.split('\n');
-                return (
-                  <React.Fragment key={index}>
-                    {lines.map((lineText, lIdx) => (
-                      <React.Fragment key={lIdx}>
-                        {lineText}
-                        {lIdx < lines.length - 1 && <br />}
-                      </React.Fragment>
-                    ))}
-                  </React.Fragment>
-                );
-              }
-
-              return <span key={index}>{part}</span>;
-            })}
-          </React.Fragment>
+          <p key={lIdx} className="leading-relaxed">
+            {renderInlineContent(trimmedLine)}
+          </p>
         );
       })}
-    </span>
+    </div>
   );
 };
