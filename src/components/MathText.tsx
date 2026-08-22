@@ -12,9 +12,46 @@ function formatImageUrl(url: string): string {
   const trimmed = url.trim();
   const driveMatch = trimmed.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
   if (driveMatch && driveMatch[1]) {
-    return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+    return 'https://lh3.googleusercontent.com/d/' + driveMatch[1];
   }
   return trimmed;
+}
+
+// Render Markdown Table (e.g. Matrix Match / List I & II) in Student CBT Portal
+function renderTableBlock(tableText: string, keyPrefix: string | number) {
+  const lines = tableText.trim().split('\n').filter(l => l.trim().startsWith('|'));
+  if (lines.length < 2) return null;
+
+  const headerCells = lines[0].split('|').slice(1, -1).map(c => c.trim());
+  const dataLines = lines.filter((l, idx) => idx > 0 && !/^\|[\s\-:\|]+\|$/.test(l.trim()));
+  const rows = dataLines.map(r => r.split('|').slice(1, -1).map(c => c.trim()));
+
+  return (
+    <div key={keyPrefix} className="my-3.5 overflow-x-auto rounded-xl border border-gray-300 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-900/80 shadow-sm">
+      <table className="w-full text-left text-xs sm:text-sm border-collapse min-w-[340px]">
+        <thead>
+          <tr className="bg-gray-200/90 dark:bg-zinc-800 border-b border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-amber-400 font-extrabold uppercase tracking-wider">
+            {headerCells.map((h, i) => (
+              <th key={i} className="py-2.5 px-4 font-bold border-r border-gray-300 dark:border-zinc-700/50 last:border-r-0">
+                <MathText text={h} />
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200 dark:divide-zinc-800">
+          {rows.map((row, rIdx) => (
+            <tr key={rIdx} className={rIdx % 2 === 0 ? 'bg-white dark:bg-zinc-900' : 'bg-gray-50/70 dark:bg-zinc-900/40'}>
+              {row.map((cell, cIdx) => (
+                <td key={cIdx} className="py-2.5 px-4 text-gray-800 dark:text-zinc-200 leading-relaxed border-r border-gray-200 dark:border-zinc-800/50 last:border-r-0 font-medium">
+                  <MathText text={cell} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 export const MathText: React.FC<Props> = ({ text, className = '' }) => {
@@ -28,7 +65,7 @@ export const MathText: React.FC<Props> = ({ text, className = '' }) => {
   )) {
     const formattedUrl = formatImageUrl(trimmedText);
     return (
-      <span className={`block my-1.5 text-center ${className}`}>
+      <span className={'block my-1.5 text-center ' + className}>
         <img
           src={formattedUrl}
           alt="Option Diagram"
@@ -46,25 +83,41 @@ export const MathText: React.FC<Props> = ({ text, className = '' }) => {
     .replace(/5Õ|5Ö|5Ô/g, "5'")
     .replace(/3Õ|3Ö|3Ô/g, "3'")
     .replace(/Õ|Ö|Ô/g, "'")
-    // Fix \frac corruption where \f becomes form-feed (\x0c) or gets stripped into "rac{"
     .replace(/[\x0c\u000c]rac\{/g, "\\frac{")
     .replace(/(^|[^a-zA-Z\\])rac\{/g, "$1\\frac{")
     .replace(/(^|[^a-zA-Z\\])qrt\{/g, "$1\\sqrt{")
     .replace(/[\x08\u0008]eta/g, "\\beta")
     .replace(/[\x0b\u000b]eta/g, "\\theta");
 
+  // Check for Markdown Table blocks
+  const tableRegex = /(\n?\|[^\r\n]+\|[\r\n]+\|[\s\-:\|]+\|[\r\n]+(?:\|[^\r\n]+\|[\r\n]?)+)/g;
+  if (tableRegex.test(sanitized)) {
+    const segments = sanitized.split(tableRegex);
+    return (
+      <span className={'inline-wrap leading-relaxed ' + className}>
+        {segments.map((seg, sIdx) => {
+          if (!seg) return null;
+          if (seg.trim().startsWith('|') && seg.includes('\n')) {
+            return renderTableBlock(seg, sIdx);
+          }
+          return <MathText key={sIdx} text={seg} className={className} />;
+        })}
+      </span>
+    );
+  }
+
   // First split by inline markdown images: ![alt](url) or [img:url] or [image:url] or {{url}}
   const imageRegex = /(!\[.*?\]\(.*?\)|\[(?:img|image):.*?\]|\{\{https?:\/\/.*?\}\})/gis;
   const blocks = sanitized.split(imageRegex);
 
   return (
-    <span className={`inline-wrap whitespace-pre-wrap leading-relaxed ${className}`}>
+    <span className={'inline-wrap whitespace-pre-wrap leading-relaxed ' + className}>
       {blocks.map((block, bIdx) => {
         if (!block) return null;
 
         const mdMatch = block.match(/^!\[(.*?)\]\((.*?)\)$/i);
         const imgTagMatch = block.match(/^\[(?:img|image):\s*(.*?)\]$/i);
-        const curlyMatch = block.match(/^\{\{(https?:\/\/.*?)\}\}$/i);
+        const curlyMatch = block.match(/^\{\{(https?:\/\/.*?)\}\}/i);
 
         const imgUrl = mdMatch ? mdMatch[2] : imgTagMatch ? imgTagMatch[1] : curlyMatch ? curlyMatch[1] : null;
         const altText = mdMatch ? mdMatch[1] : 'Diagram';
@@ -100,49 +153,39 @@ export const MathText: React.FC<Props> = ({ text, className = '' }) => {
                 isMath = true;
                 isDisplay = true;
                 mathContent = part.slice(2, -2);
-              } else if (part.startsWith('$') && part.endsWith('$')) {
-                isMath = true;
-                mathContent = part.slice(1, -1);
-              } else if (part.startsWith('\\(') && part.endsWith('\\)')) {
-                isMath = true;
-                mathContent = part.slice(2, -2);
               } else if (part.startsWith('\\[') && part.endsWith('\\]')) {
                 isMath = true;
                 isDisplay = true;
+                mathContent = part.slice(2, -2);
+              } else if (part.startsWith('$') && part.endsWith('$')) {
+                isMath = true;
+                isDisplay = false;
+                mathContent = part.slice(1, -1);
+              } else if (part.startsWith('\\(') && part.endsWith('\\)')) {
+                isMath = true;
+                isDisplay = false;
                 mathContent = part.slice(2, -2);
               }
 
               if (isMath) {
                 try {
-                  const html = katex.renderToString(mathContent, {
+                  const html = katex.renderToString(mathContent.trim(), {
                     displayMode: isDisplay,
-                    throwOnError: false
+                    throwOnError: false,
                   });
                   return (
                     <span
                       key={index}
+                      className={isDisplay ? 'block my-2 text-center overflow-x-auto py-1' : 'inline-block px-0.5'}
                       dangerouslySetInnerHTML={{ __html: html }}
-                      className={`inline-block px-0.5 max-w-full ${isDisplay ? 'block overflow-x-auto overflow-y-hidden my-2 py-1 scrollbar-thin' : 'overflow-x-auto'}`}
                     />
                   );
                 } catch {
-                  return <span key={index}>{part}</span>;
-                }
-              }
-
-              // Auto-detect math constructs even if dollar signs were omitted
-              if (/\\(frac|sqrt|vec|int|sum|alpha|beta|gamma|delta|theta|omega|pi|rho|lambda|sigma|mu|epsilon|infty|rightarrow|times|partial|mathrm|mathbf|gg|ll|left|right|pm|approx|neq|le|ge|cdot|binom|limits)/.test(part) || /\^{[^{}]*}|\_{[^{}]*}/.test(part)) {
-                try {
-                  const html = katex.renderToString(part, { displayMode: false, throwOnError: false });
                   return (
-                    <span
-                      key={index}
-                      dangerouslySetInnerHTML={{ __html: html }}
-                      className="inline-block px-0.5 max-w-full overflow-x-auto"
-                    />
+                    <span key={index} className="text-amber-600 font-mono text-xs">
+                      {part}
+                    </span>
                   );
-                } catch {
-                  return <span key={index}>{part}</span>;
                 }
               }
 
