@@ -67,7 +67,7 @@ function renderTableBlock(tableText: string, keyPrefix: string | number) {
   const dataLines = lines.filter((l, idx) => idx > 0 && !/^\|[\s\-:\|]+\|$/.test(l.trim()));
   const rows = dataLines
     .map(r => r.split('|').slice(1, -1).map(c => c.trim()))
-    .filter(row => row.some(cell => cell.replace(/^(\(\w\)|\*\*|\s)+$/g, '').trim().length > 0));
+    .filter(row => row.some(cell => cell.replace(/^(\(\w\)|[\*\s])+$/g, '').trim().length > 0));
 
   if (rows.length === 0) return null;
 
@@ -103,63 +103,67 @@ function renderTableBlock(tableText: string, keyPrefix: string | number) {
 function renderInlineContent(rawChunk: string) {
   if (!rawChunk) return null;
 
-  const parts = rawChunk.split(/(\$\$.*?\$\$|\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\]|\*\*.*?\*\*)/gs);
+  const parts = rawChunk.split(/(\$\$[^\$]+\$\$|\$[^\$\n\r]+\$|\\\(.*?\\\)|\\\[.*?\\\]|\*\*[^\*\n\r]+\*\*)/g);
 
-  return parts.map((part, index) => {
-    if (!part) return null;
-    let isMath = false;
-    let isDisplay = false;
-    let mathContent = part;
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (!part) return null;
+        let isMath = false;
+        let isDisplay = false;
+        let mathContent = part;
 
-    if (part.startsWith('$$') && part.endsWith('$$')) {
-      isMath = true;
-      isDisplay = true;
-      mathContent = part.slice(2, -2);
-    } else if (part.startsWith('\\[') && part.endsWith('\\]')) {
-      isMath = true;
-      isDisplay = true;
-      mathContent = part.slice(2, -2);
-    } else if (part.startsWith('$') && part.endsWith('$')) {
-      isMath = true;
-      isDisplay = false;
-      mathContent = part.slice(1, -1);
-    } else if (part.startsWith('\\(') && part.endsWith('\\)')) {
-      isMath = true;
-      isDisplay = false;
-      mathContent = part.slice(2, -2);
-    } else if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
-      const boldContent = part.slice(2, -2);
-      return (
-        <strong key={index} className="font-bold text-gray-900 dark:text-amber-200">
-          {renderInlineContent(boldContent)}
-        </strong>
-      );
-    }
+        if (part.startsWith('$$') && part.endsWith('$$')) {
+          isMath = true;
+          isDisplay = true;
+          mathContent = part.slice(2, -2);
+        } else if (part.startsWith('\\[') && part.endsWith('\\]')) {
+          isMath = true;
+          isDisplay = true;
+          mathContent = part.slice(2, -2);
+        } else if (part.startsWith('$') && part.endsWith('$')) {
+          isMath = true;
+          isDisplay = false;
+          mathContent = part.slice(1, -1);
+        } else if (part.startsWith('\\(') && part.endsWith('\\)')) {
+          isMath = true;
+          isDisplay = false;
+          mathContent = part.slice(2, -2);
+        } else if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+          const boldContent = part.slice(2, -2);
+          return (
+            <strong key={index} className="font-bold text-gray-900 dark:text-amber-200">
+              {renderInlineContent(boldContent)}
+            </strong>
+          );
+        }
 
-    if (isMath) {
-      try {
-        const html = katex.renderToString(mathContent.trim(), {
-          displayMode: isDisplay,
-          throwOnError: false,
-        });
-        return (
-          <span
-            key={index}
-            className={isDisplay ? 'block my-2 text-center overflow-x-auto py-1' : 'inline-block px-0.5'}
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
-        );
-      } catch {
-        return (
-          <span key={index} className="text-amber-600 font-mono text-xs">
-            {part}
-          </span>
-        );
-      }
-    }
+        if (isMath) {
+          try {
+            const html = katex.renderToString(mathContent.trim(), {
+              displayMode: isDisplay,
+              throwOnError: false,
+            });
+            return (
+              <span
+                key={index}
+                className={isDisplay ? 'block my-2 text-center overflow-x-auto py-1' : 'inline-block px-0.5'}
+                dangerouslySetInnerHTML={{ __html: html }}
+              />
+            );
+          } catch {
+            return (
+              <span key={index} className="text-amber-600 font-mono text-xs">
+                {part}
+              </span>
+            );
+          }
+        }
 
-    return <span key={index}>{part}</span>;
-  });
+        return <span key={index}>{part}</span>;
+      })}
+    </>
+  );
 }
 
 export const MathText: React.FC<Props> = ({ text, className = '' }) => {
@@ -217,7 +221,7 @@ export const MathText: React.FC<Props> = ({ text, className = '' }) => {
   const lines = sanitized.split(/\r?\n/);
 
   return (
-    <div className={'space-y-2 leading-relaxed ' + className}>
+    <div className={'space-y-2.5 leading-relaxed ' + className}>
       {lines.map((line: string, lIdx: number) => {
         const trimmedLine = line.trim();
         if (!trimmedLine) {
@@ -253,10 +257,10 @@ export const MathText: React.FC<Props> = ({ text, className = '' }) => {
           const content = statementMatch[2].trim();
           return (
             <div key={lIdx} className="flex items-start gap-3 my-2.5 pl-2 sm:pl-3.5 group">
-              <span className="px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-500/15 text-amber-900 dark:text-amber-300 font-extrabold font-mono text-xs shrink-0 border border-amber-300 dark:border-amber-500/25 shadow-xs">
+              <span className="px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-500/20 text-amber-900 dark:text-amber-300 font-extrabold font-mono text-xs shrink-0 border border-amber-300 dark:border-amber-500/30 shadow-xs">
                 {badge.endsWith(':') || badge.endsWith('.') || badge.endsWith(')') ? badge : badge + '.'}
               </span>
-              <div className="flex-1 leading-relaxed text-gray-900 dark:text-zinc-200">
+              <div className="flex-1 leading-relaxed text-gray-900 dark:text-zinc-100 font-medium">
                 {renderInlineContent(content)}
               </div>
             </div>
@@ -264,7 +268,7 @@ export const MathText: React.FC<Props> = ({ text, className = '' }) => {
         }
 
         return (
-          <p key={lIdx} className="leading-relaxed">
+          <p key={lIdx} className="leading-relaxed text-gray-900 dark:text-zinc-100">
             {renderInlineContent(trimmedLine)}
           </p>
         );
