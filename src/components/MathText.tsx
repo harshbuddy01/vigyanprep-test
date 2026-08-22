@@ -53,18 +53,18 @@ export const MathText: React.FC<Props> = ({ text, className = '' }) => {
     .replace(/[\x08\u0008]eta/g, "\\beta")
     .replace(/[\x0b\u000b]eta/g, "\\theta");
 
-  // First split by inline markdown images: ![alt](url) or [img:url] or {{url}}
-  const imageRegex = /(!\[.*?\]\(.*?\)|\[img:.*?\]|\{\{https?:\/\/.*?\}\})/gs;
+  // First split by inline markdown images: ![alt](url) or [img:url] or [image:url] or {{url}}
+  const imageRegex = /(!\[.*?\]\(.*?\)|\[(?:img|image):.*?\]|\{\{https?:\/\/.*?\}\})/gis;
   const blocks = sanitized.split(imageRegex);
 
   return (
-    <span className={`inline-wrap ${className}`}>
+    <span className={`inline-wrap whitespace-pre-wrap leading-relaxed ${className}`}>
       {blocks.map((block, bIdx) => {
         if (!block) return null;
 
-        const mdMatch = block.match(/^!\[(.*?)\]\((.*?)\)$/);
-        const imgTagMatch = block.match(/^\[img:(.*?)\]$/);
-        const curlyMatch = block.match(/^\{\{(https?:\/\/.*?)\}\}$/);
+        const mdMatch = block.match(/^!\[(.*?)\]\((.*?)\)$/i);
+        const imgTagMatch = block.match(/^\[(?:img|image):\s*(.*?)\]$/i);
+        const curlyMatch = block.match(/^\{\{(https?:\/\/.*?)\}\}$/i);
 
         const imgUrl = mdMatch ? mdMatch[2] : imgTagMatch ? imgTagMatch[1] : curlyMatch ? curlyMatch[1] : null;
         const altText = mdMatch ? mdMatch[1] : 'Diagram';
@@ -144,6 +144,21 @@ export const MathText: React.FC<Props> = ({ text, className = '' }) => {
                 } catch {
                   return <span key={index}>{part}</span>;
                 }
+              }
+
+              // Handle newlines explicitly so statements and paragraphs break cleanly
+              if (part.includes('\n')) {
+                const lines = part.split('\n');
+                return (
+                  <React.Fragment key={index}>
+                    {lines.map((lineText, lIdx) => (
+                      <React.Fragment key={lIdx}>
+                        {lineText}
+                        {lIdx < lines.length - 1 && <br />}
+                      </React.Fragment>
+                    ))}
+                  </React.Fragment>
+                );
               }
 
               return <span key={index}>{part}</span>;
