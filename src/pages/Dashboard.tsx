@@ -162,7 +162,7 @@ export function Dashboard() {
     localStorage.setItem('student_avatar_id', id);
     const scientist = SCIENTIST_AVATARS.find(a => a.id === id);
     if (scientist) {
-      setToastMessage(`✨ Persona set to ${scientist.name}`);
+      setToastMessage(`Persona set to ${scientist.name}`);
       setTimeout(() => setToastMessage(null), 3000);
     }
   };
@@ -446,8 +446,8 @@ ${studentName}`
         isReleased: true,
         isAttempted,
         label: isAttempted
-          ? '🏆 Live Attempted • Scorecard & AIR Rank Declared'
-          : '⏳ Missed Live Window • Practice & Solutions Available',
+          ? 'Live Attempted • Scorecard & AIR Rank Declared'
+          : 'Missed Live Window • Practice & Solutions Available',
         color: isAttempted ? 'emerald' : 'amber'
       };
     }
@@ -473,7 +473,7 @@ ${studentName}`
         isPractice: false,
         isReleased: false,
         isAttempted,
-        label: `🔒 Scheduled for ${startIST} IST`,
+        label: `Scheduled for ${startIST} IST`,
         color: 'amber'
       };
     }
@@ -485,7 +485,7 @@ ${studentName}`
         isPractice: false,
         isReleased: false,
         isAttempted,
-        label: '🟢 LIVE NOW — Proctored Window Open',
+        label: 'LIVE NOW — Proctored Window Open',
         color: 'emerald'
       };
     }
@@ -498,8 +498,8 @@ ${studentName}`
         isReleased: false,
         isAttempted,
         label: isAttempted
-          ? '📋 Exam Submitted — Awaiting Official Results'
-          : '📋 Test Window Closed — Results Pending',
+          ? 'Exam Submitted — Awaiting Official Results'
+          : 'Test Window Closed — Results Pending',
         color: 'gray'
       };
     }
@@ -531,12 +531,12 @@ ${studentName}`
 
     // If student already attempted this live exam and results are not released yet
     if (status.isAttempted && !status.isReleased && paper.content_type === 'test_series') {
-      triggerToast('📋 You have already submitted this exam. Official scorecard & AIR rankings will be released after 09:00 PM.');
+      triggerToast('You have already submitted this exam. Official scorecard & AIR rankings will be released after 09:00 PM.');
       return;
     }
 
     if (!status.isLive && !status.isPractice) {
-      triggerToast(`⚠️ ${status.label}`);
+      triggerToast(status.label);
       return;
     }
 
@@ -614,7 +614,7 @@ ${studentName}`
       const state = examState?.state || examState;
       if (state?.attemptId && state?.timeRemaining > 0 && !state?.isSubmitted) {
         const confirmed = window.confirm(
-          '⚠️ You have an active exam in progress!\n\n' +
+          'Active exam in progress!\n\n' +
           'Logging out will stop your answer auto-save to the server.\n' +
           'Your answers are backed up locally, but you should submit your exam first.\n\n' +
           'Are you sure you want to log out?'
@@ -1057,7 +1057,7 @@ ${studentName}`
 
             {/* Notification Bell */}
             <button
-              onClick={() => triggerToast('🔔 No new test notifications. All papers up to date.')}
+              onClick={() => triggerToast('No new test notifications. All papers up to date.')}
               className="w-10 h-10 rounded-full bg-white/40 border-2 border-amber-950/30 flex items-center justify-center text-[#1c1815] hover:text-amber-950 transition shadow-sm relative"
               title="Notifications"
             >
@@ -1091,7 +1091,7 @@ ${studentName}`
                   <AlertCircle size={24} className="animate-pulse" />
                 </div>
                 <div>
-                  <h4 className="font-serif font-bold text-base text-[#1c1815]">⚠️ Scheduled Platform Maintenance Active</h4>
+                  <h4 className="font-serif font-bold text-base text-[#1c1815]">Scheduled Platform Maintenance Active</h4>
                   <p className="text-xs font-semibold text-neutral-800 leading-relaxed">
                     VigyanPrep system updates are currently in progress. Exam servers and live results are operating in protected read-only mode.
                   </p>
@@ -1362,16 +1362,19 @@ ${studentName}`
                         <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-amber-950/15">
                           <div className="flex items-center gap-2 flex-wrap">
                             {st.isLive ? (
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-500 text-white shadow-sm animate-pulse">
-                                🔴 LIVE CBT EXAM IN PROGRESS
+                              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs">
+                                <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                                LIVE CBT EXAM IN PROGRESS
                               </span>
                             ) : isUpcoming ? (
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-500 text-black shadow-sm">
-                                ⏳ NEXT SCHEDULED EXAM
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-500 text-black shadow-xs">
+                                <Clock size={13} />
+                                NEXT SCHEDULED EXAM
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-zinc-800 text-amber-300 shadow-sm">
-                                🏆 RECENTLY CONCLUDED EXAM
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-zinc-800 text-amber-300 shadow-xs">
+                                <Award size={13} />
+                                RECENTLY CONCLUDED EXAM
                               </span>
                             )}
                             <span className="px-2.5 py-0.5 rounded-md bg-amber-950/15 border border-amber-950/30 text-[10px] font-extrabold text-amber-950">
@@ -1464,10 +1467,12 @@ ${studentName}`
                               </p>
                             )}
 
-                            <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-zinc-700 pt-1">
-                              <span>📝 {spotlight.questions_count || 60} Questions</span>
-                              <span>⏱️ {spotlight.duration_minutes || 180} Minutes</span>
-                              <span>🎯 {spotlight.total_marks || 240} Marks</span>
+                            <div className="flex flex-wrap items-center gap-3 text-xs font-mono font-bold text-zinc-700 pt-1">
+                              <span className="flex items-center gap-1.5"><FileText size={13} className="text-amber-800" /> {spotlight.questions_count || 60} Questions</span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1.5"><Clock size={13} className="text-amber-800" /> {spotlight.duration_minutes || 180} Minutes</span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1.5"><Award size={13} className="text-amber-800" /> {spotlight.total_marks || 240} Marks</span>
                             </div>
                           </div>
 
@@ -1651,17 +1656,16 @@ ${studentName}`
                       </button>
                     </div>
                   ) : viewMode === 'table' ? (
-                    /* 📋 LINEAR ACADEMIC LEDGER (STRUCTURED MODERN TABLE VIEW) */
+                    /* LINEAR ACADEMIC LEDGER (100% WIDTH RESPONSIVE TABLE VIEW - ZERO HORIZONTAL SCROLL) */
                     <div className="rounded-3xl bg-white/40 backdrop-blur-2xl border-2 border-amber-950/25 overflow-hidden shadow-xl">
-                      <div className="overflow-x-auto">
+                      <div className="w-full">
                         <table className="w-full text-left border-collapse">
                           <thead>
                             <tr className="border-b-2 border-amber-950/20 bg-gradient-to-r from-amber-900/15 via-amber-900/10 to-amber-900/5 text-[#1c1815] font-black uppercase text-[11px] tracking-wider">
-                              <th className="py-4 px-5 w-[28%] min-w-[240px]">Paper &amp; Format</th>
-                              <th className="py-4 px-4 w-[26%] min-w-[200px]">Chapters &amp; Blueprint</th>
-                              <th className="py-4 px-4 w-[18%] min-w-[160px]">Schedule Window</th>
-                              <th className="py-4 px-4 text-center w-[14%] min-w-[130px]">Status &amp; Grade</th>
-                              <th className="py-4 px-5 text-right w-[14%] min-w-[160px]">Exam Actions</th>
+                              <th className="py-3.5 px-5 w-[42%]">Paper &amp; Syllabus</th>
+                              <th className="py-3.5 px-4 w-[24%]">Schedule Window</th>
+                              <th className="py-3.5 px-4 w-[17%] text-center">Status &amp; Timer</th>
+                              <th className="py-3.5 px-5 w-[17%] text-right">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-amber-950/15">
@@ -1683,50 +1687,56 @@ ${studentName}`
                                       : 'hover:bg-white/50 border-l-4 border-l-transparent'
                                   }`}
                                 >
-                                  {/* 1. Paper Title & Tag */}
-                                  <td className="py-4 px-5">
-                                    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                                      <span className="px-2.5 py-0.5 rounded-md bg-amber-950/15 border border-amber-950/30 text-[10px] font-black text-amber-950 uppercase shrink-0">
-                                        {(paper.exam_type || paper.examType || 'IAT').toUpperCase()}
-                                      </span>
-                                      <h4 className="font-serif text-base font-bold text-[#1c1815] group-hover:text-amber-950 transition-colors whitespace-nowrap">
-                                        {paper.title}
-                                      </h4>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-[11px] text-zinc-600 font-mono font-medium mt-1.5 whitespace-nowrap">
-                                      <span>📝 {paper.questions_count || 60} Qs</span>
-                                      <span className="text-zinc-300">•</span>
-                                      <span>⏱️ {paper.duration_minutes || 180}m</span>
-                                      <span className="text-zinc-300">•</span>
-                                      <span>🎯 {paper.total_marks || 240} Marks</span>
-                                    </div>
-                                  </td>
-
-                                  {/* 2. Syllabus & Blueprint */}
-                                  <td className="py-4 px-4">
-                                    {paper.description ? (
-                                      <div className="flex flex-col items-start gap-1.5 max-w-xs">
-                                        <p className="line-clamp-1 text-xs text-zinc-700 font-semibold" title={paper.description}>
-                                          {paper.description}
-                                        </p>
-                                        <button
-                                          type="button"
-                                          onClick={() => setSyllabusModalPaper(paper)}
-                                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-900/10 hover:bg-amber-900/20 text-amber-950 text-[10px] font-black transition cursor-pointer border border-amber-900/20"
-                                        >
-                                          <BookOpen size={11} className="text-amber-800" />
-                                          <span>View Full Blueprint →</span>
-                                        </button>
+                                  {/* 1. Paper Title, Tags & Blueprint Link */}
+                                  <td className="py-4 px-5 align-middle">
+                                    <div className="space-y-1.5">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="px-2.5 py-0.5 rounded-md bg-amber-950/15 border border-amber-950/30 text-[10px] font-black text-amber-950 uppercase shrink-0">
+                                          {(paper.exam_type || paper.examType || 'IAT').toUpperCase()}
+                                        </span>
+                                        <h4 className="font-serif text-sm sm:text-base font-bold text-[#1c1815] group-hover:text-amber-950 transition-colors leading-snug">
+                                          {paper.title}
+                                        </h4>
                                       </div>
-                                    ) : (
-                                      <span className="text-xs text-zinc-500 italic">Full Prescribed Syllabus</span>
-                                    )}
+
+                                      <div className="flex items-center gap-2.5 text-[11px] text-zinc-600 font-mono font-medium flex-wrap">
+                                        <span className="inline-flex items-center gap-1">
+                                          <FileText size={12} className="text-amber-800 shrink-0" />
+                                          {paper.questions_count || 60} Qs
+                                        </span>
+                                        <span className="text-zinc-300">•</span>
+                                        <span className="inline-flex items-center gap-1">
+                                          <Clock size={12} className="text-amber-800 shrink-0" />
+                                          {paper.duration_minutes || 180}m
+                                        </span>
+                                        <span className="text-zinc-300">•</span>
+                                        <span className="inline-flex items-center gap-1">
+                                          <Award size={12} className="text-amber-800 shrink-0" />
+                                          {paper.total_marks || 240} Marks
+                                        </span>
+
+                                        {paper.description && (
+                                          <>
+                                            <span className="text-zinc-300">•</span>
+                                            <button
+                                              type="button"
+                                              onClick={() => setSyllabusModalPaper(paper)}
+                                              className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-900 hover:text-black hover:underline cursor-pointer transition"
+                                              title="View Chapter Breakdown & Blueprint"
+                                            >
+                                              <BookOpen size={11} className="text-amber-800" />
+                                              <span>Syllabus Blueprint</span>
+                                            </button>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
                                   </td>
 
-                                  {/* 3. Schedule Window */}
-                                  <td className="py-4 px-4 whitespace-nowrap">
+                                  {/* 2. Schedule Window */}
+                                  <td className="py-4 px-4 align-middle">
                                     {paper.window_start ? (
-                                      <div className="space-y-0.5">
+                                      <div className="space-y-1">
                                         <div className="text-xs font-bold text-zinc-800 flex items-center gap-1.5 font-mono">
                                           <Calendar size={13} className="text-amber-800 shrink-0" />
                                           <span>{new Date(paper.window_start).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
@@ -1751,12 +1761,13 @@ ${studentName}`
                                     )}
                                   </td>
 
-                                  {/* 4. Status & Grade */}
-                                  <td className="py-4 px-4 text-center whitespace-nowrap">
+                                  {/* 3. Status & Timer */}
+                                  <td className="py-4 px-4 text-center align-middle">
                                     {status.isLive ? (
                                       <div className="inline-flex flex-col items-center gap-1.5">
-                                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500 text-white shadow-sm animate-pulse">
-                                          🔴 LIVE NOW
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                                          LIVE NOW
                                         </span>
                                         {paper.window_end && (
                                           <ModernExamCountdown
@@ -1770,7 +1781,7 @@ ${studentName}`
                                     ) : status.isReleased ? (
                                       status.isAttempted ? (
                                         <div className="inline-flex flex-col items-center gap-1">
-                                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-amber-950 border border-amber-500/40 shadow-xs">
+                                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-amber-950 border border-amber-500/40 shadow-2xs">
                                             <Trophy size={11} /> Scorecard Declared
                                           </span>
                                           {matchAttempt?.score !== undefined ? (
@@ -1782,14 +1793,14 @@ ${studentName}`
                                           )}
                                         </div>
                                       ) : (
-                                        <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-neutral-200 text-neutral-700 border border-neutral-300">
+                                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-neutral-200 text-neutral-700 border border-neutral-300">
                                           Window Concluded
                                         </span>
                                       )
                                     ) : (paper.window_start && new Date(paper.window_start) > currentTime) ? (
                                       <div className="inline-flex flex-col items-center gap-1">
-                                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                                          ⏳ Scheduled
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                                          <Clock size={10} className="text-amber-800" /> Scheduled
                                         </span>
                                         <ModernExamCountdown
                                           targetDate={paper.window_start}
@@ -1799,21 +1810,21 @@ ${studentName}`
                                         />
                                       </div>
                                     ) : (
-                                      <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-neutral-200 text-neutral-700 border border-neutral-300">
+                                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-neutral-200 text-neutral-700 border border-neutral-300">
                                         Window Closed
                                       </span>
                                     )}
                                   </td>
 
-                                  {/* 5. Actions */}
-                                  <td className="py-4 px-5 text-right whitespace-nowrap">
-                                    <div className="flex items-center justify-end gap-2">
+                                  {/* 4. Actions */}
+                                  <td className="py-4 px-5 text-right align-middle">
+                                    <div className="flex flex-col items-end gap-1.5">
                                       {status.isLive ? (
                                         <button
                                           onClick={() => handleTestClick(paper)}
-                                          className="px-4 py-2 rounded-xl font-black text-xs uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-950/20 border-2 border-emerald-400 flex items-center gap-1.5 cursor-pointer transition transform active:scale-95 whitespace-nowrap"
+                                          className="px-4 py-2 rounded-xl font-black text-xs uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-950/20 border-2 border-emerald-400 inline-flex items-center gap-1.5 cursor-pointer transition transform active:scale-95"
                                         >
-                                          <PlayCircle size={15} />
+                                          <PlayCircle size={14} />
                                           <span>{myHallTicket ? 'Enter Live Exam' : 'Start CBT Exam'}</span>
                                         </button>
                                       ) : status.isReleased ? (
@@ -1821,58 +1832,51 @@ ${studentName}`
                                           <div className="flex items-center justify-end gap-1.5">
                                             <button
                                               onClick={() => handleViewResultClick(paper)}
-                                              className="px-3.5 py-1.5 rounded-xl font-black text-xs bg-amber-500 hover:bg-amber-400 text-black shadow-xs border border-amber-600/30 flex items-center gap-1.5 cursor-pointer transition whitespace-nowrap"
+                                              className="px-3 py-1.5 rounded-xl font-black text-xs bg-amber-500 hover:bg-amber-400 text-black shadow-2xs border border-amber-600/30 inline-flex items-center gap-1.5 cursor-pointer transition"
                                             >
-                                              <Award size={14} /> Scorecard
+                                              <Award size={13} /> Scorecard
                                             </button>
                                             <button
                                               onClick={() => handleTestClick(paper)}
-                                              className="px-3 py-1.5 rounded-xl font-bold text-xs bg-[#1c1815] hover:bg-black text-amber-300 border border-amber-500/30 flex items-center gap-1.5 cursor-pointer transition whitespace-nowrap"
+                                              className="px-2.5 py-1.5 rounded-xl font-bold text-xs bg-[#1c1815] hover:bg-black text-amber-300 border border-amber-500/30 inline-flex items-center gap-1 cursor-pointer transition"
                                               title="Re-attempt in Practice Mode with instant grading"
                                             >
-                                              <PlayCircle size={13} /> Re-Practice
+                                              <PlayCircle size={12} /> Practice
                                             </button>
                                           </div>
                                         ) : (
                                           <div className="flex items-center justify-end gap-1.5">
                                             <button
                                               onClick={() => handleViewResultClick(paper)}
-                                              className="px-3.5 py-1.5 rounded-xl font-black text-xs bg-amber-500 hover:bg-amber-400 text-black shadow-xs border border-amber-600/30 flex items-center gap-1.5 cursor-pointer transition whitespace-nowrap"
+                                              className="px-3 py-1.5 rounded-xl font-black text-xs bg-amber-500 hover:bg-amber-400 text-black shadow-2xs border border-amber-600/30 inline-flex items-center gap-1.5 cursor-pointer transition"
                                               title="View Official Answers & Solutions"
                                             >
-                                              <Award size={14} /> View Solutions
+                                              <Award size={13} /> Solutions
                                             </button>
                                             <button
                                               onClick={() => handleTestClick(paper)}
-                                              className="px-3 py-1.5 rounded-xl font-bold text-xs bg-[#1c1815] hover:bg-black text-amber-300 border border-amber-500/30 flex items-center gap-1.5 cursor-pointer transition whitespace-nowrap"
+                                              className="px-2.5 py-1.5 rounded-xl font-bold text-xs bg-[#1c1815] hover:bg-black text-amber-300 border border-amber-500/30 inline-flex items-center gap-1 cursor-pointer transition"
                                               title="Practice Mode with Instant Grading"
                                             >
-                                              <PlayCircle size={13} /> Practice
+                                              <PlayCircle size={12} /> Practice
                                             </button>
                                           </div>
                                         )
                                       ) : (
-                                        <div className="flex items-center justify-end gap-1.5">
+                                        <div className="flex flex-col items-end gap-1">
                                           {myHallTicket && (
-                                            <span className="px-2.5 py-1 rounded-lg bg-amber-200/80 border border-amber-400 font-mono text-[10px] font-black text-amber-950 whitespace-nowrap" title="Your Exam Pass Code">
-                                              🔑 {myHallTicket.unique_exam_id}
+                                            <span className="px-2 py-0.5 rounded-md bg-amber-200/80 border border-amber-400 font-mono text-[10px] font-black text-amber-950 inline-flex items-center gap-1" title="Your Exam Pass Code">
+                                              <Key size={10} className="text-amber-900" />
+                                              <span>Pass: {myHallTicket.unique_exam_id}</span>
                                             </span>
                                           )}
                                           <button
                                             type="button"
-                                            onClick={() => setSyllabusModalPaper(paper)}
-                                            className="px-3.5 py-1.5 rounded-xl font-bold text-xs bg-white/80 hover:bg-white text-zinc-800 border border-amber-950/25 flex items-center gap-1.5 cursor-pointer transition shadow-2xs whitespace-nowrap"
-                                            title="View Blueprint Syllabus"
-                                          >
-                                            <BookOpen size={13} className="text-amber-800" /> Syllabus
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => triggerToast(`⏳ ${paper.title} will go live today at 06:00 PM IST.`)}
-                                            className="px-3 py-1.5 rounded-xl font-bold text-xs bg-amber-100/80 hover:bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1.5 cursor-pointer transition whitespace-nowrap"
+                                            onClick={() => triggerToast(`${paper.title} will go live today at 06:00 PM IST.`)}
+                                            className="px-3 py-1.5 rounded-xl font-bold text-xs bg-amber-100/80 hover:bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1 cursor-pointer transition"
                                             title="Window opens at 06:00 PM IST"
                                           >
-                                            <Lock size={12} className="text-amber-800" /> Opens 06:00 PM
+                                            <Lock size={11} className="text-amber-800" /> Opens 06:00 PM
                                           </button>
                                         </div>
                                       )}
@@ -2061,7 +2065,7 @@ ${studentName}`
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => triggerToast(`⏳ ${paper.title} will go live today at 06:00 PM IST.`)}
+                                  onClick={() => triggerToast(`${paper.title} will go live today at 06:00 PM IST.`)}
                                   className="w-full py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 bg-amber-100 text-amber-900 border border-amber-300 cursor-pointer transition"
                                 >
                                   <Lock size={13} className="text-amber-800" />
@@ -2147,7 +2151,7 @@ ${studentName}`
                   </button>
 
                   <button
-                    onClick={() => triggerToast('📱 Vigyan.prep Mobile App launching soon on Play Store!')}
+                    onClick={() => triggerToast('Vigyan.prep Mobile App launching soon on Google Play Store!')}
                     className="w-full p-3.5 rounded-2xl bg-white/40 hover:bg-white/70 border-2 border-amber-950/25 text-left flex items-center justify-between transition group shadow-xs"
                   >
                     <div className="flex items-center gap-3">
@@ -2163,7 +2167,7 @@ ${studentName}`
                   </button>
 
                   <button
-                    onClick={() => triggerToast('💬 Student Discussion Forum coming soon!')}
+                    onClick={() => triggerToast('Student Discussion Forum coming soon!')}
                     className="w-full p-3.5 rounded-2xl bg-white/40 hover:bg-white/70 border-2 border-amber-950/25 text-left flex items-center justify-between transition group shadow-xs"
                   >
                     <div className="flex items-center gap-3">
@@ -2358,9 +2362,9 @@ ${studentName}`
                         let statusBadge = "bg-gray-100 text-gray-700 border-gray-200";
                         let statusText = "No Attempts";
                         if (sm.attempted > 0) {
-                          if (acc >= 70) { statusBadge = "bg-emerald-100 text-emerald-800 border-emerald-300"; statusText = "⚡ Strong Focus"; }
-                          else if (acc >= 40) { statusBadge = "bg-amber-100 text-amber-800 border-amber-300"; statusText = "📈 Steady Progress"; }
-                          else { statusBadge = "bg-rose-100 text-rose-800 border-rose-300"; statusText = "📘 Revision Needed"; }
+                          if (acc >= 70) { statusBadge = "bg-emerald-100 text-emerald-800 border-emerald-300"; statusText = "Strong Mastery"; }
+                          else if (acc >= 40) { statusBadge = "bg-amber-100 text-amber-800 border-amber-300"; statusText = "Steady Progress"; }
+                          else { statusBadge = "bg-rose-100 text-rose-800 border-rose-300"; statusText = "Revision Needed"; }
                         }
 
                         return (
@@ -2479,7 +2483,7 @@ ${studentName}`
                   <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 flex items-start gap-3">
                     <Sparkles className="text-amber-600 shrink-0 mt-0.5" size={18} />
                     <div className="text-xs text-amber-950 space-y-1">
-                      <p className="font-extrabold">💡 Academic Strategic Insight</p>
+                      <p className="font-extrabold">Academic Strategic Insight</p>
                       <p className="text-[11px] leading-relaxed text-amber-900">
                         {activePerfData?.summary && activePerfData.summary.accuracy < 60
                           ? "Your attempt rate is solid, but negative marking (-1 mark penalty) is impacting your net score. Practice selective question filtering to target 75%+ accuracy in your core subjects."

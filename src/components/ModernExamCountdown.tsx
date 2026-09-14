@@ -83,8 +83,18 @@ export const ModernExamCountdown: React.FC<ModernExamCountdownProps> = ({
     }
     return (
       <div className={`p-3.5 rounded-2xl bg-white/80 backdrop-blur-md border border-neutral-300 text-center text-zinc-800 ${className}`}>
-        <p className="text-xs font-bold text-zinc-700">
-          {isClosing ? '⏳ Entry Window Has Closed' : '🟢 Exam Is Now Live!'}
+        <p className="text-xs font-bold text-zinc-700 flex items-center justify-center gap-1.5">
+          {isClosing ? (
+            <>
+              <Clock size={14} className="text-zinc-500" />
+              <span>Entry Window Has Closed</span>
+            </>
+          ) : (
+            <>
+              <CheckCircle2 size={14} className="text-emerald-600" />
+              <span>Exam Is Now Live!</span>
+            </>
+          )}
         </p>
       </div>
     );
