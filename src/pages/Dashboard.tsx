@@ -1386,24 +1386,8 @@ ${studentName}`
                           </div>
 
                           <div className="flex items-center gap-3 flex-wrap">
-                            {st.isLive && spotlight.window_end ? (
-                              <ModernExamCountdown
-                                targetDate={spotlight.window_end}
-                                mode="closing"
-                                variant="badge"
-                                onExpire={() => setCurrentTime(new Date())}
-                              />
-                            ) : isUpcoming && spotlight.window_start ? (
-                              <ModernExamCountdown
-                                targetDate={spotlight.window_start}
-                                mode="opening"
-                                variant="badge"
-                                onExpire={() => setCurrentTime(new Date())}
-                              />
-                            ) : null}
-
                             {spotlight.window_start && (
-                              <div className="text-xs font-mono font-bold text-zinc-700 flex items-center gap-1.5">
+                              <div className="text-xs font-mono font-bold text-zinc-700 flex items-center gap-1.5 bg-white/70 px-3 py-1 rounded-full border border-amber-950/20 shadow-2xs">
                                 <Calendar size={13} className="text-amber-800" />
                                 <span>{new Date(spotlight.window_start).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
                                 <span>•</span>
