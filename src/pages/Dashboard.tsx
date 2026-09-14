@@ -1667,17 +1667,17 @@ ${studentName}`
                       </button>
                     </div>
                   ) : viewMode === 'table' ? (
-                    /* 📋 LINEAR ACADEMIC LEDGER (COMPACT TABLE VIEW) */
-                    <div className="rounded-3xl bg-white/30 backdrop-blur-2xl border-2 border-amber-950/30 overflow-hidden shadow-xl">
+                    /* 📋 LINEAR ACADEMIC LEDGER (STRUCTURED MODERN TABLE VIEW) */
+                    <div className="rounded-3xl bg-white/40 backdrop-blur-2xl border-2 border-amber-950/25 overflow-hidden shadow-xl">
                       <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs border-collapse">
+                        <table className="w-full text-left border-collapse">
                           <thead>
-                            <tr className="border-b-2 border-amber-950/20 bg-amber-900/10 text-[#1c1815] font-black uppercase text-[10px] tracking-wider">
-                              <th className="py-3.5 px-4">Paper &amp; Exam</th>
-                              <th className="py-3.5 px-4">Included Chapters / Syllabus</th>
-                              <th className="py-3.5 px-4">Schedule Window</th>
-                              <th className="py-3.5 px-4 text-center">Status &amp; Grade</th>
-                              <th className="py-3.5 px-4 text-right">Actions</th>
+                            <tr className="border-b-2 border-amber-950/20 bg-gradient-to-r from-amber-900/15 via-amber-900/10 to-amber-900/5 text-[#1c1815] font-black uppercase text-[11px] tracking-wider">
+                              <th className="py-4 px-5 w-[28%] min-w-[240px]">Paper &amp; Format</th>
+                              <th className="py-4 px-4 w-[26%] min-w-[200px]">Chapters &amp; Blueprint</th>
+                              <th className="py-4 px-4 w-[18%] min-w-[160px]">Schedule Window</th>
+                              <th className="py-4 px-4 text-center w-[14%] min-w-[130px]">Status &amp; Grade</th>
+                              <th className="py-4 px-5 text-right w-[14%] min-w-[160px]">Exam Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-amber-950/15">
@@ -1687,66 +1687,92 @@ ${studentName}`
                               const matchAttempt = (analyticsData?.trendData || []).find((t: any) => t.testId === paper.id);
                               
                               return (
-                                <tr key={paper.id} className="hover:bg-white/40 transition duration-150 group">
-                                  {/* Paper Title & Tag */}
-                                  <td className="py-4 px-4 font-bold">
-                                    <div className="flex items-center gap-2">
-                                      <span className="px-2 py-0.5 rounded-md bg-amber-950/15 border border-amber-950/30 text-[10px] font-black text-amber-950">
+                                <tr
+                                  key={paper.id}
+                                  className={`transition duration-200 group ${
+                                    status.isLive
+                                      ? 'bg-emerald-500/[0.05] hover:bg-emerald-500/[0.09] border-l-4 border-l-emerald-500'
+                                      : status.isReleased && status.isAttempted
+                                      ? 'hover:bg-amber-500/[0.06] border-l-4 border-l-amber-500'
+                                      : (paper.window_start && new Date(paper.window_start) > currentTime)
+                                      ? 'hover:bg-orange-500/[0.05] border-l-4 border-l-orange-400'
+                                      : 'hover:bg-white/50 border-l-4 border-l-transparent'
+                                  }`}
+                                >
+                                  {/* 1. Paper Title & Tag */}
+                                  <td className="py-4 px-5">
+                                    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                                      <span className="px-2.5 py-0.5 rounded-md bg-amber-950/15 border border-amber-950/30 text-[10px] font-black text-amber-950 uppercase shrink-0">
                                         {(paper.exam_type || paper.examType || 'IAT').toUpperCase()}
                                       </span>
-                                      <span className="font-serif text-sm font-bold text-[#1c1815]">
+                                      <h4 className="font-serif text-base font-bold text-[#1c1815] group-hover:text-amber-950 transition-colors whitespace-nowrap">
                                         {paper.title}
-                                      </span>
+                                      </h4>
                                     </div>
-                                    <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
-                                      {paper.questions_count || 60} Qs • {paper.duration_minutes || 180}m • {paper.total_marks || 240} Marks
+                                    <div className="flex items-center gap-2 text-[11px] text-zinc-600 font-mono font-medium mt-1.5 whitespace-nowrap">
+                                      <span>📝 {paper.questions_count || 60} Qs</span>
+                                      <span className="text-zinc-300">•</span>
+                                      <span>⏱️ {paper.duration_minutes || 180}m</span>
+                                      <span className="text-zinc-300">•</span>
+                                      <span>🎯 {paper.total_marks || 240} Marks</span>
                                     </div>
                                   </td>
 
-                                  {/* Syllabus & Blueprint */}
-                                  <td className="py-4 px-4 max-w-xs">
+                                  {/* 2. Syllabus & Blueprint */}
+                                  <td className="py-4 px-4">
                                     {paper.description ? (
-                                      <div className="flex flex-col items-start gap-1">
-                                        <p className="line-clamp-2 text-[11px] text-zinc-700 font-medium">
+                                      <div className="flex flex-col items-start gap-1.5 max-w-xs">
+                                        <p className="line-clamp-1 text-xs text-zinc-700 font-semibold" title={paper.description}>
                                           {paper.description}
                                         </p>
                                         <button
                                           type="button"
                                           onClick={() => setSyllabusModalPaper(paper)}
-                                          className="text-[10px] text-amber-900 font-extrabold hover:underline flex items-center gap-1 cursor-pointer"
+                                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-900/10 hover:bg-amber-900/20 text-amber-950 text-[10px] font-black transition cursor-pointer border border-amber-900/20"
                                         >
-                                          <BookOpen size={11} /> View Full Syllabus
+                                          <BookOpen size={11} className="text-amber-800" />
+                                          <span>View Full Blueprint →</span>
                                         </button>
                                       </div>
                                     ) : (
-                                      <span className="text-zinc-400 text-[11px] italic">Full Prescribed Syllabus</span>
+                                      <span className="text-xs text-zinc-500 italic">Full Prescribed Syllabus</span>
                                     )}
                                   </td>
 
-                                  {/* Schedule */}
-                                  <td className="py-4 px-4 font-mono text-[11px] text-zinc-600 whitespace-nowrap">
+                                  {/* 3. Schedule Window */}
+                                  <td className="py-4 px-4 whitespace-nowrap">
                                     {paper.window_start ? (
-                                      <div>
-                                        <div className="font-bold text-zinc-800 flex items-center gap-1">
-                                          <Calendar size={12} className="text-amber-800" />
-                                          {new Date(paper.window_start).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                      <div className="space-y-0.5">
+                                        <div className="text-xs font-bold text-zinc-800 flex items-center gap-1.5 font-mono">
+                                          <Calendar size={13} className="text-amber-800 shrink-0" />
+                                          <span>{new Date(paper.window_start).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                                         </div>
-                                        <div className="text-[10px] text-zinc-500 flex items-center gap-1">
-                                          <Clock size={11} />
-                                          {new Date(paper.window_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(paper.window_end || paper.window_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        <div className="text-[11px] text-zinc-600 flex items-center gap-1.5 font-mono font-medium">
+                                          <Clock size={12} className="text-zinc-400 shrink-0" />
+                                          <span>
+                                            {new Date(paper.window_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(paper.window_end || paper.window_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} IST
+                                          </span>
                                         </div>
+                                        {status.isLive && (
+                                          <div className="text-[10px] font-black text-emerald-700 flex items-center gap-1 pt-0.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                                            <span>Active Proctored Window</span>
+                                          </div>
+                                        )}
                                       </div>
                                     ) : (
-                                      <span>Available Anytime</span>
+                                      <span className="text-xs font-medium text-zinc-500 flex items-center gap-1">
+                                        <Clock size={12} className="text-zinc-400" /> 24/7 Practice Archive
+                                      </span>
                                     )}
                                   </td>
 
-                                  {/* Status / Grade */}
+                                  {/* 4. Status & Grade */}
                                   <td className="py-4 px-4 text-center whitespace-nowrap">
                                     {status.isLive ? (
-                                      <div className="inline-flex flex-col items-center gap-1">
-                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-900 border border-emerald-500/40 animate-pulse">
-                                          🟢 LIVE NOW
+                                      <div className="inline-flex flex-col items-center gap-1.5">
+                                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500 text-white shadow-sm animate-pulse">
+                                          🔴 LIVE NOW
                                         </span>
                                         {paper.window_end && (
                                           <ModernExamCountdown
@@ -1759,25 +1785,27 @@ ${studentName}`
                                       </div>
                                     ) : status.isReleased ? (
                                       status.isAttempted ? (
-                                        <div className="inline-flex flex-col items-center">
-                                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400/30 text-amber-950 border border-amber-500/40 flex items-center gap-1">
+                                        <div className="inline-flex flex-col items-center gap-1">
+                                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-amber-950 border border-amber-500/40 shadow-xs">
                                             <Trophy size={11} /> Scorecard Declared
                                           </span>
-                                          {matchAttempt?.score !== undefined && (
-                                            <span className="text-[10px] font-extrabold text-emerald-800 mt-0.5">
+                                          {matchAttempt?.score !== undefined ? (
+                                            <span className="font-mono text-[11px] font-black text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-md border border-emerald-300">
                                               Score: {matchAttempt.score}/{paper.total_marks || 240}
                                             </span>
+                                          ) : (
+                                            <span className="text-[10px] font-extrabold text-amber-900">Attempted</span>
                                           )}
                                         </div>
                                       ) : (
-                                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-neutral-200 text-neutral-700 border border-neutral-300">
-                                          Window Closed
+                                        <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-neutral-200 text-neutral-700 border border-neutral-300">
+                                          Window Concluded
                                         </span>
                                       )
                                     ) : (paper.window_start && new Date(paper.window_start) > currentTime) ? (
                                       <div className="inline-flex flex-col items-center gap-1">
                                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                                          ⏳ Upcoming
+                                          ⏳ Scheduled
                                         </span>
                                         <ModernExamCountdown
                                           targetDate={paper.window_start}
@@ -1787,76 +1815,77 @@ ${studentName}`
                                         />
                                       </div>
                                     ) : (
-                                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                                        ⏳ Upcoming
+                                      <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-neutral-200 text-neutral-700 border border-neutral-300">
+                                        Window Closed
                                       </span>
                                     )}
                                   </td>
 
-                                  {/* Actions */}
-                                  <td className="py-4 px-4 text-right whitespace-nowrap">
-                                    <div className="flex items-center justify-end gap-1.5">
+                                  {/* 5. Actions */}
+                                  <td className="py-4 px-5 text-right whitespace-nowrap">
+                                    <div className="flex items-center justify-end gap-2">
                                       {status.isLive ? (
                                         <button
                                           onClick={() => handleTestClick(paper)}
-                                          className="px-3.5 py-1.5 rounded-xl font-black text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm border border-emerald-500 flex items-center gap-1.5 cursor-pointer"
+                                          className="px-4 py-2 rounded-xl font-black text-xs uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-950/20 border-2 border-emerald-400 flex items-center gap-1.5 cursor-pointer transition transform active:scale-95 whitespace-nowrap"
                                         >
-                                          <PlayCircle size={14} /> Enter Exam
+                                          <PlayCircle size={15} />
+                                          <span>{myHallTicket ? 'Enter Live Exam' : 'Start CBT Exam'}</span>
                                         </button>
                                       ) : status.isReleased ? (
                                         status.isAttempted ? (
-                                          <>
+                                          <div className="flex items-center justify-end gap-1.5">
                                             <button
                                               onClick={() => handleViewResultClick(paper)}
-                                              className="px-3 py-1.5 rounded-xl font-bold text-xs bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black shadow-xs border border-amber-500/40 flex items-center gap-1.5 cursor-pointer"
+                                              className="px-3.5 py-1.5 rounded-xl font-black text-xs bg-amber-500 hover:bg-amber-400 text-black shadow-xs border border-amber-600/30 flex items-center gap-1.5 cursor-pointer transition whitespace-nowrap"
                                             >
-                                              <Award size={13} /> Scorecard
+                                              <Award size={14} /> Scorecard
                                             </button>
                                             <button
                                               onClick={() => handleTestClick(paper)}
-                                              className="px-2.5 py-1.5 rounded-xl font-bold text-xs bg-[#1c1815] hover:bg-black text-amber-300 border border-amber-500/30 flex items-center gap-1 cursor-pointer"
+                                              className="px-3 py-1.5 rounded-xl font-bold text-xs bg-[#1c1815] hover:bg-black text-amber-300 border border-amber-500/30 flex items-center gap-1.5 cursor-pointer transition whitespace-nowrap"
                                               title="Re-attempt in Practice Mode with instant grading"
                                             >
                                               <PlayCircle size={13} /> Re-Practice
                                             </button>
-                                          </>
+                                          </div>
                                         ) : (
-                                          <>
+                                          <div className="flex items-center justify-end gap-1.5">
                                             <button
                                               onClick={() => handleViewResultClick(paper)}
-                                              className="px-3 py-1.5 rounded-xl font-bold text-xs bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black shadow-xs border border-amber-500/40 flex items-center gap-1.5 cursor-pointer"
-                                              title="View Result & Solutions"
+                                              className="px-3.5 py-1.5 rounded-xl font-black text-xs bg-amber-500 hover:bg-amber-400 text-black shadow-xs border border-amber-600/30 flex items-center gap-1.5 cursor-pointer transition whitespace-nowrap"
+                                              title="View Official Answers & Solutions"
                                             >
-                                              <Award size={13} /> View Result
+                                              <Award size={14} /> View Solutions
                                             </button>
                                             <button
                                               onClick={() => handleTestClick(paper)}
-                                              className="px-2.5 py-1.5 rounded-xl font-bold text-xs bg-[#1c1815] hover:bg-black text-amber-300 border border-amber-500/30 flex items-center gap-1 cursor-pointer"
+                                              className="px-3 py-1.5 rounded-xl font-bold text-xs bg-[#1c1815] hover:bg-black text-amber-300 border border-amber-500/30 flex items-center gap-1.5 cursor-pointer transition whitespace-nowrap"
                                               title="Practice Mode with Instant Grading"
                                             >
                                               <PlayCircle size={13} /> Practice
                                             </button>
-                                          </>
+                                          </div>
                                         )
                                       ) : (
                                         <div className="flex items-center justify-end gap-1.5">
                                           {myHallTicket && (
-                                            <span className="px-2.5 py-1 rounded-xl bg-amber-200/80 border border-amber-400 font-mono text-[11px] font-black text-amber-950" title="Your Exam Pass Code">
+                                            <span className="px-2.5 py-1 rounded-lg bg-amber-200/80 border border-amber-400 font-mono text-[10px] font-black text-amber-950 whitespace-nowrap" title="Your Exam Pass Code">
                                               🔑 {myHallTicket.unique_exam_id}
                                             </span>
                                           )}
                                           <button
                                             type="button"
                                             onClick={() => setSyllabusModalPaper(paper)}
-                                            className="px-2.5 py-1.5 rounded-xl font-bold text-xs bg-white/80 hover:bg-white text-zinc-800 border border-amber-950/25 flex items-center gap-1 cursor-pointer transition shadow-xs"
+                                            className="px-3.5 py-1.5 rounded-xl font-bold text-xs bg-white/80 hover:bg-white text-zinc-800 border border-amber-950/25 flex items-center gap-1.5 cursor-pointer transition shadow-2xs whitespace-nowrap"
                                             title="View Blueprint Syllabus"
                                           >
-                                            <BookOpen size={12} className="text-amber-900" /> Syllabus
+                                            <BookOpen size={13} className="text-amber-800" /> Syllabus
                                           </button>
                                           <button
                                             type="button"
-                                            onClick={() => triggerToast(`⏳ ${paper.title} will go live at 06:00 PM IST.`)}
-                                            className="px-2.5 py-1.5 rounded-xl font-bold text-xs bg-amber-100/80 hover:bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 cursor-pointer transition"
+                                            onClick={() => triggerToast(`⏳ ${paper.title} will go live today at 06:00 PM IST.`)}
+                                            className="px-3 py-1.5 rounded-xl font-bold text-xs bg-amber-100/80 hover:bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1.5 cursor-pointer transition whitespace-nowrap"
                                             title="Window opens at 06:00 PM IST"
                                           >
                                             <Lock size={12} className="text-amber-800" /> Opens 06:00 PM
