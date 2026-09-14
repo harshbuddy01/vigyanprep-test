@@ -422,45 +422,44 @@ ${studentName}`
 
   const getWindowStatus = (paper: TestPaper) => {
     const isAttempted = attemptedTestIds.includes(paper.id);
-
-    // Released results (completed or response_released_at set)
-    const isResultsReleased = !!(paper.response_released_at || (paper as any).result_released_at || paper.status === 'completed');
-    if (isResultsReleased) {
-      if (isAttempted) {
-        return {
-          isLive: true,
-          isPractice: true,
-          isReleased: true,
-          isAttempted: true,
-          label: '🏆 Live Attempted • Scorecard & AIR Rank Declared',
-          color: 'emerald'
-        };
-      } else {
-        return {
-          isLive: true,
-          isPractice: true,
-          isReleased: true,
-          isAttempted: false,
-          label: '⏳ Missed Live Window • Practice & Solutions Available',
-          color: 'amber'
-        };
-      }
-    }
-
-    if (paper.content_type === 'pyq' || (!paper.window_start && !paper.window_end)) {
-      return { isLive: true, isReleased: false, isAttempted, label: '24/7 Practice Archive', color: 'emerald' };
-    }
-
     const now = new Date();
     const start = paper.window_start ? new Date(paper.window_start) : null;
     const end = paper.window_end ? new Date(paper.window_end) : null;
 
-    // Future scheduled test
+    // 1. Released results (Live exam is OVER, results & solutions declared)
+    const isResultsReleased = !!(paper.response_released_at || (paper as any).result_released_at);
+    if (isResultsReleased) {
+      return {
+        isLive: false,
+        isPractice: true,
+        isReleased: true,
+        isAttempted,
+        label: isAttempted
+          ? '🏆 Live Attempted • Scorecard & AIR Rank Declared'
+          : '⏳ Missed Live Window • Practice & Solutions Available',
+        color: isAttempted ? 'emerald' : 'amber'
+      };
+    }
+
+    // 2. 24/7 Practice PYQs
+    if (paper.content_type === 'pyq' || (!paper.window_start && !paper.window_end)) {
+      return {
+        isLive: false,
+        isPractice: true,
+        isReleased: true,
+        isAttempted,
+        label: '24/7 Practice Archive',
+        color: 'emerald'
+      };
+    }
+
+    // 3. Future scheduled test (Upcoming)
     if (start && now < start) {
       const startIST = start.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short' }) + ' ' +
         start.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true });
       return {
         isLive: false,
+        isPractice: false,
         isReleased: false,
         isAttempted,
         label: `🔒 Scheduled for ${startIST} IST`,
@@ -468,27 +467,38 @@ ${studentName}`
       };
     }
 
-    // Live test window right now
+    // 4. Live test window RIGHT NOW in real time
     if (start && end && now >= start && now <= end) {
-      return { isLive: true, isReleased: false, isAttempted, label: '🟢 LIVE NOW — Proctored Window Open', color: 'emerald' };
+      return {
+        isLive: true,
+        isPractice: false,
+        isReleased: false,
+        isAttempted,
+        label: '🟢 LIVE NOW — Proctored Window Open',
+        color: 'emerald'
+      };
     }
 
-    // Expired live test awaiting results
-    if (paper.content_type === 'test_series' && end && now > end) {
+    // 5. Concluded / Expired test awaiting result release
+    if (end && now > end) {
       return {
         isLive: false,
         isPractice: false,
         isReleased: false,
         isAttempted,
-        label: isAttempted ? '📋 Exam Submitted — Awaiting Official Results' : '📋 Test Window Closed — Results Pending',
+        label: isAttempted
+          ? '📋 Exam Submitted — Awaiting Official Results'
+          : '📋 Test Window Closed — Results Pending',
         color: 'gray'
       };
     }
 
-    // Past PYQ paper — practice anytime
     return {
-      isLive: true,
-      label: `📜 Past Test Paper (Available)`,
+      isLive: false,
+      isPractice: true,
+      isReleased: true,
+      isAttempted,
+      label: 'Past Test Paper',
       color: 'emerald'
     };
   };
@@ -502,7 +512,7 @@ ${studentName}`
       return;
     }
 
-    if (!status.isLive && status.color !== 'emerald') {
+    if (!status.isLive && !status.isPractice) {
       triggerToast(`⚠️ ${status.label}`);
       return;
     }
@@ -1421,7 +1431,7 @@ ${studentName}`
                               )
                             ) : (
                               <button
-                                onClick={() => handleTestClick(spotlight)}
+                                onClick={() => setSyllabusModalPaper(spotlight)}
                                 className="w-full py-3 rounded-2xl font-bold text-xs uppercase bg-white/70 hover:bg-white text-zinc-700 border-2 border-amber-950/25 flex items-center justify-center gap-2 cursor-pointer transition"
                               >
                                 <BookOpen size={16} className="text-amber-800" />
