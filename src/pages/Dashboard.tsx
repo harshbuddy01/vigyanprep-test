@@ -17,6 +17,7 @@ import {
   ScientistAvatar,
   SCIENTIST_PERSONAS
 } from '../components/ScientistPortraitAvatars';
+import { ModernExamCountdown } from '../components/ModernExamCountdown';
 
 export const SCIENTIST_AVATARS = SCIENTIST_PERSONAS;
 
@@ -1385,6 +1386,22 @@ ${studentName}`
                           </div>
 
                           <div className="flex items-center gap-3 flex-wrap">
+                            {st.isLive && spotlight.window_end ? (
+                              <ModernExamCountdown
+                                targetDate={spotlight.window_end}
+                                mode="closing"
+                                variant="badge"
+                                onExpire={() => setCurrentTime(new Date())}
+                              />
+                            ) : isUpcoming && spotlight.window_start ? (
+                              <ModernExamCountdown
+                                targetDate={spotlight.window_start}
+                                mode="opening"
+                                variant="badge"
+                                onExpire={() => setCurrentTime(new Date())}
+                              />
+                            ) : null}
+
                             {spotlight.window_start && (
                               <div className="text-xs font-mono font-bold text-zinc-700 flex items-center gap-1.5">
                                 <Calendar size={13} className="text-amber-800" />
@@ -1479,13 +1496,23 @@ ${studentName}`
                             )}
 
                             {st.isLive ? (
-                              <button
-                                onClick={() => handleTestClick(spotlight)}
-                                className="w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-900/20 border-2 border-emerald-400 flex items-center justify-center gap-2 cursor-pointer transition transform active:scale-98"
-                              >
-                                <PlayCircle size={18} />
-                                <span>{myHallTicket ? 'Enter Live Exam (CBT)' : 'Start CBT Exam'}</span>
-                              </button>
+                              <div className="space-y-3">
+                                {spotlight.window_end && (
+                                  <ModernExamCountdown
+                                    targetDate={spotlight.window_end}
+                                    mode="closing"
+                                    variant="hero"
+                                    onExpire={() => setCurrentTime(new Date())}
+                                  />
+                                )}
+                                <button
+                                  onClick={() => handleTestClick(spotlight)}
+                                  className="w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-900/20 border-2 border-emerald-400 flex items-center justify-center gap-2 cursor-pointer transition transform active:scale-98"
+                                >
+                                  <PlayCircle size={18} />
+                                  <span>{myHallTicket ? 'Enter Live Exam (CBT)' : 'Start CBT Exam'}</span>
+                                </button>
+                              </div>
                             ) : st.isReleased ? (
                               st.isAttempted ? (
                                 <div className="space-y-2">
@@ -1522,6 +1549,24 @@ ${studentName}`
                                   </button>
                                 </div>
                               )
+                            ) : isUpcoming ? (
+                              <div className="space-y-3">
+                                {spotlight.window_start && (
+                                  <ModernExamCountdown
+                                    targetDate={spotlight.window_start}
+                                    mode="opening"
+                                    variant="hero"
+                                    onExpire={() => setCurrentTime(new Date())}
+                                  />
+                                )}
+                                <button
+                                  onClick={() => setSyllabusModalPaper(spotlight)}
+                                  className="w-full py-3.5 rounded-2xl font-bold text-xs uppercase bg-white/70 hover:bg-white text-zinc-800 border-2 border-amber-950/25 flex items-center justify-center gap-2 cursor-pointer transition shadow-sm hover:shadow-md"
+                                >
+                                  <BookOpen size={16} className="text-amber-800" />
+                                  <span>Preview Instructions &amp; Syllabus</span>
+                                </button>
+                              </div>
                             ) : (
                               <button
                                 onClick={() => setSyllabusModalPaper(spotlight)}
@@ -1699,9 +1744,19 @@ ${studentName}`
                                   {/* Status / Grade */}
                                   <td className="py-4 px-4 text-center whitespace-nowrap">
                                     {status.isLive ? (
-                                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-900 border border-emerald-500/40 animate-pulse">
-                                        🟢 LIVE NOW
-                                      </span>
+                                      <div className="inline-flex flex-col items-center gap-1">
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-900 border border-emerald-500/40 animate-pulse">
+                                          🟢 LIVE NOW
+                                        </span>
+                                        {paper.window_end && (
+                                          <ModernExamCountdown
+                                            targetDate={paper.window_end}
+                                            mode="closing"
+                                            variant="badge"
+                                            onExpire={() => setCurrentTime(new Date())}
+                                          />
+                                        )}
+                                      </div>
                                     ) : status.isReleased ? (
                                       status.isAttempted ? (
                                         <div className="inline-flex flex-col items-center">
@@ -1719,6 +1774,18 @@ ${studentName}`
                                           Window Closed
                                         </span>
                                       )
+                                    ) : (paper.window_start && new Date(paper.window_start) > currentTime) ? (
+                                      <div className="inline-flex flex-col items-center gap-1">
+                                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                                          ⏳ Upcoming
+                                        </span>
+                                        <ModernExamCountdown
+                                          targetDate={paper.window_start}
+                                          mode="opening"
+                                          variant="badge"
+                                          onExpire={() => setCurrentTime(new Date())}
+                                        />
+                                      </div>
                                     ) : (
                                       <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
                                         ⏳ Upcoming
@@ -1942,19 +2009,35 @@ ${studentName}`
                                 </p>
                               </div>
                             ) : status.isLive ? (
-                              <button
-                                onClick={() => handleTestClick(paper)}
-                                className={`w-full py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md cursor-pointer ${
-                                  myHallTicket
-                                    ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-900/30 border border-emerald-500'
-                                    : 'bg-[#1c1815] text-amber-300 hover:bg-black shadow-amber-950/30 border border-amber-500/30'
-                                }`}
-                              >
-                                <PlayCircle size={16} />
-                                <span>{myHallTicket ? 'Enter Live Exam (CBT)' : 'Start CBT Exam'}</span>
-                              </button>
+                              <div className="space-y-2.5">
+                                {paper.window_end && (
+                                  <ModernExamCountdown
+                                    targetDate={paper.window_end}
+                                    mode="closing"
+                                    variant="compact"
+                                    onExpire={() => setCurrentTime(new Date())}
+                                  />
+                                )}
+                                <button
+                                  onClick={() => handleTestClick(paper)}
+                                  className={`w-full py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md cursor-pointer ${
+                                    myHallTicket
+                                      ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-900/30 border border-emerald-500'
+                                      : 'bg-[#1c1815] text-amber-300 hover:bg-black shadow-amber-950/30 border border-amber-500/30'
+                                  }`}
+                                >
+                                  <PlayCircle size={16} />
+                                  <span>{myHallTicket ? 'Enter Live Exam (CBT)' : 'Start CBT Exam'}</span>
+                                </button>
+                              </div>
                             ) : (paper.window_start && new Date(paper.window_start) > currentTime) ? (
                               <div className="space-y-2">
+                                <ModernExamCountdown
+                                  targetDate={paper.window_start}
+                                  mode="opening"
+                                  variant="compact"
+                                  onExpire={() => setCurrentTime(new Date())}
+                                />
                                 <button
                                   type="button"
                                   onClick={() => setSyllabusModalPaper(paper)}
