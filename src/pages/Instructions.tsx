@@ -23,6 +23,7 @@ export const Instructions: React.FC = () => {
 
   const [meta, setMeta] = useState<{
     title?: string;
+    description?: string;
     examType?: string;
     durationMinutes?: number;
     questionsCount?: number;
@@ -74,8 +75,9 @@ export const Instructions: React.FC = () => {
             const pTitle = data.test.title || 'IISER IAT Official Question Paper';
             const eType = data.test.exam_type || data.test.examType || 'IAT';
             const isLive = data.test.content_type === 'test_series';
+            const pDesc = data.test.description || null;
 
-            setMeta({ title: pTitle, examType: eType, durationMinutes: durMins, questionsCount: qCount, totalMarks: totalMks, pyqYear: pYear, isLiveTest: isLive });
+            setMeta({ title: pTitle, description: pDesc, examType: eType, durationMinutes: durMins, questionsCount: qCount, totalMarks: totalMks, pyqYear: pYear, isLiveTest: isLive });
 
             setTestMeta({
               testTitle: pTitle, examType: eType, durationMinutes: durMins,
@@ -247,6 +249,21 @@ export const Instructions: React.FC = () => {
             <h2 className="text-xl font-bold text-[#1b365d]">GENERAL INSTRUCTIONS</h2>
             <p className="text-xs text-gray-500 mt-1">Please read the instructions carefully before starting the examination.</p>
           </div>
+
+          {/* 🎯 Test Specific Blueprint & Syllabus Banner */}
+          {meta?.description && (
+            <div className="p-5 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl space-y-2 shadow-sm">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-amber-500 text-black shadow-sm">
+                  🎯 Test Specific Blueprint & Syllabus
+                </span>
+                <span className="text-xs text-amber-900 font-bold">Important Instructions for this Paper</span>
+              </div>
+              <p className="text-sm font-semibold text-zinc-900 leading-relaxed whitespace-pre-line pl-1">
+                {meta.description}
+              </p>
+            </div>
+          )}
 
           {error && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
