@@ -34,10 +34,10 @@ function renderTableCellContent(cell: string) {
     const rest = matchCol1[2].trim();
     return (
       <div className="flex items-start gap-2">
-        <span className="px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 font-bold font-mono text-xs shrink-0 border border-amber-300 dark:border-amber-500/30">
+        <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-bold font-mono text-xs shrink-0 border border-amber-300">
           ({badge})
         </span>
-        <div className="flex-1 leading-relaxed">
+        <div className="flex-1 leading-relaxed text-gray-900">
           <MathText text={rest} />
         </div>
       </div>
@@ -49,10 +49,10 @@ function renderTableCellContent(cell: string) {
     const rest = matchCol2[2].trim();
     return (
       <div className="flex items-start gap-2">
-        <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-300 font-bold font-mono text-xs shrink-0 border border-blue-300 dark:border-blue-500/30">
+        <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-900 font-bold font-mono text-xs shrink-0 border border-blue-300">
           ({badge})
         </span>
-        <div className="flex-1 leading-relaxed">
+        <div className="flex-1 leading-relaxed text-gray-900">
           <MathText text={rest} />
         </div>
       </div>
@@ -76,22 +76,22 @@ function renderTableBlock(tableText: string, keyPrefix: string | number) {
   if (rows.length === 0) return null;
 
   return (
-    <div key={keyPrefix} className="my-3.5 overflow-x-auto rounded-xl border border-gray-300 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-900/80 shadow-sm">
+    <div key={keyPrefix} className="my-3.5 overflow-x-auto rounded-xl border border-gray-300 bg-gray-50 shadow-sm">
       <table className="w-full text-left text-xs sm:text-sm border-collapse min-w-[340px]">
         <thead>
-          <tr className="bg-gray-200/90 dark:bg-zinc-800 border-b border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-amber-400 font-extrabold uppercase tracking-wider">
+          <tr className="bg-gray-200 border-b border-gray-300 text-gray-900 font-extrabold uppercase tracking-wider">
             {headerCells.map((h, i) => (
-              <th key={i} className="py-2.5 px-4 font-bold border-r border-gray-300 dark:border-zinc-700/50 last:border-r-0">
+              <th key={i} className="py-2.5 px-4 font-bold border-r border-gray-300 last:border-r-0 text-gray-900">
                 <MathText text={h} />
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-200 dark:divide-zinc-800">
+        <tbody className="divide-y divide-gray-200">
           {rows.map((row, rIdx) => (
-            <tr key={rIdx} className={rIdx % 2 === 0 ? 'bg-white dark:bg-zinc-900' : 'bg-gray-50/70 dark:bg-zinc-900/40'}>
+            <tr key={rIdx} className={rIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50/70'}>
               {row.map((cell, cIdx) => (
-                <td key={cIdx} className="py-2.5 px-4 text-gray-800 dark:text-zinc-200 leading-relaxed border-r border-gray-200 dark:border-zinc-800/50 last:border-r-0 font-medium">
+                <td key={cIdx} className="py-2.5 px-4 text-gray-900 leading-relaxed border-r border-gray-200 last:border-r-0 font-medium">
                   {renderTableCellContent(cell)}
                 </td>
               ))}
@@ -136,7 +136,7 @@ function renderInlineContent(rawChunk: string) {
         } else if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
           const boldContent = part.slice(2, -2);
           return (
-            <strong key={index} className="font-bold text-gray-900 dark:text-amber-200">
+            <strong key={index} className="font-bold text-gray-900">
               {renderInlineContent(boldContent)}
             </strong>
           );
@@ -151,20 +151,20 @@ function renderInlineContent(rawChunk: string) {
             return (
               <span
                 key={index}
-                className={isDisplay ? 'block my-2 text-center overflow-x-auto py-1' : 'inline-block px-0.5'}
+                className={isDisplay ? 'block my-2 text-center overflow-x-auto py-1 text-gray-900 font-medium' : 'inline-block px-0.5 text-gray-900 font-medium'}
                 dangerouslySetInnerHTML={{ __html: html }}
               />
             );
           } catch {
             return (
-              <span key={index} className="text-amber-600 font-mono text-xs">
+              <span key={index} className="text-amber-800 font-mono text-xs">
                 {part}
               </span>
             );
           }
         }
 
-        return <span key={index}>{part}</span>;
+        return <span key={index} className="text-gray-900">{part}</span>;
       })}
     </>
   );
@@ -261,10 +261,10 @@ export const MathText: React.FC<Props> = ({ text, className = '' }) => {
           const content = statementMatch[2].trim();
           return (
             <div key={lIdx} className="flex items-start gap-3 my-2.5 pl-2 sm:pl-3.5 group">
-              <span className="px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-500/20 text-amber-900 dark:text-amber-300 font-extrabold font-mono text-xs shrink-0 border border-amber-300 dark:border-amber-500/30 shadow-xs">
+              <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-extrabold font-mono text-xs shrink-0 border border-amber-300 shadow-xs">
                 {badge.endsWith(':') || badge.endsWith('.') || badge.endsWith(')') ? badge : badge + '.'}
               </span>
-              <div className="flex-1 leading-relaxed text-gray-900 dark:text-zinc-100 font-medium">
+              <div className="flex-1 leading-relaxed text-gray-900 font-medium">
                 {renderInlineContent(content)}
               </div>
             </div>
@@ -272,7 +272,7 @@ export const MathText: React.FC<Props> = ({ text, className = '' }) => {
         }
 
         return (
-          <p key={lIdx} className="leading-relaxed text-gray-900 dark:text-zinc-100">
+          <p key={lIdx} className="leading-relaxed text-gray-900 font-medium">
             {renderInlineContent(trimmedLine)}
           </p>
         );

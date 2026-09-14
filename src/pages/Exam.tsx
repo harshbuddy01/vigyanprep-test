@@ -469,7 +469,7 @@ export default function Exam() {
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] overflow-hidden bg-[#f4f6f9] font-sans text-gray-800 relative select-none">
+    <div className="flex flex-col h-[100dvh] overflow-hidden bg-[#f4f6f9] font-sans text-gray-950 relative select-none">
       
       {/* 🛡️ Focus-Loss / Screenshot Blackout Shroud */}
       {isWindowBlurred && !isSubmitted && (
@@ -585,8 +585,8 @@ export default function Exam() {
       </div>
 
       <div className="flex flex-1 overflow-hidden relative">
-        {/* 🛡️ Visible Proctored CBT Security Watermark */}
-        <div className="fixed inset-0 pointer-events-none z-30 overflow-hidden select-none opacity-[0.08] flex flex-wrap content-start justify-center gap-24 p-8 transform -rotate-12 scale-110">
+        {/* 🛡️ Visible Proctored CBT Security Watermark (Background Layer) */}
+        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none opacity-[0.035] flex flex-wrap content-start justify-center gap-24 p-8 transform -rotate-12 scale-110">
           {Array.from({ length: 48 }).map((_, i) => (
             <div key={i} className="text-base font-mono font-black tracking-widest text-[#1b365d] uppercase whitespace-nowrap">
               VIGYAN PREP • {candidateName || 'CANDIDATE'} • {rollNumber || 'CBT'}
@@ -627,9 +627,9 @@ export default function Exam() {
                 </div>
               </div>
 
-              <div className="p-4 sm:p-6 bg-gray-50 rounded-xl border border-gray-200 text-sm leading-relaxed text-gray-900 min-h-[120px] space-y-4">
-                <div className="font-medium text-sm sm:text-base">
-                  <MathText text={(currentQ as any).question_text || currentQ.text || 'Question text will appear here.'} />
+              <div className="p-4 sm:p-6 bg-white rounded-2xl border-2 border-gray-300 text-sm sm:text-base leading-relaxed text-gray-950 min-h-[120px] space-y-4 shadow-sm">
+                <div className="font-semibold text-base sm:text-lg text-gray-950">
+                  <MathText text={(currentQ as any).question_text || currentQ.text || 'Question text will appear here.'} className="text-gray-950 font-semibold" />
                 </div>
                 {((currentQ as any).image_url || (currentQ as any).diagram_url) && (
                   <div className="my-3 text-center">
@@ -651,19 +651,19 @@ export default function Exam() {
                     <button
                       key={optIndex}
                       onClick={() => handleOptionSelect(optKey)}
-                      className={`w-full text-left p-3 sm:p-4 rounded-xl border-2 transition-all flex items-center gap-3 active:scale-[0.99] cursor-pointer ${
+                      className={`w-full text-left p-3.5 sm:p-4 rounded-xl border-2 transition-all flex items-center gap-3 active:scale-[0.99] cursor-pointer ${
                         isSelected
-                          ? 'border-[#007bff] bg-blue-50/70 text-[#1b365d] shadow-sm'
-                          : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 text-gray-800'
+                          ? 'border-[#007bff] bg-blue-50/80 text-[#1b365d] shadow-sm font-semibold'
+                          : 'border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50 text-gray-950'
                       }`}
                     >
                       <span className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm shrink-0 transition ${
-                        isSelected ? 'bg-[#007bff] text-white shadow' : 'bg-gray-100 border border-gray-300 text-gray-700'
+                        isSelected ? 'bg-[#007bff] text-white shadow' : 'bg-gray-100 border border-gray-300 text-gray-800'
                       }`}>
                         {optKey}
                       </span>
-                      <span className="text-xs sm:text-sm font-medium flex-1">
-                        <MathText text={opt} />
+                      <span className="text-sm sm:text-base font-semibold flex-1 text-gray-950">
+                        <MathText text={opt} className="text-gray-950 font-semibold" />
                       </span>
                     </button>
                   );

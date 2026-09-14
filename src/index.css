@@ -1,6 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --bg: #241e12;
   --bg-deep: #16120b;
@@ -13,8 +15,8 @@
 
 body {
   font-family: var(--font-body);
-  background-color: var(--bg-deep);
-  color: var(--ivory);
+  background-color: #fdfbf7;
+  color: #1c1815;
   min-height: 100vh;
   margin: 0;
   -webkit-font-smoothing: antialiased;
