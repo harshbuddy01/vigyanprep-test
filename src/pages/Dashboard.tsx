@@ -38,6 +38,7 @@ interface TestPaper {
   passcode?: string;
   access_code?: string;
   response_released_at?: string;
+  description?: string;
 }
 
 interface HallTicket {
@@ -113,6 +114,11 @@ export function Dashboard() {
   const [subsLoading, setSubsLoading] = useState(true);
   const [hallTickets, setHallTickets] = useState<HallTicket[]>([]);
   const [attemptedTestIds, setAttemptedTestIds] = useState<string[]>([]);
+  const [expandedSyllabus, setExpandedSyllabus] = useState<Record<string, boolean>>({});
+
+  const toggleSyllabus = (id: string) => {
+    setExpandedSyllabus(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   // Modals & Toasts
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -1329,6 +1335,29 @@ ${studentName}`
                                       <p className="font-extrabold text-amber-950">{paper.total_marks || 240} M</p>
                                     </div>
                                   </div>
+
+                                  {/* 📘 Syllabus & Specific Chapters Accordion */}
+                                  {paper.description && (
+                                    <div className="rounded-2xl bg-amber-500/15 border border-amber-600/30 overflow-hidden text-xs">
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleSyllabus(paper.id)}
+                                        className="w-full px-3.5 py-2 flex items-center justify-between font-bold text-amber-950 hover:bg-amber-500/20 transition cursor-pointer"
+                                      >
+                                        <span className="flex items-center gap-1.5 font-extrabold text-[11px] uppercase tracking-wide">
+                                          <BookOpen size={13} className="text-amber-900" /> Syllabus & Blueprint
+                                        </span>
+                                        <span className="text-[10px] font-extrabold text-amber-950 bg-amber-300/80 px-2 py-0.5 rounded-md border border-amber-500/40">
+                                          {expandedSyllabus[paper.id] ? 'Hide' : 'View Syllabus'}
+                                        </span>
+                                      </button>
+                                      {expandedSyllabus[paper.id] && (
+                                        <div className="p-3.5 pt-1.5 border-t border-amber-600/20 bg-amber-50/90 text-zinc-900 leading-relaxed font-bold whitespace-pre-line text-[11px]">
+                                          {paper.description}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
                                   
                                   {myHallTicket && (
                                     <div className="mt-2 p-3 rounded-xl bg-gradient-to-r from-amber-200 to-amber-400 border border-amber-500 shadow-inner flex flex-col gap-2">
@@ -1483,6 +1512,29 @@ ${studentName}`
                               <p className="font-extrabold text-amber-950">{paper.total_marks || 240} M</p>
                             </div>
                           </div>
+
+                          {/* 📘 Syllabus & Specific Chapters Accordion */}
+                          {paper.description && (
+                            <div className="rounded-2xl bg-amber-500/15 border border-amber-600/30 overflow-hidden text-xs">
+                              <button
+                                type="button"
+                                onClick={() => toggleSyllabus(paper.id)}
+                                className="w-full px-3.5 py-2 flex items-center justify-between font-bold text-amber-950 hover:bg-amber-500/20 transition cursor-pointer"
+                              >
+                                <span className="flex items-center gap-1.5 font-extrabold text-[11px] uppercase tracking-wide">
+                                  <BookOpen size={13} className="text-amber-900" /> Syllabus & Blueprint
+                                </span>
+                                <span className="text-[10px] font-extrabold text-amber-950 bg-amber-300/80 px-2 py-0.5 rounded-md border border-amber-500/40">
+                                  {expandedSyllabus[paper.id] ? 'Hide' : 'View Syllabus'}
+                                </span>
+                              </button>
+                              {expandedSyllabus[paper.id] && (
+                                <div className="p-3.5 pt-1.5 border-t border-amber-600/20 bg-amber-50/90 text-zinc-900 leading-relaxed font-bold whitespace-pre-line text-[11px]">
+                                  {paper.description}
+                                </div>
+                              )}
+                            </div>
+                          )}
 
                           {myHallTicket && (
                             <div className="mt-2 p-3 rounded-xl bg-gradient-to-r from-amber-200 to-amber-400 border border-amber-500 shadow-inner flex flex-col gap-2">
