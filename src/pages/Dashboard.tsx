@@ -5,7 +5,7 @@ import {
   Settings, Search, Bell, Award, Sparkles,
   ArrowRight, PlayCircle, Lock, Key, X, AlertCircle, CheckCircle2,
   RefreshCw, HelpCircle, Download, ChevronRight, Menu, Home, Mail,
-  Edit3, GraduationCap, Trophy, Brain
+  Edit3, GraduationCap, Trophy, Brain, List, LayoutGrid, Clock, Calendar
 } from 'lucide-react';
 import { getCookie, deleteCookie } from '../lib/cookies';
 import { useExamStore, generateRollNumber } from '../stores/examStore';
@@ -115,6 +115,9 @@ export function Dashboard() {
   const [hallTickets, setHallTickets] = useState<HallTicket[]>([]);
   const [attemptedTestIds, setAttemptedTestIds] = useState<string[]>([]);
   const [expandedSyllabus, setExpandedSyllabus] = useState<Record<string, boolean>>({});
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'LIVE' | 'UPCOMING' | 'COMPLETED' | 'PRACTICE'>('ALL');
+  const [syllabusModalPaper, setSyllabusModalPaper] = useState<TestPaper | null>(null);
 
   const toggleSyllabus = (id: string) => {
     setExpandedSyllabus(prev => ({ ...prev, [id]: !prev[id] }));
@@ -619,8 +622,21 @@ ${studentName}`
 
   const filteredTests = activePapersList.filter(t => {
     const matchesCat = activeCategory === 'ALL' || (t.exam_type || t.examType || '').toUpperCase().includes(activeCategory);
-    const matchesSearch = !searchTerm || t.title.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCat && matchesSearch;
+    const searchLower = searchTerm.toLowerCase().trim();
+    const matchesSearch = !searchTerm ||
+      t.title.toLowerCase().includes(searchLower) ||
+      (t.description || '').toLowerCase().includes(searchLower) ||
+      (t.exam_type || t.examType || '').toLowerCase().includes(searchLower);
+
+    if (!matchesCat || !matchesSearch) return false;
+
+    if (statusFilter === 'ALL') return true;
+    const st = getWindowStatus(t);
+    if (statusFilter === 'LIVE') return st.isLive;
+    if (statusFilter === 'UPCOMING') return !st.isLive && t.window_start && new Date(t.window_start) > new Date();
+    if (statusFilter === 'COMPLETED') return st.isReleased && st.isAttempted;
+    if (statusFilter === 'PRACTICE') return st.isReleased;
+    return true;
   });
 
   return (
@@ -1228,20 +1244,17 @@ ${studentName}`
           {/* MAIN SPLIT GRID: LEFT EXAM CONTENT & RIGHT QUICK ACTIONS */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
-            {/* LEFT CONTENT AREA (9 Cols) */}
+            {/* LEFT CONTENT AREA (8 Cols on desktop) */}
             <div className="lg:col-span-8 space-y-6">
               {loading ? (
                 <div className="p-16 rounded-3xl bg-white/20 backdrop-blur-2xl border-2 border-amber-950/30 text-center space-y-3 shadow-2xl">
                   <RefreshCw className="animate-spin text-amber-950 w-8 h-8 mx-auto" />
                   <p className="text-xs text-[#1c1815] font-mono font-bold">Loading Examination Papers...</p>
                 </div>
-              ) : filteredTests.length === 0 ? (
+              ) : activePapersList.length === 0 ? (
                 /* ULTRA-TRANSPARENT GLASS MAIN PANEL WITH HANDCRAFTED STUDENT STUDYING SKETCH */
                 <div className="p-8 sm:p-10 rounded-3xl bg-white/15 backdrop-blur-2xl border-2 border-amber-950/35 text-center space-y-6 shadow-2xl flex flex-col items-center shadow-[inset_0_1px_2px_0_rgba(255,255,255,0.6)]">
-                  
-                  {/* Pure Handcrafted SVG Line Art Component */}
                   <StudentDeskSketch className="w-80 h-56 text-[#1c1815]" />
-
                   <div className="space-y-2 max-w-md">
                     <h3 className="font-serif text-2xl font-bold text-[#1c1815]">
                       {activeTab === 'TEST_SERIES' ? 'No Upcoming Test Series Scheduled' : 'No Free PYQ Papers Available'}
@@ -1264,376 +1277,569 @@ ${studentName}`
                   )}
                 </div>
               ) : (
-                /* TEST CARDS GRID */
-                <div className="space-y-8">
-                  {/* UPCOMING TESTS (Subscribed) */}
+                <div className="space-y-6">
+                  {/* ══════════════════════════════════════════════════════════════════
+                      1. HERO SPOTLIGHT: CURRENT LIVE / IMMEDIATE UPCOMING TEST
+                     ══════════════════════════════════════════════════════════════════ */}
                   {(() => {
-                    // subscribedExamTypes is already computed above (includes bundle_includes)
-                    const upcomingTests = filteredTests.filter(t => {
-                      const examCat = (t.exam_type || t.examType || '').toUpperCase();
-                      if (!subscribedExamTypes.has(examCat)) return false;
-                      if (!t.window_start) return false;
-                      return new Date(t.window_start) > new Date();
-                    });
+                    const live = activePapersList.find(t => getWindowStatus(t).isLive);
+                    const nextUp = activePapersList
+                      .filter(t => !getWindowStatus(t).isLive && t.window_start && new Date(t.window_start) > new Date())
+                      .sort((a, b) => new Date(a.window_start!).getTime() - new Date(b.window_start!).getTime())[0];
+                    const recentDone = activePapersList
+                      .filter(t => getWindowStatus(t).isReleased)
+                      .sort((a, b) => new Date(b.window_end || 0).getTime() - new Date(a.window_end || 0).getTime())[0];
 
-                    if (upcomingTests.length === 0) return null;
+                    const spotlight = live || nextUp || recentDone;
+                    if (!spotlight) return null;
+
+                    const st = getWindowStatus(spotlight);
+                    const myHallTicket = hallTickets.find(h => h.test_id === spotlight.id);
+                    const matchAttempt = (analyticsData?.trendData || []).find((t: any) => t.testId === spotlight.id);
 
                     return (
-                      <div className="space-y-4">
-                        <h3 className="font-serif text-2xl font-bold text-[#1c1815] flex items-center gap-2">
-                          <Sparkles size={24} className="text-amber-600" />
-                          Upcoming Tests (Your Subscriptions)
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {upcomingTests.map((paper) => {
-                            const status = getWindowStatus(paper);
-                            const examCat = (paper.exam_type || paper.examType || 'IAT').toUpperCase();
-                            const myHallTicket = hallTickets.find(h => h.test_id === paper.id);
+                      <div className={`p-6 sm:p-7 rounded-3xl backdrop-blur-2xl border-2 transition-all duration-300 shadow-xl relative overflow-hidden ${
+                        st.isLive
+                          ? 'bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-white/40 border-emerald-500/60 shadow-emerald-950/10'
+                          : nextUp
+                          ? 'bg-gradient-to-br from-amber-500/15 via-orange-500/5 to-white/40 border-amber-500/60 shadow-amber-950/10'
+                          : 'bg-white/30 border-amber-950/30'
+                      }`}>
+                        {/* Top Accent Ribbon */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-amber-950/15">
+                          <div className="flex items-center gap-2">
+                            {st.isLive ? (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-500 text-white shadow-sm animate-pulse">
+                                🔴 LIVE CBT EXAM IN PROGRESS
+                              </span>
+                            ) : nextUp ? (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-500 text-black shadow-sm">
+                                ⏳ NEXT SCHEDULED EXAM
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-zinc-800 text-amber-300 shadow-sm">
+                                🏆 RECENTLY CONCLUDED EXAM
+                              </span>
+                            )}
+                            <span className="px-2.5 py-0.5 rounded-md bg-amber-950/15 border border-amber-950/30 text-[10px] font-extrabold text-amber-950">
+                              {(spotlight.exam_type || spotlight.examType || 'IAT').toUpperCase()}
+                            </span>
+                          </div>
+
+                          {spotlight.window_start && (
+                            <div className="text-xs font-mono font-bold text-zinc-700 flex items-center gap-1.5">
+                              <Calendar size={13} className="text-amber-800" />
+                              <span>{new Date(spotlight.window_start).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                              <span>•</span>
+                              <Clock size={13} className="text-amber-800" />
+                              <span>{new Date(spotlight.window_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} IST</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Title & Details */}
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center pt-5">
+                          <div className="md:col-span-7 space-y-3">
+                            <h3 className="font-serif text-2xl sm:text-3xl font-bold text-[#1c1815]">
+                              {spotlight.title}
+                            </h3>
                             
-                            const isUpcomingWithHallTicket = myHallTicket && !status.isLive && paper.window_start && new Date(paper.window_start) > new Date();
-
-                            return (
-                              <div
-                                key={`upcoming-${paper.id}`}
-                                className="rounded-3xl bg-amber-100/40 backdrop-blur-2xl border-2 border-amber-500/50 hover:border-amber-600 p-6 space-y-5 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between relative group shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.6)]"
-                              >
-                                <div className="space-y-4">
-                                  <div className="flex items-center justify-between">
-                                    <span className="px-3 py-1 rounded-full bg-amber-950/15 border border-amber-950/30 text-amber-950 text-[10px] font-extrabold uppercase tracking-wider">
-                                      {examCat}
-                                    </span>
-                                    <span className="font-serif italic text-xs text-[#1c1815] font-extrabold">
-                                      {paper.exam_year || paper.year || paper.pyq_year || new Date().getFullYear()}
-                                    </span>
-                                  </div>
-
-                                  <h4 className="font-serif text-xl font-bold text-[#1c1815] group-hover:text-amber-950 transition-colors line-clamp-2">
-                                    {paper.title}
-                                  </h4>
-
-                                  <div className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 border-2 ${
-                                    status.color === 'emerald'
-                                      ? 'bg-emerald-200/60 border-emerald-400 text-emerald-950'
-                                      : status.color === 'amber'
-                                      ? 'bg-amber-200/60 border-amber-400 text-amber-950'
-                                      : 'bg-red-200/60 border-red-400 text-red-950'
-                                  }`}>
-                                    <span>{status.label}</span>
-                                  </div>
-
-                                  <div className="grid grid-cols-3 gap-2 pt-2 border-t-2 border-amber-950/25 text-center text-xs">
-                                    <div className="bg-white/40 p-2 rounded-xl border border-amber-950/25">
-                                      <p className="text-[9px] text-[#1c1815] uppercase font-extrabold">Questions</p>
-                                      <p className="font-extrabold text-[#1c1815]">{paper.questions_count || 60} Qs</p>
-                                    </div>
-                                    <div className="bg-white/40 p-2 rounded-xl border border-amber-950/25">
-                                      <p className="text-[9px] text-[#1c1815] uppercase font-extrabold">Duration</p>
-                                      <p className="font-extrabold text-[#1c1815]">{paper.duration_minutes || 180} Mins</p>
-                                    </div>
-                                    <div className="bg-white/40 p-2 rounded-xl border border-amber-950/25">
-                                      <p className="text-[9px] text-[#1c1815] uppercase font-extrabold">Marks</p>
-                                      <p className="font-extrabold text-amber-950">{paper.total_marks || 240} M</p>
-                                    </div>
-                                  </div>
-
-                                  {/* 📘 Syllabus & Specific Chapters Accordion */}
-                                  {paper.description && (
-                                    <div className="rounded-2xl bg-amber-500/15 border border-amber-600/30 overflow-hidden text-xs">
-                                      <button
-                                        type="button"
-                                        onClick={() => toggleSyllabus(paper.id)}
-                                        className="w-full px-3.5 py-2 flex items-center justify-between font-bold text-amber-950 hover:bg-amber-500/20 transition cursor-pointer"
-                                      >
-                                        <span className="flex items-center gap-1.5 font-extrabold text-[11px] uppercase tracking-wide">
-                                          <BookOpen size={13} className="text-amber-900" /> Syllabus & Blueprint
-                                        </span>
-                                        <span className="text-[10px] font-extrabold text-amber-950 bg-amber-300/80 px-2 py-0.5 rounded-md border border-amber-500/40">
-                                          {expandedSyllabus[paper.id] ? 'Hide' : 'View Syllabus'}
-                                        </span>
-                                      </button>
-                                      {expandedSyllabus[paper.id] && (
-                                        <div className="p-3.5 pt-1.5 border-t border-amber-600/20 bg-amber-50/90 text-zinc-900 leading-relaxed font-bold whitespace-pre-line text-[11px]">
-                                          {paper.description}
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                  
-                                  {myHallTicket && (
-                                    <div className="mt-2 p-3 rounded-xl bg-gradient-to-r from-amber-200 to-amber-400 border border-amber-500 shadow-inner flex flex-col gap-2">
-                                      <div className="flex items-start gap-3">
-                                        <div className="bg-amber-900/10 p-2 rounded-lg text-amber-950">
-                                          <Key size={18} />
-                                        </div>
-                                        <div>
-                                          <p className="text-[10px] uppercase font-extrabold text-amber-900 tracking-wider">Your Exam Pass</p>
-                                          <p className="font-mono text-sm font-bold text-amber-950">{myHallTicket.unique_exam_id}</p>
-                                        </div>
-                                      </div>
-                                      {isUpcomingWithHallTicket && (
-                                        <p className="text-[10px] text-amber-950 font-bold border-t border-amber-500/30 pt-2 mt-1">
-                                          Exam on {new Date(paper.window_start!).toLocaleDateString()} at {new Date(paper.window_start!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </p>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-
-                                {status.isReleased ? (
-                                  status.isAttempted ? (
-                                    <div className="space-y-2">
-                                      <button
-                                        onClick={() => {
-                                          const matchAttempt = (analyticsData?.trendData || []).find((t: any) => t.testId === paper.id);
-                                          const attemptParam = matchAttempt?.attemptId ? `&attemptId=${matchAttempt.attemptId}` : '';
-                                          navigate(`/response-sheet?testId=${paper.id}${attemptParam}`);
-                                        }}
-                                        className="w-full py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-md border border-amber-400/40 cursor-pointer transition"
-                                      >
-                                        <Award size={16} />
-                                        <span>View Your Scorecard &amp; AIR Rank</span>
-                                      </button>
-                                      <button
-                                        onClick={() => handleTestClick(paper)}
-                                        className="w-full py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 bg-[#1c1815] text-amber-300 hover:bg-black border border-amber-500/30 cursor-pointer transition"
-                                      >
-                                        <PlayCircle size={14} />
-                                        <span>Re-Practice Mode (Instant Grading)</span>
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <div className="space-y-2">
-                                      <div className="p-2.5 rounded-xl bg-amber-950/10 border border-amber-950/20 text-[11px] text-[#1c1815] space-y-1">
-                                        <p className="font-bold flex items-center gap-1.5 text-amber-950">
-                                          <span>⚠️</span> <span>Missed Live Exam Window</span>
-                                        </p>
-                                        <p className="text-[10px] text-neutral-700 leading-snug">
-                                          You did not take this exam during the scheduled live window. You can take it in Practice Mode with instant auto-grading or view official solutions below.
-                                        </p>
-                                      </div>
-                                      <button
-                                        onClick={() => handleTestClick(paper)}
-                                        className="w-full py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-md border border-amber-400/40 cursor-pointer transition"
-                                      >
-                                        <PlayCircle size={16} />
-                                        <span>Practice Mode (Instant Grading)</span>
-                                      </button>
-                                      <button
-                                        onClick={() => navigate(`/response-sheet?testId=${paper.id}&viewSolutions=true`)}
-                                        className="w-full py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 bg-[#1c1815] text-amber-300 hover:bg-black border border-amber-500/30 cursor-pointer transition"
-                                      >
-                                        <FileText size={14} />
-                                        <span>View Paper Solutions &amp; Answer Key</span>
-                                      </button>
-                                    </div>
-                                  )
-                                ) : status.isAttempted && paper.content_type === 'test_series' ? (
-                                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-1">
-                                    <div className="text-xs font-black text-emerald-700 flex items-center justify-center gap-1.5">
-                                      <CheckCircle2 size={16} className="text-emerald-600" />
-                                      <span>Exam Submitted Successfully</span>
-                                    </div>
-                                    <p className="text-[10px] text-neutral-600">
-                                      Your responses have been recorded. Official results &amp; AIR rankings will be released after 09:00 PM.
-                                    </p>
-                                  </div>
-                                ) : (
-                                  <button
-                                    onClick={() => handleTestClick(paper)}
-                                    disabled={!status.isLive}
-                                    className={`w-full py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md ${
-                                      status.isLive
-                                        ? (myHallTicket ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-900/30 border border-emerald-500 cursor-pointer' : 'bg-[#1c1815] text-amber-300 hover:bg-black shadow-amber-950/30 cursor-pointer border border-amber-500/30')
-                                        : 'bg-neutral-300/60 text-neutral-600 border border-neutral-400 cursor-not-allowed'
-                                    }`}
-                                  >
-                                    {status.isLive ? <PlayCircle size={16} /> : <Lock size={16} />}
-                                    <span>{status.isLive ? (myHallTicket ? 'Enter Exam' : 'Start CBT Exam') : 'Test Window Closed'}</span>
-                                  </button>
-                                )}
+                            {spotlight.description ? (
+                              <div className="p-3.5 rounded-2xl bg-white/70 border border-amber-950/20 text-xs text-zinc-800 space-y-1">
+                                <p className="font-bold text-[11px] text-amber-950 flex items-center gap-1 uppercase tracking-wide">
+                                  <BookOpen size={12} /> Blueprint Syllabus
+                                </p>
+                                <p className="line-clamp-2 text-zinc-700 font-semibold leading-relaxed">
+                                  {spotlight.description}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => setSyllabusModalPaper(spotlight)}
+                                  className="text-[10px] text-amber-900 font-extrabold hover:underline inline-block pt-0.5 cursor-pointer"
+                                >
+                                  Read Full Chapter Breakdown →
+                                </button>
                               </div>
-                            );
-                          })}
+                            ) : (
+                              <p className="text-xs text-zinc-600 font-medium">
+                                Full Prescribed National Entrance Syllabus (Physics, Chemistry, Mathematics &amp; Biology).
+                              </p>
+                            )}
+
+                            <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-zinc-700 pt-1">
+                              <span>📝 {spotlight.questions_count || 60} Questions</span>
+                              <span>⏱️ {spotlight.duration_minutes || 180} Minutes</span>
+                              <span>🎯 {spotlight.total_marks || 240} Marks</span>
+                            </div>
+                          </div>
+
+                          <div className="md:col-span-5 flex flex-col gap-3 justify-center">
+                            {myHallTicket && (
+                              <div className="p-3 rounded-2xl bg-amber-200/70 border border-amber-400 text-center shadow-inner">
+                                <p className="text-[10px] uppercase font-extrabold text-amber-900 tracking-wider">Your Official Exam Pass</p>
+                                <p className="font-mono text-base font-black text-amber-950">{myHallTicket.unique_exam_id}</p>
+                              </div>
+                            )}
+
+                            {st.isLive ? (
+                              <button
+                                onClick={() => handleTestClick(spotlight)}
+                                className="w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-900/20 border-2 border-emerald-400 flex items-center justify-center gap-2 cursor-pointer transition transform active:scale-98"
+                              >
+                                <PlayCircle size={18} />
+                                <span>{myHallTicket ? 'Enter Live Exam (CBT)' : 'Start CBT Exam'}</span>
+                              </button>
+                            ) : st.isReleased ? (
+                              st.isAttempted ? (
+                                <div className="space-y-2">
+                                  <button
+                                    onClick={() => {
+                                      const attemptParam = matchAttempt?.attemptId ? `&attemptId=${matchAttempt.attemptId}` : '';
+                                      navigate(`/response-sheet?testId=${spotlight.id}${attemptParam}`);
+                                    }}
+                                    className="w-full py-3 rounded-xl font-bold text-xs uppercase tracking-wider bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black shadow-md border border-amber-500/40 flex items-center justify-center gap-2 cursor-pointer transition"
+                                  >
+                                    <Award size={16} />
+                                    <span>View Scorecard &amp; AIR Rank</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleTestClick(spotlight)}
+                                    className="w-full py-2 rounded-xl font-bold text-xs uppercase bg-[#1c1815] text-amber-300 hover:bg-black border border-amber-500/30 flex items-center justify-center gap-1.5 cursor-pointer transition"
+                                  >
+                                    <PlayCircle size={14} />
+                                    <span>Re-Practice Mode</span>
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => handleTestClick(spotlight)}
+                                  className="w-full py-3 rounded-xl font-bold text-xs uppercase bg-[#1c1815] text-amber-300 hover:bg-black border border-amber-500/30 flex items-center justify-center gap-1.5 cursor-pointer transition"
+                                >
+                                  <PlayCircle size={16} />
+                                  <span>Practice Mode (Instant Grading)</span>
+                                </button>
+                              )
+                            ) : (
+                              <button
+                                onClick={() => handleTestClick(spotlight)}
+                                className="w-full py-3 rounded-2xl font-bold text-xs uppercase bg-white/70 hover:bg-white text-zinc-700 border-2 border-amber-950/25 flex items-center justify-center gap-2 cursor-pointer transition"
+                              >
+                                <BookOpen size={16} className="text-amber-800" />
+                                <span>Preview Instructions &amp; Syllabus</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
                   })()}
 
-                  <div className="space-y-4">
-                    <h3 className="font-serif text-xl font-bold text-[#1c1815]">All Available Papers</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {filteredTests.map((paper) => {
-                    const status = getWindowStatus(paper);
-                    const examCat = (paper.exam_type || paper.examType || 'IAT').toUpperCase();
-                    const myHallTicket = hallTickets.find(h => h.test_id === paper.id);
-                    
-                    const isUpcomingWithHallTicket = myHallTicket && !status.isLive && paper.window_start && new Date(paper.window_start) > new Date();
-
-                    return (
-                      <div
-                        key={paper.id}
-                        className="rounded-3xl bg-white/20 backdrop-blur-2xl border-2 border-amber-950/35 hover:border-amber-950/60 p-6 space-y-5 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between relative group shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.6)]"
-                      >
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <span className="px-3 py-1 rounded-full bg-amber-950/15 border border-amber-950/30 text-amber-950 text-[10px] font-extrabold uppercase tracking-wider">
-                              {examCat}
-                            </span>
-                            <span className="font-serif italic text-xs text-[#1c1815] font-extrabold">
-                              {paper.exam_year || paper.year || paper.pyq_year || new Date().getFullYear()}
-                            </span>
-                          </div>
-
-                          <h4 className="font-serif text-xl font-bold text-[#1c1815] group-hover:text-amber-950 transition-colors line-clamp-2">
-                            {paper.title}
-                          </h4>
-
-                          <div className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 border-2 ${
-                            status.color === 'emerald'
-                              ? 'bg-emerald-200/60 border-emerald-400 text-emerald-950'
-                              : status.color === 'amber'
-                              ? 'bg-amber-200/60 border-amber-400 text-amber-950'
-                              : 'bg-red-200/60 border-red-400 text-red-950'
+                  {/* ══════════════════════════════════════════════════════════════════
+                      2. CONTROL & FILTER RIBBON (Scales cleanly to 30+ tests)
+                     ══════════════════════════════════════════════════════════════════ */}
+                  <div className="p-3.5 sm:p-4 rounded-3xl bg-white/30 backdrop-blur-2xl border-2 border-amber-950/25 shadow-md flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                    {/* Status Filter Tabs with Counts */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+                      {[
+                        { id: 'ALL', label: 'All Papers', count: activePapersList.length },
+                        { id: 'LIVE', label: 'Live Now', count: activePapersList.filter(t => getWindowStatus(t).isLive).length },
+                        { id: 'UPCOMING', label: 'Upcoming', count: activePapersList.filter(t => !getWindowStatus(t).isLive && t.window_start && new Date(t.window_start) > new Date()).length },
+                        { id: 'COMPLETED', label: 'Scorecards', count: activePapersList.filter(t => getWindowStatus(t).isReleased && getWindowStatus(t).isAttempted).length },
+                        { id: 'PRACTICE', label: 'Re-Practice', count: activePapersList.filter(t => getWindowStatus(t).isReleased).length },
+                      ].map(tab => (
+                        <button
+                          key={tab.id}
+                          onClick={() => setStatusFilter(tab.id as any)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                            statusFilter === tab.id
+                              ? 'bg-[#1c1815] text-amber-300 shadow-sm'
+                              : 'bg-white/60 text-zinc-700 hover:bg-white hover:text-black border border-amber-950/10'
+                          }`}
+                        >
+                          <span>{tab.label}</span>
+                          <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                            statusFilter === tab.id ? 'bg-amber-400 text-black' : 'bg-zinc-200 text-zinc-700'
                           }`}>
-                            <span>{status.label}</span>
-                          </div>
+                            {tab.count}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
 
-                          <div className="grid grid-cols-3 gap-2 pt-2 border-t-2 border-amber-950/25 text-center text-xs">
-                            <div className="bg-white/40 p-2 rounded-xl border border-amber-950/25">
-                              <p className="text-[9px] text-[#1c1815] uppercase font-extrabold">Questions</p>
-                              <p className="font-extrabold text-[#1c1815]">{paper.questions_count || 60} Qs</p>
-                            </div>
-                            <div className="bg-white/40 p-2 rounded-xl border border-amber-950/25">
-                              <p className="text-[9px] text-[#1c1815] uppercase font-extrabold">Duration</p>
-                              <p className="font-extrabold text-[#1c1815]">{paper.duration_minutes || 180} Mins</p>
-                            </div>
-                            <div className="bg-white/40 p-2 rounded-xl border border-amber-950/25">
-                              <p className="text-[9px] text-[#1c1815] uppercase font-extrabold">Marks</p>
-                              <p className="font-extrabold text-amber-950">{paper.total_marks || 240} M</p>
-                            </div>
-                          </div>
-
-                          {/* 📘 Syllabus & Specific Chapters Accordion */}
-                          {paper.description && (
-                            <div className="rounded-2xl bg-amber-500/15 border border-amber-600/30 overflow-hidden text-xs">
-                              <button
-                                type="button"
-                                onClick={() => toggleSyllabus(paper.id)}
-                                className="w-full px-3.5 py-2 flex items-center justify-between font-bold text-amber-950 hover:bg-amber-500/20 transition cursor-pointer"
-                              >
-                                <span className="flex items-center gap-1.5 font-extrabold text-[11px] uppercase tracking-wide">
-                                  <BookOpen size={13} className="text-amber-900" /> Syllabus & Blueprint
-                                </span>
-                                <span className="text-[10px] font-extrabold text-amber-950 bg-amber-300/80 px-2 py-0.5 rounded-md border border-amber-500/40">
-                                  {expandedSyllabus[paper.id] ? 'Hide' : 'View Syllabus'}
-                                </span>
-                              </button>
-                              {expandedSyllabus[paper.id] && (
-                                <div className="p-3.5 pt-1.5 border-t border-amber-600/20 bg-amber-50/90 text-zinc-900 leading-relaxed font-bold whitespace-pre-line text-[11px]">
-                                  {paper.description}
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {myHallTicket && (
-                            <div className="mt-2 p-3 rounded-xl bg-gradient-to-r from-amber-200 to-amber-400 border border-amber-500 shadow-inner flex flex-col gap-2">
-                              <div className="flex items-start gap-3">
-                                <div className="bg-amber-900/10 p-2 rounded-lg text-amber-950">
-                                  <Key size={18} />
-                                </div>
-                                <div>
-                                  <p className="text-[10px] uppercase font-extrabold text-amber-900 tracking-wider">Your Exam Pass</p>
-                                  <p className="font-mono text-sm font-bold text-amber-950">{myHallTicket.unique_exam_id}</p>
-                                </div>
-                              </div>
-                              {isUpcomingWithHallTicket && (
-                                <p className="text-[10px] text-amber-950 font-bold border-t border-amber-500/30 pt-2 mt-1">
-                                  Exam on {new Date(paper.window_start!).toLocaleDateString()} at {new Date(paper.window_start!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {status.isReleased ? (
-                          status.isAttempted ? (
-                            <div className="space-y-2">
-                              <button
-                                onClick={() => {
-                                  const matchAttempt = (analyticsData?.trendData || []).find((t: any) => t.testId === paper.id);
-                                  const attemptParam = matchAttempt?.attemptId ? `&attemptId=${matchAttempt.attemptId}` : '';
-                                  navigate(`/response-sheet?testId=${paper.id}${attemptParam}`);
-                                }}
-                                className="w-full py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-md border border-amber-400/40 cursor-pointer transition"
-                              >
-                                <Award size={16} />
-                                <span>View Your Scorecard &amp; AIR Rank</span>
-                              </button>
-                              <button
-                                onClick={() => handleTestClick(paper)}
-                                className="w-full py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 bg-[#1c1815] text-amber-300 hover:bg-black border border-amber-500/30 cursor-pointer transition"
-                              >
-                                <PlayCircle size={14} />
-                                <span>Re-Practice Mode (Instant Grading)</span>
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="space-y-2">
-                              <div className="p-2.5 rounded-xl bg-amber-950/10 border border-amber-950/20 text-[11px] text-[#1c1815] space-y-1">
-                                <p className="font-bold flex items-center gap-1.5 text-amber-950">
-                                  <span>⚠️</span> <span>Missed Live Exam Window</span>
-                                </p>
-                                <p className="text-[10px] text-neutral-700 leading-snug">
-                                  You did not take this exam during the scheduled live window. You can take it in Practice Mode with instant auto-grading or view official solutions below.
-                                </p>
-                              </div>
-                              <button
-                                onClick={() => handleTestClick(paper)}
-                                className="w-full py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-md border border-amber-400/40 cursor-pointer transition"
-                              >
-                                <PlayCircle size={16} />
-                                <span>Practice Mode (Instant Grading)</span>
-                              </button>
-                              <button
-                                onClick={() => navigate(`/response-sheet?testId=${paper.id}&viewSolutions=true`)}
-                                className="w-full py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 bg-[#1c1815] text-amber-300 hover:bg-black border border-amber-500/30 cursor-pointer transition"
-                              >
-                                <FileText size={14} />
-                                <span>View Paper Solutions &amp; Answer Key</span>
-                              </button>
-                            </div>
-                          )
-                        ) : status.isAttempted && paper.content_type === 'test_series' ? (
-                          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-1">
-                            <div className="text-xs font-black text-emerald-700 flex items-center justify-center gap-1.5">
-                              <CheckCircle2 size={16} className="text-emerald-600" />
-                              <span>Exam Submitted Successfully</span>
-                            </div>
-                            <p className="text-[10px] text-neutral-600">
-                              Your responses have been recorded. Official results &amp; AIR rankings will be released after 09:00 PM.
-                            </p>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => handleTestClick(paper)}
-                            disabled={!status.isLive}
-                            className={`w-full py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md ${
-                              status.isLive
-                                ? (myHallTicket ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-900/30 border border-emerald-500 cursor-pointer' : 'bg-[#1c1815] text-amber-300 hover:bg-black shadow-amber-950/30 cursor-pointer border border-amber-500/30')
-                                : 'bg-neutral-300/60 text-neutral-600 border border-neutral-400 cursor-not-allowed'
-                            }`}
-                          >
-                            {status.isLive ? <PlayCircle size={16} /> : <Lock size={16} />}
-                            <span>{status.isLive ? (myHallTicket ? 'Enter Exam' : 'Start CBT Exam') : 'Test Window Closed'}</span>
+                    {/* Search Input & View Switcher */}
+                    <div className="flex items-center gap-2.5">
+                      <div className="relative flex-1 md:w-52">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                        <input
+                          type="text"
+                          placeholder="Search chapter or test..."
+                          value={searchTerm}
+                          onChange={e => setSearchTerm(e.target.value)}
+                          className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-white/80 border border-amber-950/20 text-xs font-semibold focus:outline-none focus:border-amber-600 shadow-inner placeholder:text-zinc-400"
+                        />
+                        {searchTerm && (
+                          <button onClick={() => setSearchTerm('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-black cursor-pointer">
+                            <X size={12} />
                           </button>
                         )}
-
                       </div>
-                    );
-                  })}
+
+                      {/* View Mode Switcher */}
+                      <div className="flex items-center bg-white/80 p-1 rounded-xl border border-amber-950/20 shadow-inner">
+                        <button
+                          onClick={() => setViewMode('table')}
+                          className={`p-1.5 rounded-lg transition cursor-pointer ${viewMode === 'table' ? 'bg-[#1c1815] text-amber-300 shadow-xs' : 'text-zinc-500 hover:text-black'}`}
+                          title="Compact Academic Ledger View"
+                        >
+                          <List size={15} />
+                        </button>
+                        <button
+                          onClick={() => setViewMode('grid')}
+                          className={`p-1.5 rounded-lg transition cursor-pointer ${viewMode === 'grid' ? 'bg-[#1c1815] text-amber-300 shadow-xs' : 'text-zinc-500 hover:text-black'}`}
+                          title="Card Grid View"
+                        >
+                          <LayoutGrid size={15} />
+                        </button>
+                      </div>
                     </div>
                   </div>
+
+                  {/* ══════════════════════════════════════════════════════════════════
+                      3. MAIN PAPERS LIST (Table Ledger Mode vs Bento Grid Mode)
+                     ══════════════════════════════════════════════════════════════════ */}
+                  {filteredTests.length === 0 ? (
+                    <div className="p-10 rounded-3xl bg-white/20 backdrop-blur-xl border border-amber-950/20 text-center space-y-2">
+                      <p className="font-serif text-lg font-bold text-zinc-800">No papers found for this filter</p>
+                      <p className="text-xs text-zinc-600 font-medium">Try selecting "All Papers" or clearing your search term.</p>
+                      <button
+                        onClick={() => { setStatusFilter('ALL'); setSearchTerm(''); }}
+                        className="mt-2 px-4 py-1.5 rounded-xl bg-[#1c1815] text-amber-300 text-xs font-bold hover:bg-black cursor-pointer"
+                      >
+                        Reset Filters
+                      </button>
+                    </div>
+                  ) : viewMode === 'table' ? (
+                    /* 📋 LINEAR ACADEMIC LEDGER (COMPACT TABLE VIEW) */
+                    <div className="rounded-3xl bg-white/30 backdrop-blur-2xl border-2 border-amber-950/30 overflow-hidden shadow-xl">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead>
+                            <tr className="border-b-2 border-amber-950/20 bg-amber-900/10 text-[#1c1815] font-black uppercase text-[10px] tracking-wider">
+                              <th className="py-3.5 px-4">Paper &amp; Exam</th>
+                              <th className="py-3.5 px-4">Included Chapters / Syllabus</th>
+                              <th className="py-3.5 px-4">Schedule Window</th>
+                              <th className="py-3.5 px-4 text-center">Status &amp; Grade</th>
+                              <th className="py-3.5 px-4 text-right">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-amber-950/15">
+                            {filteredTests.map((paper) => {
+                              const status = getWindowStatus(paper);
+                              const myHallTicket = hallTickets.find(h => h.test_id === paper.id);
+                              const matchAttempt = (analyticsData?.trendData || []).find((t: any) => t.testId === paper.id);
+                              
+                              return (
+                                <tr key={paper.id} className="hover:bg-white/40 transition duration-150 group">
+                                  {/* Paper Title & Tag */}
+                                  <td className="py-4 px-4 font-bold">
+                                    <div className="flex items-center gap-2">
+                                      <span className="px-2 py-0.5 rounded-md bg-amber-950/15 border border-amber-950/30 text-[10px] font-black text-amber-950">
+                                        {(paper.exam_type || paper.examType || 'IAT').toUpperCase()}
+                                      </span>
+                                      <span className="font-serif text-sm font-bold text-[#1c1815]">
+                                        {paper.title}
+                                      </span>
+                                    </div>
+                                    <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
+                                      {paper.questions_count || 60} Qs • {paper.duration_minutes || 180}m • {paper.total_marks || 240} Marks
+                                    </div>
+                                  </td>
+
+                                  {/* Syllabus & Blueprint */}
+                                  <td className="py-4 px-4 max-w-xs">
+                                    {paper.description ? (
+                                      <div className="flex flex-col items-start gap-1">
+                                        <p className="line-clamp-2 text-[11px] text-zinc-700 font-medium">
+                                          {paper.description}
+                                        </p>
+                                        <button
+                                          type="button"
+                                          onClick={() => setSyllabusModalPaper(paper)}
+                                          className="text-[10px] text-amber-900 font-extrabold hover:underline flex items-center gap-1 cursor-pointer"
+                                        >
+                                          <BookOpen size={11} /> View Full Syllabus
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <span className="text-zinc-400 text-[11px] italic">Full Prescribed Syllabus</span>
+                                    )}
+                                  </td>
+
+                                  {/* Schedule */}
+                                  <td className="py-4 px-4 font-mono text-[11px] text-zinc-600 whitespace-nowrap">
+                                    {paper.window_start ? (
+                                      <div>
+                                        <div className="font-bold text-zinc-800 flex items-center gap-1">
+                                          <Calendar size={12} className="text-amber-800" />
+                                          {new Date(paper.window_start).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                        </div>
+                                        <div className="text-[10px] text-zinc-500 flex items-center gap-1">
+                                          <Clock size={11} />
+                                          {new Date(paper.window_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(paper.window_end || paper.window_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <span>Available Anytime</span>
+                                    )}
+                                  </td>
+
+                                  {/* Status / Grade */}
+                                  <td className="py-4 px-4 text-center whitespace-nowrap">
+                                    {status.isLive ? (
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-900 border border-emerald-500/40 animate-pulse">
+                                        🟢 LIVE NOW
+                                      </span>
+                                    ) : status.isReleased ? (
+                                      status.isAttempted ? (
+                                        <div className="inline-flex flex-col items-center">
+                                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400/30 text-amber-950 border border-amber-500/40 flex items-center gap-1">
+                                            <Trophy size={11} /> Scorecard Declared
+                                          </span>
+                                          {matchAttempt?.score !== undefined && (
+                                            <span className="text-[10px] font-extrabold text-emerald-800 mt-0.5">
+                                              Score: {matchAttempt.score}/{paper.total_marks || 240}
+                                            </span>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-neutral-200 text-neutral-700 border border-neutral-300">
+                                          Window Closed
+                                        </span>
+                                      )
+                                    ) : (
+                                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                                        ⏳ Upcoming
+                                      </span>
+                                    )}
+                                  </td>
+
+                                  {/* Actions */}
+                                  <td className="py-4 px-4 text-right whitespace-nowrap">
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      {status.isLive ? (
+                                        <button
+                                          onClick={() => handleTestClick(paper)}
+                                          className="px-3.5 py-1.5 rounded-xl font-black text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm border border-emerald-500 flex items-center gap-1.5 cursor-pointer"
+                                        >
+                                          <PlayCircle size={14} /> Enter Exam
+                                        </button>
+                                      ) : status.isReleased ? (
+                                        status.isAttempted ? (
+                                          <>
+                                            <button
+                                              onClick={() => {
+                                                const attemptParam = matchAttempt?.attemptId ? `&attemptId=${matchAttempt.attemptId}` : '';
+                                                navigate(`/response-sheet?testId=${paper.id}${attemptParam}`);
+                                              }}
+                                              className="px-3 py-1.5 rounded-xl font-bold text-xs bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black shadow-xs border border-amber-500/40 flex items-center gap-1.5 cursor-pointer"
+                                            >
+                                              <Award size={13} /> Scorecard
+                                            </button>
+                                            <button
+                                              onClick={() => handleTestClick(paper)}
+                                              className="px-2.5 py-1.5 rounded-xl font-bold text-xs bg-[#1c1815] hover:bg-black text-amber-300 border border-amber-500/30 flex items-center gap-1 cursor-pointer"
+                                              title="Re-attempt in Practice Mode with instant grading"
+                                            >
+                                              <PlayCircle size={13} /> Re-Practice
+                                            </button>
+                                          </>
+                                        ) : (
+                                          <button
+                                            onClick={() => handleTestClick(paper)}
+                                            className="px-3 py-1.5 rounded-xl font-bold text-xs bg-[#1c1815] hover:bg-black text-amber-300 border border-amber-500/30 flex items-center gap-1.5 cursor-pointer"
+                                          >
+                                            <PlayCircle size={13} /> Practice Mode
+                                          </button>
+                                        )
+                                      ) : (
+                                        <div className="flex items-center gap-1">
+                                          {myHallTicket ? (
+                                            <span className="px-2.5 py-1 rounded-xl bg-amber-200/80 border border-amber-400 font-mono text-[11px] font-black text-amber-950" title="Your Exam Pass Code">
+                                              🔑 {myHallTicket.unique_exam_id}
+                                            </span>
+                                          ) : (
+                                            <span className="text-zinc-400 text-[11px] font-semibold">Registered</span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ) : (
+                    /* 🗂️ MODERN BENTO GRID VIEW */
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {filteredTests.map((paper) => {
+                        const status = getWindowStatus(paper);
+                        const examCat = (paper.exam_type || paper.examType || 'IAT').toUpperCase();
+                        const myHallTicket = hallTickets.find(h => h.test_id === paper.id);
+                        const matchAttempt = (analyticsData?.trendData || []).find((t: any) => t.testId === paper.id);
+
+                        return (
+                          <div
+                            key={paper.id}
+                            className="rounded-3xl bg-white/25 backdrop-blur-2xl border-2 border-amber-950/30 hover:border-amber-950/60 p-6 space-y-5 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between relative group shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.6)]"
+                          >
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <span className="px-3 py-1 rounded-full bg-amber-950/15 border border-amber-950/30 text-amber-950 text-[10px] font-extrabold uppercase tracking-wider">
+                                  {examCat}
+                                </span>
+                                <span className="font-serif italic text-xs text-[#1c1815] font-extrabold">
+                                  {paper.exam_year || paper.year || paper.pyq_year || new Date().getFullYear()}
+                                </span>
+                              </div>
+
+                              <h4 className="font-serif text-xl font-bold text-[#1c1815] group-hover:text-amber-950 transition-colors line-clamp-2">
+                                {paper.title}
+                              </h4>
+
+                              <div className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 border-2 ${
+                                status.color === 'emerald'
+                                  ? 'bg-emerald-200/60 border-emerald-400 text-emerald-950'
+                                  : status.color === 'amber'
+                                  ? 'bg-amber-200/60 border-amber-400 text-amber-950'
+                                  : 'bg-red-200/60 border-red-400 text-red-950'
+                              }`}>
+                                <span>{status.label}</span>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-2 pt-2 border-t-2 border-amber-950/25 text-center text-xs">
+                                <div className="bg-white/40 p-2 rounded-xl border border-amber-950/25">
+                                  <p className="text-[9px] text-[#1c1815] uppercase font-extrabold">Questions</p>
+                                  <p className="font-extrabold text-[#1c1815]">{paper.questions_count || 60} Qs</p>
+                                </div>
+                                <div className="bg-white/40 p-2 rounded-xl border border-amber-950/25">
+                                  <p className="text-[9px] text-[#1c1815] uppercase font-extrabold">Duration</p>
+                                  <p className="font-extrabold text-[#1c1815]">{paper.duration_minutes || 180} Mins</p>
+                                </div>
+                                <div className="bg-white/40 p-2 rounded-xl border border-amber-950/25">
+                                  <p className="text-[9px] text-[#1c1815] uppercase font-extrabold">Marks</p>
+                                  <p className="font-extrabold text-amber-950">{paper.total_marks || 240} M</p>
+                                </div>
+                              </div>
+
+                              {/* 📘 Syllabus & Specific Chapters Accordion */}
+                              {paper.description && (
+                                <div className="rounded-2xl bg-amber-500/15 border border-amber-600/30 overflow-hidden text-xs">
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleSyllabus(paper.id)}
+                                    className="w-full px-3.5 py-2 flex items-center justify-between font-bold text-amber-950 hover:bg-amber-500/20 transition cursor-pointer"
+                                  >
+                                    <span className="flex items-center gap-1.5 font-extrabold text-[11px] uppercase tracking-wide">
+                                      <BookOpen size={13} className="text-amber-900" /> Syllabus &amp; Blueprint
+                                    </span>
+                                    <span className="text-[10px] font-extrabold text-amber-950 bg-amber-300/80 px-2 py-0.5 rounded-md border border-amber-500/40">
+                                      {expandedSyllabus[paper.id] ? 'Hide' : 'View Syllabus'}
+                                    </span>
+                                  </button>
+                                  {expandedSyllabus[paper.id] && (
+                                    <div className="p-3.5 pt-1.5 border-t border-amber-600/20 bg-amber-50/90 text-zinc-900 leading-relaxed font-bold whitespace-pre-line text-[11px]">
+                                      {paper.description}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {myHallTicket && (
+                                <div className="mt-2 p-3 rounded-xl bg-gradient-to-r from-amber-200 to-amber-400 border border-amber-500 shadow-inner flex flex-col gap-2">
+                                  <div className="flex items-start gap-3">
+                                    <div className="bg-amber-900/10 p-2 rounded-lg text-amber-950">
+                                      <Key size={18} />
+                                    </div>
+                                    <div>
+                                      <p className="text-[10px] uppercase font-extrabold text-amber-900 tracking-wider">Your Exam Pass</p>
+                                      <p className="font-mono text-sm font-bold text-amber-950">{myHallTicket.unique_exam_id}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {status.isReleased ? (
+                              status.isAttempted ? (
+                                <div className="space-y-2">
+                                  <button
+                                    onClick={() => {
+                                      const attemptParam = matchAttempt?.attemptId ? `&attemptId=${matchAttempt.attemptId}` : '';
+                                      navigate(`/response-sheet?testId=${paper.id}${attemptParam}`);
+                                    }}
+                                    className="w-full py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-md border border-amber-400/40 cursor-pointer transition"
+                                  >
+                                    <Award size={16} />
+                                    <span>View Your Scorecard &amp; AIR Rank</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleTestClick(paper)}
+                                    className="w-full py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 bg-[#1c1815] text-amber-300 hover:bg-black border border-amber-500/30 cursor-pointer transition"
+                                  >
+                                    <PlayCircle size={14} />
+                                    <span>Re-Practice Mode (Instant Grading)</span>
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <button
+                                    onClick={() => handleTestClick(paper)}
+                                    className="w-full py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-md border border-amber-400/40 cursor-pointer transition"
+                                  >
+                                    <PlayCircle size={16} />
+                                    <span>Practice Mode (Instant Grading)</span>
+                                  </button>
+                                  <button
+                                    onClick={() => navigate(`/response-sheet?testId=${paper.id}&viewSolutions=true`)}
+                                    className="w-full py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 bg-[#1c1815] text-amber-300 hover:bg-black border border-amber-500/30 cursor-pointer transition"
+                                  >
+                                    <FileText size={14} />
+                                    <span>View Paper Solutions &amp; Answer Key</span>
+                                  </button>
+                                </div>
+                              )
+                            ) : status.isAttempted && paper.content_type === 'test_series' ? (
+                              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-1">
+                                <div className="text-xs font-black text-emerald-700 flex items-center justify-center gap-1.5">
+                                  <CheckCircle2 size={16} className="text-emerald-600" />
+                                  <span>Exam Submitted Successfully</span>
+                                </div>
+                                <p className="text-[10px] text-neutral-600">
+                                  Your responses have been recorded. Official results &amp; AIR rankings will be released after window closes.
+                                </p>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleTestClick(paper)}
+                                disabled={!status.isLive}
+                                className={`w-full py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md ${
+                                  status.isLive
+                                    ? (myHallTicket ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-900/30 border border-emerald-500 cursor-pointer' : 'bg-[#1c1815] text-amber-300 hover:bg-black shadow-amber-950/30 cursor-pointer border border-amber-500/30')
+                                    : 'bg-neutral-300/60 text-neutral-600 border border-neutral-400 cursor-not-allowed'
+                                }`}
+                              >
+                                {status.isLive ? <PlayCircle size={16} /> : <Lock size={16} />}
+                                <span>{status.isLive ? (myHallTicket ? 'Enter Exam' : 'Start CBT Exam') : 'Test Window Closed'}</span>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -2198,6 +2404,67 @@ ${studentName}`
                 className="py-2 px-4 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs rounded-xl transition cursor-pointer"
               >
                 Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════
+          INTERACTIVE FULL SYLLABUS & BLUEPRINT MODAL
+         ══════════════════════════════════════════════════════════════════ */}
+      {syllabusModalPaper && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-[#fcfaf7] border-2 border-amber-950/30 rounded-3xl max-w-xl w-full p-6 space-y-5 shadow-2xl relative">
+            <div className="flex items-center justify-between border-b-2 border-amber-950/15 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-md bg-amber-950/15 border border-amber-950/30 text-xs font-black text-amber-950">
+                  {(syllabusModalPaper.exam_type || syllabusModalPaper.examType || 'IAT').toUpperCase()}
+                </span>
+                <h3 className="font-serif text-lg font-bold text-[#1c1815]">
+                  {syllabusModalPaper.title} • Syllabus &amp; Blueprint
+                </h3>
+              </div>
+              <button
+                onClick={() => setSyllabusModalPaper(null)}
+                className="p-1.5 rounded-lg hover:bg-zinc-200 text-zinc-500 hover:text-black transition cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs text-zinc-800 leading-relaxed">
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+                <p className="font-extrabold text-[11px] uppercase tracking-wide text-amber-950 flex items-center gap-1.5">
+                  <BookOpen size={14} /> Tested Chapters &amp; Section Rules
+                </p>
+                <p className="font-semibold text-zinc-900 whitespace-pre-line leading-relaxed text-sm">
+                  {syllabusModalPaper.description || 'Full Prescribed National Entrance Syllabus (Physics, Chemistry, Mathematics & Biology).'}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="p-2.5 rounded-xl bg-white border border-amber-950/20">
+                  <p className="text-[10px] text-zinc-500 font-bold uppercase">Questions</p>
+                  <p className="font-black text-sm text-[#1c1815]">{syllabusModalPaper.questions_count || 60} Qs</p>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white border border-amber-950/20">
+                  <p className="text-[10px] text-zinc-500 font-bold uppercase">Duration</p>
+                  <p className="font-black text-sm text-[#1c1815]">{syllabusModalPaper.duration_minutes || 180} Mins</p>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white border border-amber-950/20">
+                  <p className="text-[10px] text-zinc-500 font-bold uppercase">Marking</p>
+                  <p className="font-black text-sm text-[#1c1815]">+{4} / -{1}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setSyllabusModalPaper(null)}
+                className="px-5 py-2 rounded-xl bg-[#1c1815] text-amber-300 font-bold text-xs uppercase hover:bg-black transition shadow-sm cursor-pointer"
+              >
+                Close Blueprint
               </button>
             </div>
           </div>
