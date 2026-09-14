@@ -7,7 +7,8 @@ import {
   RefreshCw, HelpCircle, Download, ChevronRight, ChevronLeft, Menu, Home, Mail,
   Edit3, GraduationCap, Trophy, Brain, List, LayoutGrid, Clock, Calendar
 } from 'lucide-react';
-import { getCookie, deleteCookie } from '../lib/cookies';
+import { getCookie, deleteCookie, setCookie } from '../lib/cookies';
+import { supabase } from '../lib/supabase';
 import { useExamStore, generateRollNumber } from '../stores/examStore';
 import {
   StudentDeskSketch
@@ -20,6 +21,21 @@ import {
 import { ModernExamCountdown } from '../components/ModernExamCountdown';
 
 export const SCIENTIST_AVATARS = SCIENTIST_PERSONAS;
+
+export function isTokenExpired(t: string | null | undefined): boolean {
+  if (!t || t === 'mock_local_preview_token') return false;
+  try {
+    const parts = t.split('.');
+    if (parts.length < 2) return false;
+    const payload = JSON.parse(atob(parts[1]));
+    if (payload.exp && payload.exp * 1000 <= Date.now()) {
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 interface TestPaper {
   id: string;
@@ -113,6 +129,7 @@ export function Dashboard() {
   const [studentEmail, setStudentEmail] = useState('');
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [subsLoading, setSubsLoading] = useState(true);
+  const [isSessionExpired, setIsSessionExpired] = useState(false);
   const [hallTickets, setHallTickets] = useState<HallTicket[]>([]);
   const [attemptedTestIds, setAttemptedTestIds] = useState<string[]>([]);
   const [expandedSyllabus, setExpandedSyllabus] = useState<Record<string, boolean>>({});
@@ -208,34 +225,75 @@ ${studentName}`
 
     const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-    // Check token exists — on localhost provide preview mock session
-    if (!token && isLocalhost) {
-      token = 'mock_local_preview_token';
-      name = name === 'Student' ? 'Harsh Anand' : name;
-      email = email || 'anandharsh437@gmail.com';
-    } else if (!token && !email) {
-      console.warn('No auth token found. Redirecting to login.');
-      window.location.href = 'https://auth.vigyanprep.com';
-      return;
-    }
-
-    // Extract student identity gracefully
-    if (token && token !== 'mock_local_preview_token') {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        if (payload.email && !email) email = payload.email;
-        if ((payload.name || payload.full_name) && name === 'Student') name = payload.name || payload.full_name;
-      } catch {
-        // Token is opaque or custom, maintain session
+    async function initSession() {
+      // 1. Check if existing token has expired
+      if (token && isTokenExpired(token)) {
+        console.warn('⚠️ Stored token has expired. Clearing stale session credentials.');
+        deleteCookie('student_token');
+        localStorage.removeItem('student_token');
+        token = null;
       }
+
+      // 2. Attempt silent recovery from Supabase session if token is missing
+      if (!token && !isLocalhost) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token && !isTokenExpired(session.access_token)) {
+            token = session.access_token;
+            setCookie('student_token', token, 30);
+            localStorage.setItem('student_token', token);
+            if (session.user?.email) email = session.user.email;
+            if (session.user?.user_metadata?.full_name) name = session.user.user_metadata.full_name;
+          }
+        } catch (err) {
+          console.warn('Supabase session recovery error:', err);
+        }
+      }
+
+      // 3. Localhost preview mock session
+      if (!token && isLocalhost) {
+        token = 'mock_local_preview_token';
+        name = name === 'Student' ? 'Harsh Anand' : name;
+        email = email || 'anandharsh437@gmail.com';
+      }
+
+      // 4. In production, if no valid token exists, flag session expired
+      if (!token && !isLocalhost) {
+        console.warn('No valid auth token found. User session expired or unauthenticated.');
+        setIsSessionExpired(true);
+        deleteCookie('student_token');
+        localStorage.removeItem('student_token');
+        setSubsLoading(false);
+        loadDashboardTests(); // Load public tests only
+        return;
+      }
+
+      // 5. Extract student identity gracefully from valid token
+      if (token && token !== 'mock_local_preview_token') {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          if (payload.email && !email) email = payload.email;
+          if ((payload.name || payload.full_name) && name === 'Student') name = payload.name || payload.full_name;
+        } catch {}
+      }
+
+      if (token && token !== 'mock_local_preview_token') {
+        setCookie('student_token', token, 30);
+        localStorage.setItem('student_token', token);
+      }
+      if (name) localStorage.setItem('student_name', name);
+      if (email) localStorage.setItem('student_email', email);
+
+      setStudentName(name);
+      setStudentEmail(email);
+
+      const activeToken = token || '';
+      loadDashboardTests();
+      loadSubscriptions(activeToken);
+      loadHallTickets(activeToken);
+      loadAttempts(activeToken);
+      loadAnalytics(activeToken);
     }
-
-    if (token) localStorage.setItem('student_token', token);
-    if (name) localStorage.setItem('student_name', name);
-    if (email) localStorage.setItem('student_email', email);
-
-    setStudentName(name);
-    setStudentEmail(email);
 
     async function loadDashboardTests(silent = false) {
       if (!silent) setLoading(true);
@@ -275,6 +333,11 @@ ${studentName}`
         const res = await fetch(`https://api.vigyanprep.com/api/student/hall-tickets?cb=${Date.now()}`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         });
+        if (res.status === 401) {
+          setIsSessionExpired(true);
+          setHallTickets([]);
+          return;
+        }
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.hallTickets) {
@@ -297,6 +360,14 @@ ${studentName}`
         const res = await fetch(`https://api.vigyanprep.com/api/student/subscriptions?cb=${Date.now()}`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         });
+        if (res.status === 401) {
+          console.warn('⚠️ Subscriptions API returned 401 Unauthorized: session expired');
+          setIsSessionExpired(true);
+          deleteCookie('student_token');
+          localStorage.removeItem('student_token');
+          setSubscriptions([]);
+          return;
+        }
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.subscriptions && data.subscriptions.length > 0) {
@@ -382,6 +453,10 @@ ${studentName}`
         const res = await fetch(`https://api.vigyanprep.com/api/student/attempts?cb=${Date.now()}`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         });
+        if (res.status === 401) {
+          setIsSessionExpired(true);
+          return;
+        }
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.attemptedTestIds) {
@@ -398,6 +473,10 @@ ${studentName}`
         const res = await fetch(`https://api.vigyanprep.com/api/student/analytics/performance?cb=${Date.now()}`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         });
+        if (res.status === 401) {
+          setIsSessionExpired(true);
+          return;
+        }
         if (res.ok) {
           const data = await res.json();
           if (data.success) {
@@ -409,18 +488,16 @@ ${studentName}`
       }
     }
 
-    const activeToken = token || '';
-    loadDashboardTests();
-    loadSubscriptions(activeToken);
-    loadHallTickets(activeToken);
-    loadAttempts(activeToken);
-    loadAnalytics(activeToken);
+    initSession();
 
     // 🔄 Live Auto-Sync Every 15 Seconds
     const syncInterval = setInterval(() => {
-      loadAttempts(activeToken);
-      loadDashboardTests(true);
-      loadAnalytics(activeToken);
+      const currentToken = getCookie('student_token') || localStorage.getItem('student_token') || '';
+      if (currentToken && !isTokenExpired(currentToken)) {
+        loadAttempts(currentToken);
+        loadDashboardTests(true);
+        loadAnalytics(currentToken);
+      }
     }, 15000);
 
     return () => clearInterval(syncInterval);
@@ -1103,6 +1180,36 @@ ${studentName}`
             </div>
           )}
 
+          {/* SESSION EXPIRED / LOGIN REQUIRED BANNER */}
+          {isSessionExpired && (
+            <div className="p-5 rounded-3xl bg-amber-500/20 border-2 border-amber-600/50 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl backdrop-blur-md mb-6 animate-fade-in">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-2xl bg-amber-600/30 text-amber-950 shrink-0">
+                  <Lock size={24} className="animate-pulse" />
+                </div>
+                <div>
+                  <h4 className="font-serif font-bold text-base text-[#1c1815]">Student Login Session Expired</h4>
+                  <p className="text-xs font-semibold text-neutral-800 leading-relaxed">
+                    Your login session has expired. Please log in again to load your registered test series passes, live CBT exams, and official results.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteCookie('student_token');
+                  localStorage.removeItem('student_token');
+                  window.location.href = `https://auth.vigyanprep.com/?redirect=${encodeURIComponent(window.location.href)}`;
+                }}
+                className="px-5 py-2.5 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs uppercase tracking-wider transition shadow-md border-2 border-amber-400 inline-flex items-center gap-2 shrink-0 cursor-pointer active:scale-95"
+              >
+                <Lock size={13} />
+                <span>Log In Again</span>
+                <ArrowRight size={13} />
+              </button>
+            </div>
+          )}
+
           {/* HERO WELCOME BANNER (Clean, Solid, Modern Scientific Aesthetic) */}
           <div className="relative overflow-hidden p-8 sm:p-10 rounded-3xl bg-white/85 backdrop-blur-xl border border-stone-200 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
 
@@ -1184,7 +1291,11 @@ ${studentName}`
                     : 'bg-white/30 backdrop-blur-xl text-[#1c1815] hover:text-amber-950 border-2 border-amber-950/30 shadow-xs'
                 }`}
               >
-                {subscriptions.length > 0 ? `MY TEST SERIES (${testSeriesPapers.length})` : 'TEST SERIES (0)'}
+                {isSessionExpired
+                  ? 'MY TEST SERIES (LOGIN REQUIRED)'
+                  : subscriptions.length > 0
+                    ? `MY TEST SERIES (${testSeriesPapers.length})`
+                    : 'TEST SERIES (0)'}
               </button>
 
               <button
@@ -1300,30 +1411,60 @@ ${studentName}`
                   <p className="text-xs text-[#1c1815] font-mono font-bold">Loading Examination Papers...</p>
                 </div>
               ) : activePapersList.length === 0 ? (
-                /* ULTRA-TRANSPARENT GLASS MAIN PANEL WITH HANDCRAFTED STUDENT STUDYING SKETCH */
-                <div className="p-8 sm:p-10 rounded-3xl bg-white/15 backdrop-blur-2xl border-2 border-amber-950/35 text-center space-y-6 shadow-2xl flex flex-col items-center shadow-[inset_0_1px_2px_0_rgba(255,255,255,0.6)]">
-                  <StudentDeskSketch className="w-80 h-56 text-[#1c1815]" />
-                  <div className="space-y-2 max-w-md">
-                    <h3 className="font-serif text-2xl font-bold text-[#1c1815]">
-                      {activeTab === 'TEST_SERIES' ? 'No Upcoming Test Series Scheduled' : 'No Free PYQ Papers Available'}
-                    </h3>
-                    <p className="text-xs text-[#1c1815] leading-relaxed font-extrabold">
-                      {activeTab === 'TEST_SERIES'
-                        ? 'Your subscribed test series papers will appear here on their scheduled exam dates. You can also explore available passes on the website.'
-                        : 'Check back soon for newly published past year question papers.'}
-                    </p>
-                  </div>
+                isSessionExpired && activeTab === 'TEST_SERIES' ? (
+                  <div className="p-8 sm:p-10 rounded-3xl bg-amber-500/10 backdrop-blur-2xl border-2 border-amber-600/40 text-center space-y-6 shadow-2xl flex flex-col items-center">
+                    <div className="w-16 h-16 rounded-2xl bg-amber-500/25 text-amber-900 border-2 border-amber-500/40 flex items-center justify-center shadow-sm">
+                      <Lock size={32} />
+                    </div>
+                    <div className="space-y-2 max-w-md">
+                      <h3 className="font-serif text-2xl font-bold text-[#1c1815]">
+                        Login Session Expired
+                      </h3>
+                      <p className="text-xs text-[#1c1815] leading-relaxed font-extrabold">
+                        Your session has timed out. Please log in again to load your registered test series, live exam papers, and official scorecards.
+                      </p>
+                    </div>
 
-                  {activeTab === 'TEST_SERIES' && (
-                    <a
-                      href="https://vigyanprep.com/tests"
-                      className="px-6 py-3 rounded-xl bg-[#1c1815] text-amber-300 font-bold text-xs uppercase tracking-wider hover:bg-black transition shadow-xl shadow-amber-950/30 border border-amber-500/30 flex items-center gap-2"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        deleteCookie('student_token');
+                        localStorage.removeItem('student_token');
+                        window.location.href = `https://auth.vigyanprep.com/?redirect=${encodeURIComponent(window.location.href)}`;
+                      }}
+                      className="px-6 py-3.5 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs uppercase tracking-wider transition shadow-xl border-2 border-amber-400 inline-flex items-center gap-2 cursor-pointer active:scale-95"
                     >
-                      <span>Browse Test Series Passes</span>
-                      <ArrowRight size={16} />
-                    </a>
-                  )}
-                </div>
+                      <Lock size={15} />
+                      <span>Log In Again</span>
+                      <ArrowRight size={15} />
+                    </button>
+                  </div>
+                ) : (
+                  /* ULTRA-TRANSPARENT GLASS MAIN PANEL WITH HANDCRAFTED STUDENT STUDYING SKETCH */
+                  <div className="p-8 sm:p-10 rounded-3xl bg-white/15 backdrop-blur-2xl border-2 border-amber-950/35 text-center space-y-6 shadow-2xl flex flex-col items-center shadow-[inset_0_1px_2px_0_rgba(255,255,255,0.6)]">
+                    <StudentDeskSketch className="w-80 h-56 text-[#1c1815]" />
+                    <div className="space-y-2 max-w-md">
+                      <h3 className="font-serif text-2xl font-bold text-[#1c1815]">
+                        {activeTab === 'TEST_SERIES' ? 'No Upcoming Test Series Scheduled' : 'No Free PYQ Papers Available'}
+                      </h3>
+                      <p className="text-xs text-[#1c1815] leading-relaxed font-extrabold">
+                        {activeTab === 'TEST_SERIES'
+                          ? 'Your subscribed test series papers will appear here on their scheduled exam dates. You can also explore available passes on the website.'
+                          : 'Check back soon for newly published past year question papers.'}
+                      </p>
+                    </div>
+
+                    {activeTab === 'TEST_SERIES' && (
+                      <a
+                        href="https://vigyanprep.com/tests"
+                        className="px-6 py-3 rounded-xl bg-[#1c1815] text-amber-300 font-bold text-xs uppercase tracking-wider hover:bg-black transition shadow-xl shadow-amber-950/30 border border-amber-500/30 flex items-center gap-2"
+                      >
+                        <span>Browse Test Series Passes</span>
+                        <ArrowRight size={16} />
+                      </a>
+                    )}
+                  </div>
+                )
               ) : (
                 <div className="space-y-6">
                   {/* ══════════════════════════════════════════════════════════════════
