@@ -1361,7 +1361,12 @@ ${studentName}`
                         {/* Top Accent Ribbon */}
                         <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-amber-950/15">
                           <div className="flex items-center gap-2 flex-wrap">
-                            {st.isLive ? (
+                            {st.isAttempted && !st.isReleased && spotlight.content_type === 'test_series' ? (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-700 text-white shadow-xs">
+                                <CheckCircle2 size={13} />
+                                EXAM SUBMITTED • RESULTS PENDING
+                              </span>
+                            ) : st.isLive ? (
                               <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs">
                                 <span className="w-2 h-2 rounded-full bg-white animate-ping" />
                                 LIVE CBT EXAM IN PROGRESS
@@ -1484,7 +1489,27 @@ ${studentName}`
                               </div>
                             )}
 
-                            {st.isLive ? (
+                            {st.isAttempted && !st.isReleased && spotlight.content_type === 'test_series' ? (
+                              <div className="space-y-3">
+                                <div className="p-4 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/30 text-emerald-950 space-y-1.5 text-center shadow-xs">
+                                  <div className="inline-flex items-center justify-center gap-2 text-xs font-black text-emerald-800 uppercase tracking-wide">
+                                    <CheckCircle2 size={16} className="text-emerald-600" />
+                                    <span>Exam Submitted • Responses Recorded</span>
+                                  </div>
+                                  <p className="text-[11px] text-zinc-700 font-medium leading-relaxed">
+                                    Your answers have been securely recorded. Official scorecards, solutions, and All-India Rank (AIR) will be published after the window closes at {spotlight.window_end ? new Date(spotlight.window_end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '09:00 PM'} IST.
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  disabled
+                                  className="w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider bg-emerald-100 text-emerald-800 border-2 border-emerald-300 flex items-center justify-center gap-2 cursor-not-allowed shadow-2xs"
+                                >
+                                  <CheckCircle2 size={15} className="text-emerald-700" />
+                                  <span>Responses Recorded • Awaiting Results</span>
+                                </button>
+                              </div>
+                            ) : st.isLive ? (
                               <div className="space-y-3">
                                 {spotlight.window_end && (
                                   <ModernExamCountdown
@@ -1763,7 +1788,14 @@ ${studentName}`
 
                                   {/* 3. Status & Timer */}
                                   <td className="py-4 px-4 text-center align-middle">
-                                    {status.isLive ? (
+                                    {status.isAttempted && !status.isReleased && paper.content_type === 'test_series' ? (
+                                      <div className="inline-flex flex-col items-center gap-1">
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
+                                          <CheckCircle2 size={11} className="text-emerald-600" /> Exam Submitted
+                                        </span>
+                                        <span className="text-[10px] font-bold text-zinc-600">Results at 9 PM</span>
+                                      </div>
+                                    ) : status.isLive ? (
                                       <div className="inline-flex flex-col items-center gap-1.5">
                                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs">
                                           <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
@@ -1819,7 +1851,15 @@ ${studentName}`
                                   {/* 4. Actions */}
                                   <td className="py-4 px-5 text-right align-middle">
                                     <div className="flex flex-col items-end gap-1.5">
-                                      {status.isLive ? (
+                                      {status.isAttempted && !status.isReleased && paper.content_type === 'test_series' ? (
+                                        <div className="flex flex-col items-end gap-1">
+                                          <span className="px-3 py-1.5 rounded-xl font-bold text-xs bg-emerald-100/80 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1.5 shadow-2xs">
+                                            <CheckCircle2 size={13} className="text-emerald-700" />
+                                            <span>Submitted</span>
+                                          </span>
+                                          <span className="text-[10px] font-medium text-zinc-500">Official AIR at 9 PM</span>
+                                        </div>
+                                      ) : status.isLive ? (
                                         <button
                                           onClick={() => handleTestClick(paper)}
                                           className="px-4 py-2 rounded-xl font-black text-xs uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-950/20 border-2 border-emerald-400 inline-flex items-center gap-1.5 cursor-pointer transition transform active:scale-95"
