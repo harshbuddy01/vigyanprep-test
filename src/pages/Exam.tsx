@@ -99,7 +99,14 @@ export default function Exam() {
     if (submittingRef.current) return;
     submittingRef.current = true;
 
-    const currentAnswers = { ...useExamStore.getState().answers, ...answers };
+    const validQuestionIds = new Set((questions || []).map((q: any) => q.id));
+    const rawAnswers = { ...useExamStore.getState().answers, ...answers };
+    const currentAnswers: Record<string, any> = {};
+    for (const [qid, ans] of Object.entries(rawAnswers)) {
+      if (validQuestionIds.size === 0 || validQuestionIds.has(qid)) {
+        currentAnswers[qid] = ans;
+      }
+    }
     const activeId = testIdParam || testId || useExamStore.getState().testId || '';
     const activeAttemptId = attemptId || useExamStore.getState().attemptId || '';
     const activeToken = token || useExamStore.getState().token || getCookie('student_token') || localStorage.getItem('student_token') || getCookie('auth_token') || localStorage.getItem('auth_token') || '';
@@ -292,6 +299,14 @@ export default function Exam() {
         if (!aId || !t || state.isSubmitted) return;
 
         const apiBase = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
+        const validQuestionIds = new Set((state.questions || []).map((q: any) => q.id));
+        const filteredAnswers: Record<string, any> = {};
+        for (const [qid, ans] of Object.entries(state.answers || {})) {
+          if (validQuestionIds.size === 0 || validQuestionIds.has(qid)) {
+            filteredAnswers[qid] = ans;
+          }
+        }
+
         const res = await fetch(`${apiBase}/api/exam/heartbeat`, {
           method: 'POST',
           headers: {
@@ -301,7 +316,7 @@ export default function Exam() {
           body: JSON.stringify({
             attempt_id: aId,
             time_remaining: state.timeRemaining,
-            answers: state.answers,
+            answers: filteredAnswers,
             warning_count: state.warningCount
           })
         });

@@ -60,22 +60,28 @@ export const submitExam = async (attemptId: string, answers: any, token?: string
     });
 
     if (res.ok) return res.json();
+    throw new Error(`Lifecycle submit failed with status: ${res.status}`);
   } catch (e) {
     console.warn('Primary lifecycle submit failed, trying fallback:', e);
+
+    // Fallback endpoint
+    try {
+      const fallbackRes = await fetch(`${API_URL}/api/exam/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: validToken ? `Bearer ${validToken}` : ''
+        },
+        body: JSON.stringify({ attemptId, answers: answersList })
+      });
+
+      if (fallbackRes && fallbackRes.ok) return fallbackRes.json();
+    } catch (fallbackErr) {
+      console.warn('Fallback submit failed:', fallbackErr);
+    }
+
+    throw e; // Re-throw to activate 3-attempt exponential retry in Exam.tsx
   }
-
-  // Fallback endpoint
-  const fallbackRes = await fetch(`${API_URL}/api/exam/submit`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: validToken ? `Bearer ${validToken}` : ''
-    },
-    body: JSON.stringify({ attemptId, answers: answersList })
-  }).catch(() => null);
-
-  if (fallbackRes && fallbackRes.ok) return fallbackRes.json();
-  return { success: true };
 };
 
 export const sendHeartbeat = async (attemptId: string, timeRemaining: number, answers: any, warningCount: number, token: string) => {
