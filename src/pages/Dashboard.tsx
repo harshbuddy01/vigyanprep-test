@@ -607,6 +607,21 @@ ${studentName}`
   };
 
   const handleLogout = () => {
+    // VP-V005: Protect against accidental logout during a live exam
+    try {
+      const examState = JSON.parse(localStorage.getItem('vigyan_exam_v2') || '{}');
+      const state = examState?.state || examState;
+      if (state?.attemptId && state?.timeRemaining > 0 && !state?.isSubmitted) {
+        const confirmed = window.confirm(
+          '⚠️ You have an active exam in progress!\n\n' +
+          'Logging out will stop your answer auto-save to the server.\n' +
+          'Your answers are backed up locally, but you should submit your exam first.\n\n' +
+          'Are you sure you want to log out?'
+        );
+        if (!confirmed) return;
+      }
+    } catch (e) {}
+
     deleteCookie('student_token');
     deleteCookie('student_name');
     deleteCookie('student_email');

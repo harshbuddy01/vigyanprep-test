@@ -114,12 +114,38 @@ export default function Exam() {
 
     submitExam();
 
-    try {
-      if (activeAttemptId) {
-        await apiSubmitExam(activeAttemptId, currentAnswers, activeToken);
+    // VP-V003: Retry submission up to 3 times with exponential backoff
+    let submitSuccess = false;
+    if (activeAttemptId) {
+      const maxRetries = 3;
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          await apiSubmitExam(activeAttemptId, currentAnswers, activeToken);
+          submitSuccess = true;
+          break;
+        } catch (e) {
+          console.error(`API submission attempt ${attempt + 1}/${maxRetries} failed:`, e);
+          if (attempt < maxRetries - 1) {
+            // Exponential backoff: 1s, 2s, 4s
+            await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
+          }
+        }
       }
-    } catch (e) {
-      console.error('API submission error:', e);
+    } else {
+      submitSuccess = true; // No attemptId means practice mode
+    }
+
+    if (!submitSuccess) {
+      // All retries failed — answers are safe in localStorage
+      // Mark for background retry on next page load
+      try {
+        localStorage.setItem('vigyan_pending_submit', JSON.stringify({
+          attemptId: activeAttemptId,
+          answers: currentAnswers,
+          timestamp: Date.now()
+        }));
+      } catch (e) {}
+      console.error('⚠️ All submission retries failed. Answers saved locally for recovery.');
     }
 
     const search = activeId ? `?testId=${activeId}` : window.location.search;
@@ -261,12 +287,12 @@ export default function Exam() {
     const heartbeatInterval = setInterval(async () => {
       try {
         const state = useExamStore.getState();
-        const t = state.token || localStorage.getItem('exam_token');
+        const t = state.token || localStorage.getItem('exam_token') || getCookie('student_token') || localStorage.getItem('student_token') || '';
         const aId = state.attemptId;
         if (!aId || !t || state.isSubmitted) return;
 
         const apiBase = import.meta.env.VITE_API_URL || 'https://api.vigyanprep.com';
-        await fetch(`${apiBase}/api/exam/heartbeat`, {
+        const res = await fetch(`${apiBase}/api/exam/heartbeat`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -275,15 +301,33 @@ export default function Exam() {
           body: JSON.stringify({
             attempt_id: aId,
             time_remaining: state.timeRemaining,
-            answers_count: Object.keys(state.answers).length
+            answers: state.answers,
+            warning_count: state.warningCount
           })
         });
+
+        // VP-V004: Sync timer from server-authoritative remaining_seconds
+        if (res.ok) {
+          const data = await res.json();
+          if (typeof data.remaining_seconds === 'number' && data.remaining_seconds >= 0) {
+            const drift = Math.abs(state.timeRemaining - data.remaining_seconds);
+            // Only re-sync if drift exceeds 5 seconds (avoid flicker)
+            if (drift > 5) {
+              useExamStore.getState().setTimeRemaining(data.remaining_seconds);
+            }
+          }
+          // Auto-submit if server says expired
+          if (data.expired && !useExamStore.getState().isSubmitted) {
+            doSubmit();
+          }
+        }
       } catch (err) {
+        // Non-fatal: network may be temporarily down
       }
     }, 15000);
 
     return () => clearInterval(heartbeatInterval);
-  }, []);
+  }, [doSubmit]);
 
   useEffect(() => {
     if (timeRemaining <= 0 && !isSubmitted && questions.length > 0) {
