@@ -120,6 +120,14 @@ export function Dashboard() {
   const [syllabusModalPaper, setSyllabusModalPaper] = useState<TestPaper | null>(null);
   const [missedExamModalPaper, setMissedExamModalPaper] = useState<TestPaper | null>(null);
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 10000);
+    return () => clearInterval(timer);
+  }, []);
 
   const toggleSyllabus = (id: string) => {
     setExpandedSyllabus(prev => ({ ...prev, [id]: !prev[id] }));
@@ -424,7 +432,7 @@ ${studentName}`
 
   const getWindowStatus = (paper: TestPaper) => {
     const isAttempted = attemptedTestIds.includes(paper.id);
-    const now = new Date();
+    const now = currentTime;
     const start = paper.window_start ? new Date(paper.window_start) : null;
     const end = paper.window_end ? new Date(paper.window_end) : null;
 
@@ -1749,14 +1757,28 @@ ${studentName}`
                                           </>
                                         )
                                       ) : (
-                                        <div className="flex items-center gap-1">
-                                          {myHallTicket ? (
+                                        <div className="flex items-center justify-end gap-1.5">
+                                          {myHallTicket && (
                                             <span className="px-2.5 py-1 rounded-xl bg-amber-200/80 border border-amber-400 font-mono text-[11px] font-black text-amber-950" title="Your Exam Pass Code">
                                               🔑 {myHallTicket.unique_exam_id}
                                             </span>
-                                          ) : (
-                                            <span className="text-zinc-400 text-[11px] font-semibold">Registered</span>
                                           )}
+                                          <button
+                                            type="button"
+                                            onClick={() => setSyllabusModalPaper(paper)}
+                                            className="px-2.5 py-1.5 rounded-xl font-bold text-xs bg-white/80 hover:bg-white text-zinc-800 border border-amber-950/25 flex items-center gap-1 cursor-pointer transition shadow-xs"
+                                            title="View Blueprint Syllabus"
+                                          >
+                                            <BookOpen size={12} className="text-amber-900" /> Syllabus
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => triggerToast(`⏳ ${paper.title} will go live at 06:00 PM IST.`)}
+                                            className="px-2.5 py-1.5 rounded-xl font-bold text-xs bg-amber-100/80 hover:bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 cursor-pointer transition"
+                                            title="Window opens at 06:00 PM IST"
+                                          >
+                                            <Lock size={12} className="text-amber-800" /> Opens 06:00 PM
+                                          </button>
                                         </div>
                                       )}
                                     </div>
@@ -1904,18 +1926,44 @@ ${studentName}`
                                   Your responses have been recorded. Official results &amp; AIR rankings will be released after window closes.
                                 </p>
                               </div>
-                            ) : (
+                            ) : status.isLive ? (
                               <button
                                 onClick={() => handleTestClick(paper)}
-                                disabled={!status.isLive}
-                                className={`w-full py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md ${
-                                  status.isLive
-                                    ? (myHallTicket ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-900/30 border border-emerald-500 cursor-pointer' : 'bg-[#1c1815] text-amber-300 hover:bg-black shadow-amber-950/30 cursor-pointer border border-amber-500/30')
-                                    : 'bg-neutral-300/60 text-neutral-600 border border-neutral-400 cursor-not-allowed'
+                                className={`w-full py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md cursor-pointer ${
+                                  myHallTicket
+                                    ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-900/30 border border-emerald-500'
+                                    : 'bg-[#1c1815] text-amber-300 hover:bg-black shadow-amber-950/30 border border-amber-500/30'
                                 }`}
                               >
-                                {status.isLive ? <PlayCircle size={16} /> : <Lock size={16} />}
-                                <span>{status.isLive ? (myHallTicket ? 'Enter Exam' : 'Start CBT Exam') : 'Test Window Closed'}</span>
+                                <PlayCircle size={16} />
+                                <span>{myHallTicket ? 'Enter Live Exam (CBT)' : 'Start CBT Exam'}</span>
+                              </button>
+                            ) : (paper.window_start && new Date(paper.window_start) > currentTime) ? (
+                              <div className="space-y-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setSyllabusModalPaper(paper)}
+                                  className="w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-white/80 hover:bg-white text-zinc-800 border border-amber-950/30 cursor-pointer transition shadow-xs"
+                                >
+                                  <BookOpen size={15} className="text-amber-900" />
+                                  <span>Preview Syllabus &amp; Blueprint</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => triggerToast(`⏳ ${paper.title} will go live today at 06:00 PM IST.`)}
+                                  className="w-full py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 bg-amber-100 text-amber-900 border border-amber-300 cursor-pointer transition"
+                                >
+                                  <Lock size={13} className="text-amber-800" />
+                                  <span>Opens Today at 06:00 PM IST</span>
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                disabled
+                                className="w-full py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-neutral-200 text-neutral-500 border border-neutral-300 cursor-not-allowed"
+                              >
+                                <Lock size={16} />
+                                <span>Exam Window Concluded</span>
                               </button>
                             )}
                           </div>
