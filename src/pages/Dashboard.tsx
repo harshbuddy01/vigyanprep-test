@@ -4,7 +4,7 @@ import {
   LayoutDashboard, FileText, BookOpen, BarChart3, Bookmark, MessageSquare,
   Settings, Search, Bell, Award, Sparkles,
   ArrowRight, PlayCircle, Lock, Key, X, AlertCircle, CheckCircle2,
-  RefreshCw, HelpCircle, Download, ChevronRight, Menu, Home, Mail,
+  RefreshCw, HelpCircle, Download, ChevronRight, ChevronLeft, Menu, Home, Mail,
   Edit3, GraduationCap, Trophy, Brain, List, LayoutGrid, Clock, Calendar
 } from 'lucide-react';
 import { getCookie, deleteCookie } from '../lib/cookies';
@@ -118,6 +118,8 @@ export function Dashboard() {
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'LIVE' | 'UPCOMING' | 'COMPLETED' | 'PRACTICE'>('ALL');
   const [syllabusModalPaper, setSyllabusModalPaper] = useState<TestPaper | null>(null);
+  const [missedExamModalPaper, setMissedExamModalPaper] = useState<TestPaper | null>(null);
+  const [activeHeroSlide, setActiveHeroSlide] = useState(0);
 
   const toggleSyllabus = (id: string) => {
     setExpandedSyllabus(prev => ({ ...prev, [id]: !prev[id] }));
@@ -501,6 +503,18 @@ ${studentName}`
       label: 'Past Test Paper',
       color: 'emerald'
     };
+  };
+
+  const handleViewResultClick = (paper: TestPaper) => {
+    const status = getWindowStatus(paper);
+    const matchAttempt = (analyticsData?.trendData || []).find((t: any) => t.testId === paper.id);
+
+    if (status.isAttempted) {
+      const attemptParam = matchAttempt?.attemptId ? `&attemptId=${matchAttempt.attemptId}` : '';
+      navigate(`/response-sheet?testId=${paper.id}${attemptParam}`);
+    } else {
+      setMissedExamModalPaper(paper);
+    }
   };
 
   const handleTestClick = (paper: TestPaper) => {
@@ -1289,40 +1303,45 @@ ${studentName}`
               ) : (
                 <div className="space-y-6">
                   {/* ══════════════════════════════════════════════════════════════════
-                      1. HERO SPOTLIGHT: CURRENT LIVE / IMMEDIATE UPCOMING TEST
+                      1. HERO FLOATING MULTI-EXAM CAROUSEL (Live & Upcoming Tests)
                      ══════════════════════════════════════════════════════════════════ */}
                   {(() => {
-                    const live = activePapersList.find(t => getWindowStatus(t).isLive);
-                    const nextUp = activePapersList
+                    const livePapers = activePapersList.filter(t => getWindowStatus(t).isLive);
+                    const upcomingPapers = activePapersList
                       .filter(t => !getWindowStatus(t).isLive && t.window_start && new Date(t.window_start) > new Date())
-                      .sort((a, b) => new Date(a.window_start!).getTime() - new Date(b.window_start!).getTime())[0];
+                      .sort((a, b) => new Date(a.window_start!).getTime() - new Date(b.window_start!).getTime());
                     const recentDone = activePapersList
                       .filter(t => getWindowStatus(t).isReleased)
-                      .sort((a, b) => new Date(b.window_end || 0).getTime() - new Date(a.window_end || 0).getTime())[0];
+                      .sort((a, b) => new Date(b.window_end || 0).getTime() - new Date(a.window_end || 0).getTime());
 
-                    const spotlight = live || nextUp || recentDone;
-                    if (!spotlight) return null;
+                    const featuredPapers = livePapers.length > 0
+                      ? [...livePapers, ...upcomingPapers]
+                      : (upcomingPapers.length > 0 ? upcomingPapers : (recentDone.length > 0 ? recentDone.slice(0, 3) : activePapersList.slice(0, 3)));
 
+                    if (featuredPapers.length === 0) return null;
+
+                    const currentSlideIndex = (activeHeroSlide >= 0 && activeHeroSlide < featuredPapers.length) ? activeHeroSlide : 0;
+                    const spotlight = featuredPapers[currentSlideIndex];
                     const st = getWindowStatus(spotlight);
                     const myHallTicket = hallTickets.find(h => h.test_id === spotlight.id);
-                    const matchAttempt = (analyticsData?.trendData || []).find((t: any) => t.testId === spotlight.id);
+                    const isUpcoming = spotlight.window_start && new Date(spotlight.window_start) > new Date();
 
                     return (
                       <div className={`p-6 sm:p-7 rounded-3xl backdrop-blur-2xl border-2 transition-all duration-300 shadow-xl relative overflow-hidden ${
                         st.isLive
                           ? 'bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-white/40 border-emerald-500/60 shadow-emerald-950/10'
-                          : nextUp
+                          : isUpcoming
                           ? 'bg-gradient-to-br from-amber-500/15 via-orange-500/5 to-white/40 border-amber-500/60 shadow-amber-950/10'
                           : 'bg-white/30 border-amber-950/30'
                       }`}>
                         {/* Top Accent Ribbon */}
                         <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-amber-950/15">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             {st.isLive ? (
                               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-500 text-white shadow-sm animate-pulse">
                                 🔴 LIVE CBT EXAM IN PROGRESS
                               </span>
-                            ) : nextUp ? (
+                            ) : isUpcoming ? (
                               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-500 text-black shadow-sm">
                                 ⏳ NEXT SCHEDULED EXAM
                               </span>
@@ -1334,17 +1353,62 @@ ${studentName}`
                             <span className="px-2.5 py-0.5 rounded-md bg-amber-950/15 border border-amber-950/30 text-[10px] font-extrabold text-amber-950">
                               {(spotlight.exam_type || spotlight.examType || 'IAT').toUpperCase()}
                             </span>
+
+                            {featuredPapers.length > 1 && (
+                              <span className="text-[10px] font-bold text-zinc-600 bg-white/70 border border-amber-950/20 px-2.5 py-0.5 rounded-full">
+                                {currentSlideIndex + 1} of {featuredPapers.length} Scheduled Exams
+                              </span>
+                            )}
                           </div>
 
-                          {spotlight.window_start && (
-                            <div className="text-xs font-mono font-bold text-zinc-700 flex items-center gap-1.5">
-                              <Calendar size={13} className="text-amber-800" />
-                              <span>{new Date(spotlight.window_start).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
-                              <span>•</span>
-                              <Clock size={13} className="text-amber-800" />
-                              <span>{new Date(spotlight.window_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} IST</span>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-3 flex-wrap">
+                            {spotlight.window_start && (
+                              <div className="text-xs font-mono font-bold text-zinc-700 flex items-center gap-1.5">
+                                <Calendar size={13} className="text-amber-800" />
+                                <span>{new Date(spotlight.window_start).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                                <span>•</span>
+                                <Clock size={13} className="text-amber-800" />
+                                <span>{new Date(spotlight.window_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} IST</span>
+                              </div>
+                            )}
+
+                            {/* Floating Carousel Navigation Arrows & Dots */}
+                            {featuredPapers.length > 1 && (
+                              <div className="flex items-center gap-1 bg-white/80 border border-amber-950/20 rounded-full p-1 shadow-xs">
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveHeroSlide((prev) => (prev - 1 + featuredPapers.length) % featuredPapers.length)}
+                                  className="p-1 rounded-full hover:bg-amber-950/10 text-zinc-800 transition cursor-pointer"
+                                  title="Previous Scheduled Exam"
+                                >
+                                  <ChevronLeft size={14} />
+                                </button>
+                                <div className="flex items-center gap-1 px-1.5">
+                                  {featuredPapers.map((_, idx) => (
+                                    <button
+                                      key={idx}
+                                      type="button"
+                                      onClick={() => setActiveHeroSlide(idx)}
+                                      className={`h-2 rounded-full transition-all cursor-pointer ${
+                                        idx === currentSlideIndex
+                                          ? 'w-4 bg-amber-900'
+                                          : 'w-2 bg-amber-900/30 hover:bg-amber-900/60'
+                                      }`}
+                                      title={`Slide ${idx + 1}`}
+                                    />
+                                  ))}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveHeroSlide((prev) => (prev + 1) % featuredPapers.length)}
+                                  className="p-1 rounded-full hover:bg-amber-950/10 text-zinc-800 transition cursor-pointer"
+                                  title="Next Scheduled Exam"
+                                >
+                                  <ChevronRight size={14} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
 
                         {/* Title & Details */}
@@ -1403,10 +1467,7 @@ ${studentName}`
                               st.isAttempted ? (
                                 <div className="space-y-2">
                                   <button
-                                    onClick={() => {
-                                      const attemptParam = matchAttempt?.attemptId ? `&attemptId=${matchAttempt.attemptId}` : '';
-                                      navigate(`/response-sheet?testId=${spotlight.id}${attemptParam}`);
-                                    }}
+                                    onClick={() => handleViewResultClick(spotlight)}
                                     className="w-full py-3 rounded-xl font-bold text-xs uppercase tracking-wider bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black shadow-md border border-amber-500/40 flex items-center justify-center gap-2 cursor-pointer transition"
                                   >
                                     <Award size={16} />
@@ -1421,18 +1482,27 @@ ${studentName}`
                                   </button>
                                 </div>
                               ) : (
-                                <button
-                                  onClick={() => handleTestClick(spotlight)}
-                                  className="w-full py-3 rounded-xl font-bold text-xs uppercase bg-[#1c1815] text-amber-300 hover:bg-black border border-amber-500/30 flex items-center justify-center gap-1.5 cursor-pointer transition"
-                                >
-                                  <PlayCircle size={16} />
-                                  <span>Practice Mode (Instant Grading)</span>
-                                </button>
+                                <div className="space-y-2">
+                                  <button
+                                    onClick={() => handleViewResultClick(spotlight)}
+                                    className="w-full py-3 rounded-xl font-bold text-xs uppercase tracking-wider bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black shadow-md border border-amber-500/40 flex items-center justify-center gap-2 cursor-pointer transition"
+                                  >
+                                    <Award size={16} />
+                                    <span>View Result &amp; Analysis</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleTestClick(spotlight)}
+                                    className="w-full py-2 rounded-xl font-bold text-xs uppercase bg-[#1c1815] text-amber-300 hover:bg-black border border-amber-500/30 flex items-center justify-center gap-1.5 cursor-pointer transition"
+                                  >
+                                    <PlayCircle size={16} />
+                                    <span>Practice Mode (Instant Grading)</span>
+                                  </button>
+                                </div>
                               )
                             ) : (
                               <button
                                 onClick={() => setSyllabusModalPaper(spotlight)}
-                                className="w-full py-3 rounded-2xl font-bold text-xs uppercase bg-white/70 hover:bg-white text-zinc-700 border-2 border-amber-950/25 flex items-center justify-center gap-2 cursor-pointer transition"
+                                className="w-full py-3.5 rounded-2xl font-bold text-xs uppercase bg-white/70 hover:bg-white text-zinc-800 border-2 border-amber-950/25 flex items-center justify-center gap-2 cursor-pointer transition shadow-sm hover:shadow-md"
                               >
                                 <BookOpen size={16} className="text-amber-800" />
                                 <span>Preview Instructions &amp; Syllabus</span>
@@ -1647,10 +1717,7 @@ ${studentName}`
                                         status.isAttempted ? (
                                           <>
                                             <button
-                                              onClick={() => {
-                                                const attemptParam = matchAttempt?.attemptId ? `&attemptId=${matchAttempt.attemptId}` : '';
-                                                navigate(`/response-sheet?testId=${paper.id}${attemptParam}`);
-                                              }}
+                                              onClick={() => handleViewResultClick(paper)}
                                               className="px-3 py-1.5 rounded-xl font-bold text-xs bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black shadow-xs border border-amber-500/40 flex items-center gap-1.5 cursor-pointer"
                                             >
                                               <Award size={13} /> Scorecard
@@ -1664,12 +1731,22 @@ ${studentName}`
                                             </button>
                                           </>
                                         ) : (
-                                          <button
-                                            onClick={() => handleTestClick(paper)}
-                                            className="px-3 py-1.5 rounded-xl font-bold text-xs bg-[#1c1815] hover:bg-black text-amber-300 border border-amber-500/30 flex items-center gap-1.5 cursor-pointer"
-                                          >
-                                            <PlayCircle size={13} /> Practice Mode
-                                          </button>
+                                          <>
+                                            <button
+                                              onClick={() => handleViewResultClick(paper)}
+                                              className="px-3 py-1.5 rounded-xl font-bold text-xs bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black shadow-xs border border-amber-500/40 flex items-center gap-1.5 cursor-pointer"
+                                              title="View Result & Solutions"
+                                            >
+                                              <Award size={13} /> View Result
+                                            </button>
+                                            <button
+                                              onClick={() => handleTestClick(paper)}
+                                              className="px-2.5 py-1.5 rounded-xl font-bold text-xs bg-[#1c1815] hover:bg-black text-amber-300 border border-amber-500/30 flex items-center gap-1 cursor-pointer"
+                                              title="Practice Mode with Instant Grading"
+                                            >
+                                              <PlayCircle size={13} /> Practice
+                                            </button>
+                                          </>
                                         )
                                       ) : (
                                         <div className="flex items-center gap-1">
@@ -1698,7 +1775,6 @@ ${studentName}`
                         const status = getWindowStatus(paper);
                         const examCat = (paper.exam_type || paper.examType || 'IAT').toUpperCase();
                         const myHallTicket = hallTickets.find(h => h.test_id === paper.id);
-                        const matchAttempt = (analyticsData?.trendData || []).find((t: any) => t.testId === paper.id);
 
                         return (
                           <div
@@ -1786,10 +1862,7 @@ ${studentName}`
                               status.isAttempted ? (
                                 <div className="space-y-2">
                                   <button
-                                    onClick={() => {
-                                      const attemptParam = matchAttempt?.attemptId ? `&attemptId=${matchAttempt.attemptId}` : '';
-                                      navigate(`/response-sheet?testId=${paper.id}${attemptParam}`);
-                                    }}
+                                    onClick={() => handleViewResultClick(paper)}
                                     className="w-full py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-md border border-amber-400/40 cursor-pointer transition"
                                   >
                                     <Award size={16} />
@@ -1806,18 +1879,18 @@ ${studentName}`
                               ) : (
                                 <div className="space-y-2">
                                   <button
-                                    onClick={() => handleTestClick(paper)}
+                                    onClick={() => handleViewResultClick(paper)}
                                     className="w-full py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-md border border-amber-400/40 cursor-pointer transition"
                                   >
-                                    <PlayCircle size={16} />
-                                    <span>Practice Mode (Instant Grading)</span>
+                                    <Award size={16} />
+                                    <span>View Result &amp; Analysis</span>
                                   </button>
                                   <button
-                                    onClick={() => navigate(`/response-sheet?testId=${paper.id}&viewSolutions=true`)}
+                                    onClick={() => handleTestClick(paper)}
                                     className="w-full py-2 rounded-xl font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 bg-[#1c1815] text-amber-300 hover:bg-black border border-amber-500/30 cursor-pointer transition"
                                   >
-                                    <FileText size={14} />
-                                    <span>View Paper Solutions &amp; Answer Key</span>
+                                    <PlayCircle size={14} />
+                                    <span>Practice Mode (Instant Grading)</span>
                                   </button>
                                 </div>
                               )
@@ -2475,6 +2548,102 @@ ${studentName}`
                 className="px-5 py-2 rounded-xl bg-[#1c1815] text-amber-300 font-bold text-xs uppercase hover:bg-black transition shadow-sm cursor-pointer"
               >
                 Close Blueprint
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════
+          MISSED LIVE EXAM / VIEW RESULT GUIDANCE MODAL
+         ══════════════════════════════════════════════════════════════════ */}
+      {missedExamModalPaper && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-[#fcfaf7] border-2 border-amber-950/30 rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl relative">
+            <div className="flex items-center justify-between border-b-2 border-amber-950/15 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-md bg-amber-950/15 border border-amber-950/30 text-xs font-black text-amber-950">
+                  {(missedExamModalPaper.exam_type || missedExamModalPaper.examType || 'IAT').toUpperCase()}
+                </span>
+                <h3 className="font-serif text-lg font-bold text-[#1c1815]">
+                  {missedExamModalPaper.title} • Result Status
+                </h3>
+              </div>
+              <button
+                onClick={() => setMissedExamModalPaper(null)}
+                className="p-1.5 rounded-lg hover:bg-zinc-200 text-zinc-500 hover:text-black transition cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs text-zinc-800 leading-relaxed">
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+                <p className="font-extrabold text-[12px] uppercase tracking-wide text-amber-950 flex items-center gap-1.5">
+                  <Clock size={15} className="text-amber-800" />
+                  Live Exam Window Concluded
+                </p>
+                <p className="text-zinc-700 font-medium leading-relaxed">
+                  You were not present during the official proctored live window for <strong className="text-zinc-900 font-bold">{missedExamModalPaper.title}</strong>
+                  {missedExamModalPaper.window_start ? ` (${new Date(missedExamModalPaper.window_start).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })})` : ''}.
+                  Because of this, an official All-India Rank (AIR) and candidate response sheet were not generated for your account.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white border border-amber-950/20 space-y-3">
+                <p className="font-bold text-zinc-900 text-xs">Choose how you would like to proceed:</p>
+                
+                <div className="space-y-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const paperToAttempt = missedExamModalPaper;
+                      setMissedExamModalPaper(null);
+                      handleTestClick(paperToAttempt);
+                    }}
+                    className="w-full p-3.5 rounded-2xl bg-[#1c1815] text-amber-300 hover:bg-black border border-amber-500/40 text-left flex items-start gap-3 transition group cursor-pointer shadow-sm"
+                  >
+                    <div className="p-2 rounded-xl bg-amber-400/10 text-amber-400 mt-0.5 group-hover:bg-amber-400/20">
+                      <PlayCircle size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-xs text-amber-200 uppercase tracking-wide">1. Attempt in Practice Mode (Recommended)</p>
+                      <p className="text-[11px] text-zinc-300 font-normal mt-0.5 leading-relaxed">
+                        Experience the timed CBT interface with full question palette. Get instant scorecard and breakdown upon submission.
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const testId = missedExamModalPaper.id;
+                      setMissedExamModalPaper(null);
+                      navigate(`/response-sheet?testId=${testId}&viewSolutions=true`);
+                    }}
+                    className="w-full p-3.5 rounded-2xl bg-amber-100/60 hover:bg-amber-100 text-amber-950 border border-amber-400/50 text-left flex items-start gap-3 transition group cursor-pointer shadow-sm"
+                  >
+                    <div className="p-2 rounded-xl bg-amber-500/20 text-amber-900 mt-0.5 group-hover:bg-amber-500/30">
+                      <FileText size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-xs text-amber-950 uppercase tracking-wide">2. View Official Solutions &amp; Answer Key</p>
+                      <p className="text-[11px] text-zinc-600 font-normal mt-0.5 leading-relaxed">
+                        Browse all questions with step-by-step mathematical explanations, derivations, and correct options directly.
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setMissedExamModalPaper(null)}
+                className="px-5 py-2 rounded-xl bg-zinc-200 hover:bg-zinc-300 text-zinc-800 font-bold text-xs uppercase transition cursor-pointer"
+              >
+                Close
               </button>
             </div>
           </div>
