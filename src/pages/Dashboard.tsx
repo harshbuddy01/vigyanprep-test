@@ -184,28 +184,68 @@ export function Dashboard() {
     }
   };
 
-  const handleSendProfileRequest = () => {
-    if (!reqName.trim() && !reqEmail.trim()) {
-      alert("Please enter the new name or email you wish to update.");
+  const [newNameInput, setNewNameInput] = useState('');
+  const [isUpdatingName, setIsUpdatingName] = useState(false);
+
+  const handleUpdateName = async () => {
+    const trimmed = (newNameInput || '').trim();
+    if (!trimmed) {
+      alert("Please enter a valid full name.");
       return;
     }
+    if (trimmed.length < 2) {
+      alert("Name must be at least 2 characters.");
+      return;
+    }
+
+    setIsUpdatingName(true);
+    try {
+      // 1. Update in Supabase Auth user metadata if logged in
+      try {
+        await supabase.auth.updateUser({
+          data: { full_name: trimmed }
+        });
+      } catch (err) {
+        console.warn("Supabase auth updateUser fallback:", err);
+      }
+
+      // 2. Update local state and cookies
+      setStudentName(trimmed);
+      setCookie('student_name', trimmed, 30);
+      document.cookie = `student_name=${encodeURIComponent(trimmed)}; domain=.vigyanprep.com; path=/; max-age=2592000; SameSite=Lax; Secure`;
+      localStorage.setItem('student_name', trimmed);
+      localStorage.setItem('full_name', trimmed);
+
+      // 3. Update exam store
+      useExamStore.getState().setTestMeta({ candidateName: trimmed });
+
+      setToastMessage("✓ Name updated successfully!");
+      setNewNameInput('');
+      setTimeout(() => setToastMessage(null), 3500);
+    } catch (err: any) {
+      alert(err.message || "Failed to update name. Please try again.");
+    } finally {
+      setIsUpdatingName(false);
+    }
+  };
+
+  const handleSendEmailChangeRequest = () => {
     const roll = generateRollNumber(studentEmail, studentName);
-    const subject = encodeURIComponent(`[PROFILE UPDATE REQUEST] Student: ${studentName} (${roll})`);
+    const subject = encodeURIComponent(`[EMAIL CHANGE REQUEST] Student: ${studentName} (${roll})`);
     const body = encodeURIComponent(
 `Hello VigyanPrep Academic Support Team,
 
-I would like to request an official update to my student profile:
+I am requesting to transfer my registered student email address:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CURRENT PROFILE DETAILS:
-• Current Full Name: ${studentName}
+STUDENT IDENTITY:
+• Current Name: ${studentName}
 • Current Registered Email: ${studentEmail}
 • Candidate Roll Number: ${roll}
 
-REQUESTED UPDATES:
-• Requested New Full Name: ${reqName.trim() || '(No Change)'}
-• Requested New Email: ${reqEmail.trim() || '(No Change)'}
-• Reason for Update: ${reqReason.trim() || 'Correction / Academic verification'}
+REQUESTED NEW EMAIL:
+• New Email Address: ${reqEmail.trim() || '[Please specify new email]'}
+• Reason for Transfer: ${reqReason.trim() || 'Primary email change'}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Please verify my student identity and update my test series records accordingly.
@@ -2736,99 +2776,105 @@ ${studentName}`
               </div>
             </div>
 
-            {/* Section 2: Current Account Details */}
-            <div className="space-y-1.5 text-xs bg-amber-950/5 p-3.5 rounded-2xl border border-amber-950/15">
-              <div className="flex justify-between items-center"><span className="text-neutral-500 font-bold">Candidate Name:</span> <span className="font-extrabold text-[#1c1815]">{studentName}</span></div>
-              <div className="flex justify-between items-center"><span className="text-neutral-500 font-bold">Registered Email:</span> <span className="font-extrabold text-[#1c1815]">{studentEmail}</span></div>
-              <div className="flex justify-between items-center"><span className="text-neutral-500 font-bold">Candidate Roll No:</span> <span className="font-mono font-bold text-amber-900">{generateRollNumber(studentEmail, studentName)}</span></div>
-            </div>
-
-            {/* Section 3: Request Profile Verification / Update */}
-            <div className="space-y-3 p-4 rounded-2xl bg-white border-2 border-amber-950/20 shadow-xs">
-              <div>
-                <h4 className="text-xs font-extrabold uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
-                  <Edit3 size={14} className="text-amber-800" /> Request Name or Email Correction
-                </h4>
-                <p className="text-[11px] text-neutral-600 mt-1 leading-relaxed">
-                  To protect your official test series scores and prevent unauthorized access, name/email changes require quick academic verification. Fill below to generate an automatic support email.
-                </p>
+            {/* Section 2: Candidate Identity Card */}
+            <div className="bg-[#f5ebd7]/50 rounded-2xl p-4 border border-[#d9cea8]/80 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#6e5d4f]">Official Candidate Identity</span>
+                <span className="text-[10px] font-mono font-bold bg-[#1c1815] text-[#f4b931] px-2.5 py-0.5 rounded-full">
+                  {generateRollNumber(studentEmail, studentName)}
+                </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                <div>
-                  <label className="block text-[10px] font-bold text-neutral-700 mb-1">New Full Name</label>
+              {/* Instant Name Editor */}
+              <div className="bg-white/80 rounded-xl p-3 border border-[#e2d8c0] shadow-xs">
+                <label className="block text-[11px] font-bold text-[#3b2e24] mb-1.5 flex items-center justify-between">
+                  <span>Candidate Full Name</span>
+                  <span className="text-[9px] font-normal text-neutral-500">Instant save • No approval needed</span>
+                </label>
+                <div className="flex items-center gap-2">
                   <input
                     type="text"
-                    placeholder="e.g. Correct Name"
-                    value={reqName}
-                    onChange={(e) => setReqName(e.target.value)}
-                    className="w-full text-xs px-3 py-2 rounded-xl bg-gray-50 border border-gray-300 focus:outline-none focus:border-amber-950"
+                    defaultValue={studentName}
+                    placeholder="Enter your full name"
+                    onChange={(e) => setNewNameInput(e.target.value)}
+                    className="flex-1 text-xs px-3 py-2 rounded-lg bg-white border border-[#d9cea8] text-[#1c1815] font-semibold focus:outline-none focus:border-[#1c1815] focus:ring-1 focus:ring-[#1c1815] transition"
                   />
+                  <button
+                    type="button"
+                    onClick={handleUpdateName}
+                    disabled={isUpdatingName}
+                    className="px-4 py-2 bg-[#1c1815] hover:bg-[#332b24] disabled:opacity-50 text-white font-bold text-xs rounded-lg transition shadow-xs cursor-pointer shrink-0"
+                  >
+                    {isUpdatingName ? "Saving..." : "Save Name"}
+                  </button>
                 </div>
+              </div>
+
+              {/* Registered Email (Protected) */}
+              <div className="bg-white/60 rounded-xl p-3 border border-[#e2d8c0]/70 flex items-center justify-between text-xs">
                 <div>
-                  <label className="block text-[10px] font-bold text-neutral-700 mb-1">New Email Address</label>
-                  <input
-                    type="email"
-                    placeholder="e.g. new@email.com"
-                    value={reqEmail}
-                    onChange={(e) => setReqEmail(e.target.value)}
-                    className="w-full text-xs px-3 py-2 rounded-xl bg-gray-50 border border-gray-300 focus:outline-none focus:border-amber-950"
-                  />
+                  <span className="text-[10px] text-neutral-500 font-bold block">Registered Email</span>
+                  <span className="font-semibold text-[#1c1815] font-mono">{studentEmail}</span>
+                </div>
+                <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-md">
+                  <CheckCircle2 size={12} />
+                  <span>Verified Identity</span>
                 </div>
               </div>
+            </div>
 
-              <div>
-                <label className="block text-[10px] font-bold text-neutral-700 mb-1">Reason for Update</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Spelling correction / Primary email change"
-                  value={reqReason}
-                  onChange={(e) => setReqReason(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-xl bg-gray-50 border border-gray-300 focus:outline-none focus:border-amber-950"
-                />
+            {/* Section 3: Need Email Transfer? */}
+            <div className="bg-white/50 rounded-xl p-3 border border-dashed border-[#d9cea8] text-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-[#4a3b2c] flex items-center gap-1.5">
+                  <Mail size={13} className="text-[#a67c1e]" /> Need to change your registered email?
+                </span>
+                <span className="text-[9px] text-neutral-500">Security verification required</span>
               </div>
-
-              <div className="flex flex-col sm:flex-row gap-2 pt-1">
+              <p className="text-[10px] text-neutral-600 leading-relaxed">
+                Registered emails are locked to protect your paid test series passes and exam history. To transfer to a new email address, our academic helpdesk can assist you.
+              </p>
+              <div className="flex items-center gap-2 pt-0.5">
                 <button
                   type="button"
-                  onClick={handleSendProfileRequest}
-                  className="flex-1 py-2.5 px-4 bg-[#1c1815] hover:bg-black text-amber-300 font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow transition cursor-pointer border border-amber-500/30"
+                  onClick={handleSendEmailChangeRequest}
+                  className="py-1.5 px-3 bg-[#f4ebd9] hover:bg-[#eae0cb] text-[#3b2e24] font-bold text-[10px] rounded-lg border border-[#d9cea8] transition cursor-pointer flex items-center gap-1.5"
                 >
-                  <Mail size={14} />
-                  <span>Send Support Request Email</span>
+                  <Mail size={12} />
+                  <span>Request Email Transfer</span>
                 </button>
                 <a
-                  href={`https://wa.me/917004283531?text=Hello%20VigyanPrep%20Support%2C%20I%20am%20student%20${encodeURIComponent(studentName)}%20(${encodeURIComponent(generateRollNumber(studentEmail, studentName))})%20and%20would%20like%20to%20request%20a%20profile%20correction.`}
+                  href={`https://wa.me/917004283531?text=Hello%20VigyanPrep%2C%20I%20am%20student%20${encodeURIComponent(studentName)}%20(${encodeURIComponent(studentEmail)})%20and%20need%20help%20transferring%20my%20registered%20email.`}
                   target="_blank"
                   rel="noreferrer"
-                  className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition cursor-pointer"
+                  className="py-1.5 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-lg border border-emerald-200 transition cursor-pointer flex items-center gap-1.5"
                 >
-                  <MessageSquare size={14} />
-                  <span>WhatsApp (+91 7004283531)</span>
+                  <MessageSquare size={12} />
+                  <span>WhatsApp Helpdesk</span>
                 </a>
               </div>
               {requestSent && (
-                <p className="text-[11px] text-emerald-700 font-bold text-center bg-emerald-50 py-1.5 px-3 rounded-lg border border-emerald-200">
-                  ✓ Email draft opened! Our support desk will verify and update your records promptly.
+                <p className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 py-1 px-2.5 rounded border border-emerald-200 mt-1">
+                  ✓ Email request prepared! Our support team will assist you shortly.
                 </p>
               )}
             </div>
 
-            {/* Section 4: Password Security & Sign Out */}
-            <div className="pt-2 flex items-center justify-between gap-3 border-t border-amber-950/15">
+            {/* Section 4: Security & Sign Out Footer */}
+            <div className="pt-2 flex items-center justify-between gap-3 border-t border-[#d9cea8]/60">
               <a
                 href="https://auth.vigyanprep.com"
                 target="_blank"
                 rel="noreferrer"
-                className="text-xs font-bold text-amber-900 hover:underline flex items-center gap-1"
+                className="text-xs font-bold text-[#a67c1e] hover:text-[#1c1815] flex items-center gap-1.5 transition"
               >
                 <Key size={13} />
-                <span>Change Password</span>
+                <span>Security &amp; Password</span>
               </a>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="py-2 px-4 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs rounded-xl transition cursor-pointer"
+                className="py-1.5 px-3.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs rounded-xl transition cursor-pointer"
               >
                 Sign Out
               </button>
