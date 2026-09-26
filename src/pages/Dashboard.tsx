@@ -5,7 +5,7 @@ import {
   Settings, Search, Bell, Award, Sparkles,
   ArrowRight, PlayCircle, Lock, Key, X, AlertCircle, CheckCircle2,
   RefreshCw, HelpCircle, Download, ChevronRight, ChevronLeft, Menu, Home, Mail,
-  Edit3, GraduationCap, Trophy, Brain, List, LayoutGrid, Clock, Calendar
+  GraduationCap, Trophy, Brain, List, LayoutGrid, Clock, Calendar
 } from 'lucide-react';
 import { getCookie, deleteCookie, setCookie } from '../lib/cookies';
 import { supabase } from '../lib/supabase';
@@ -167,9 +167,6 @@ export function Dashboard() {
   const [selectedAvatarId, setSelectedAvatarId] = useState<string>(() => {
     return localStorage.getItem('student_avatar_id') || 'einstein';
   });
-  const [reqName, setReqName] = useState('');
-  const [reqEmail, setReqEmail] = useState('');
-  const [reqReason, setReqReason] = useState('');
   const [requestSent, setRequestSent] = useState(false);
 
   const currentScientist = SCIENTIST_AVATARS.find(a => a.id === selectedAvatarId) || SCIENTIST_AVATARS[0];
@@ -231,6 +228,8 @@ export function Dashboard() {
 
   const handleSendEmailChangeRequest = () => {
     const roll = generateRollNumber(studentEmail, studentName);
+    const newEmail = typeof window !== 'undefined' ? (window.prompt("Enter your new email address:") || '') : '';
+    const reason = typeof window !== 'undefined' ? (window.prompt("Reason for transfer (optional):") || 'Primary email change') : 'Primary email change';
     const subject = encodeURIComponent(`[EMAIL CHANGE REQUEST] Student: ${studentName} (${roll})`);
     const body = encodeURIComponent(
 `Hello VigyanPrep Academic Support Team,
@@ -244,8 +243,8 @@ STUDENT IDENTITY:
 • Candidate Roll Number: ${roll}
 
 REQUESTED NEW EMAIL:
-• New Email Address: ${reqEmail.trim() || '[Please specify new email]'}
-• Reason for Transfer: ${reqReason.trim() || 'Primary email change'}
+• New Email Address: ${newEmail.trim() || '[Please specify new email]'}
+• Reason for Transfer: ${reason.trim() || 'Primary email change'}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Please verify my student identity and update my test series records accordingly.

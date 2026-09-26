@@ -380,6 +380,27 @@ export default function Exam() {
     }
   };
 
+  const handleNumericalInput = (val: string) => {
+    if (!currentQ) return;
+    setAnswer(currentQ.id, val);
+    const updated = { ...answers, [currentQ.id]: val };
+    const activeId = testIdParam || testId || useExamStore.getState().testId || '';
+    const activeAttemptId = attemptId || useExamStore.getState().attemptId || '';
+    const activeToken = token || useExamStore.getState().token || getCookie('student_token') || localStorage.getItem('student_token') || '';
+
+    try {
+      if (activeId) {
+        localStorage.setItem(`vigyan_response_${activeId}`, JSON.stringify(updated));
+      }
+      localStorage.setItem('vigyan_last_answers', JSON.stringify(updated));
+    } catch (e) {}
+
+    // Instant non-blocking server autosave sync
+    if (activeAttemptId) {
+      sendHeartbeat(activeAttemptId, timeRemaining, updated, warningCount, activeToken).catch(() => {});
+    }
+  };
+
   const handleSaveAndNext = () => {
     if (currentSectionQIndex !== -1 && currentSectionQIndex < sectionQuestions.length - 1) {
       const nextQ = sectionQuestions[currentSectionQIndex + 1];
@@ -657,33 +678,115 @@ export default function Exam() {
                 )}
               </div>
 
-              <div className="space-y-2.5">
-                {(currentQ.options || ['Option A', 'Option B', 'Option C', 'Option D']).map((opt, optIndex) => {
-                  const optKey = String.fromCharCode(65 + optIndex);
-                  const isSelected = answers[currentQ.id] === optKey;
+              {currentQ.type === 'Numerical' ? (
+                <div className="bg-white rounded-2xl border-2 border-gray-300 p-4 sm:p-6 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#1b365d] flex items-center gap-2">
+                      <span className="w-6 h-6 rounded bg-[#1b365d] text-white flex items-center justify-center font-mono text-xs">123</span>
+                      Numerical / Integer Type Question
+                    </span>
+                    <span className="text-[11px] font-mono font-bold bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-0.5 rounded-full">
+                      JEE Main Pattern
+                    </span>
+                  </div>
 
-                  return (
-                    <button
-                      key={optIndex}
-                      onClick={() => handleOptionSelect(optKey)}
-                      className={`w-full text-left p-3.5 sm:p-4 rounded-xl border-2 transition-all flex items-center gap-3 active:scale-[0.99] cursor-pointer ${
-                        isSelected
-                          ? 'border-[#007bff] bg-blue-50/80 text-[#1b365d] shadow-sm font-semibold'
-                          : 'border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50 text-gray-950'
-                      }`}
-                    >
-                      <span className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm shrink-0 transition ${
-                        isSelected ? 'bg-[#007bff] text-white shadow' : 'bg-gray-100 border border-gray-300 text-gray-800'
-                      }`}>
-                        {optKey}
-                      </span>
-                      <span className="text-sm sm:text-base font-semibold flex-1 text-gray-950">
-                        <MathText text={opt} className="text-gray-950 font-semibold" />
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+                  {/* Input Response Box */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-2">
+                      Your Numerical Response:
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="text"
+                        value={answers[currentQ.id] || ''}
+                        onChange={(e) => handleNumericalInput(e.target.value)}
+                        placeholder="Click keypad or type here..."
+                        className="flex-1 max-w-sm px-4 py-3 bg-gray-50 border-2 border-[#1b365d] rounded-xl font-mono text-lg font-bold text-[#1b365d] focus:outline-none focus:ring-2 focus:ring-amber-400"
+                      />
+                      {(answers[currentQ.id] !== undefined && answers[currentQ.id] !== '') && (
+                        <button
+                          type="button"
+                          onClick={() => handleNumericalInput('')}
+                          className="px-3.5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl border border-gray-300 transition cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* NTA On-Screen Virtual Keypad */}
+                  <div className="pt-2">
+                    <p className="text-xs font-semibold text-gray-500 mb-2">
+                      Use On-Screen Virtual Keypad to enter your answer:
+                    </p>
+                    <div className="bg-gray-100 p-3 sm:p-4 rounded-2xl border border-gray-300 max-w-xs space-y-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '-'].map((k) => (
+                          <button
+                            key={k}
+                            type="button"
+                            onClick={() => {
+                              const curr = String(answers[currentQ.id] || '');
+                              handleNumericalInput(curr + k);
+                            }}
+                            className="py-3 rounded-xl bg-white hover:bg-[#1b365d] hover:text-white border-2 border-gray-300 font-mono font-black text-base text-gray-900 shadow-sm transition active:scale-95 cursor-pointer"
+                          >
+                            {k}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const curr = String(answers[currentQ.id] || '');
+                            handleNumericalInput(curr.slice(0, -1));
+                          }}
+                          className="py-2.5 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold text-xs border border-gray-300 transition active:scale-95 cursor-pointer"
+                        >
+                          ⌫ Backspace
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleNumericalInput('')}
+                          className="py-2.5 rounded-xl bg-red-100 hover:bg-red-200 text-red-700 font-bold text-xs border border-red-200 transition active:scale-95 cursor-pointer"
+                        >
+                          Clear All
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {(currentQ.options || ['Option A', 'Option B', 'Option C', 'Option D']).map((opt, optIndex) => {
+                    const optKey = String.fromCharCode(65 + optIndex);
+                    const isSelected = answers[currentQ.id] === optKey;
+
+                    return (
+                      <button
+                        key={optIndex}
+                        onClick={() => handleOptionSelect(optKey)}
+                        className={`w-full text-left p-3.5 sm:p-4 rounded-xl border-2 transition-all flex items-center gap-3 active:scale-[0.99] cursor-pointer ${
+                          isSelected
+                            ? 'border-[#007bff] bg-blue-50/80 text-[#1b365d] shadow-sm font-semibold'
+                            : 'border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50 text-gray-950'
+                        }`}
+                      >
+                        <span className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm shrink-0 transition ${
+                          isSelected ? 'bg-[#007bff] text-white shadow' : 'bg-gray-100 border border-gray-300 text-gray-800'
+                        }`}>
+                          {optKey}
+                        </span>
+                        <span className="text-sm sm:text-base font-semibold flex-1 text-gray-950">
+                          <MathText text={opt} className="text-gray-950 font-semibold" />
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center py-16 text-gray-500">No questions loaded.</div>
