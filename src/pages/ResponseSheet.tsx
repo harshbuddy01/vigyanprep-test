@@ -782,7 +782,7 @@ export const ResponseSheet: React.FC = () => {
                                   <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${badgeStyle}`}>
                                     {label}
                                   </span>
-                                  <div className="flex-1"><MathText text={opt} /></div>
+                                  <div className="flex-1"><MathText text={opt} inlineOnly /></div>
                                   {isResultDeclared && isOfficialCorrect && (
                                     <span className="text-[10px] font-extrabold text-emerald-900 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md shrink-0 flex items-center gap-1">
                                       {isStudentChoice ? "✓ Your Choice (Correct +4)" : "✓ Official Correct Key"}

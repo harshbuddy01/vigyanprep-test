@@ -5,6 +5,7 @@ import 'katex/dist/katex.min.css';
 interface Props {
   text: string;
   className?: string;
+  inlineOnly?: boolean;
 }
 
 function formatImageUrl(url?: string): string {
@@ -170,10 +171,15 @@ function renderInlineContent(rawChunk: string) {
   );
 }
 
-export const MathText: React.FC<Props> = ({ text, className = '' }) => {
+export const MathText: React.FC<Props> = ({ text, className = '', inlineOnly = false }) => {
   if (!text) return null;
 
   const trimmedText = text.trim();
+  if (!trimmedText) return null;
+
+  if (inlineOnly) {
+    return <span className={'inline-block leading-relaxed ' + className}>{renderInlineContent(trimmedText)}</span>;
+  }
   if (/^https?:\/\/[^\s]+$/i.test(trimmedText) && (
     /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(trimmedText) ||
     /googleusercontent\.com/i.test(trimmedText) ||
@@ -253,8 +259,9 @@ export const MathText: React.FC<Props> = ({ text, className = '' }) => {
           );
         }
 
-        // Check if line is a numbered statement
-        const statementMatch = trimmedLine.match(/^(\([0-9ivxIVX]+\)|[0-9ivxIVX]+[\.\)]|Statement\s+[0-9IVX]+:?|Assertion\s*\([A-Z]\):?|Reason\s*\([A-Z]\):?|\b[1-9]\b(?=\s+[A-Za-z]))\s*([\s\S]*)$/i);
+        // Check if line is a numbered statement or Statement/Assertion/Reason header:
+        // Strictly requires a delimiter (colon, period, or hyphen) so sentences like "Statement I is false" are NEVER matched as badges!
+        const statementMatch = trimmedLine.match(/^(\([0-9ivxIVX]+\)|[0-9ivxIVX]+[\.\)]|Statement\s+(?:[0-9]+|[ivxIVX]+)\s*[:\-–—]|Assertion\s*\([A-Z]\)\s*[:\-–—]|Reason\s*\([A-Z]\)\s*[:\-–—])\s*([\s\S]*)$/i);
 
         if (statementMatch) {
           const badge = statementMatch[1].trim();
@@ -262,7 +269,7 @@ export const MathText: React.FC<Props> = ({ text, className = '' }) => {
           return (
             <div key={lIdx} className="flex items-start gap-3 my-2.5 pl-2 sm:pl-3.5 group">
               <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-extrabold font-mono text-xs shrink-0 border border-amber-300 shadow-xs">
-                {badge.endsWith(':') || badge.endsWith('.') || badge.endsWith(')') ? badge : badge + '.'}
+                {badge.endsWith(':') || badge.endsWith('.') || badge.endsWith(')') ? badge : badge + ':'}
               </span>
               <div className="flex-1 leading-relaxed text-gray-900 font-medium">
                 {renderInlineContent(content)}

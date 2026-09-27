@@ -215,7 +215,7 @@ export function Bookmarks() {
                               <span className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold shrink-0 ${
                                 isCorrect ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-500'
                               }`}>{label}</span>
-                              <div className="pt-0.5"><MathText text={opt} /></div>
+                              <div className="pt-0.5"><MathText text={opt} inlineOnly /></div>
                               {isCorrect && <span className="text-[9px] uppercase font-bold text-emerald-600 shrink-0 mt-1">✓ Correct</span>}
                             </div>
                           );

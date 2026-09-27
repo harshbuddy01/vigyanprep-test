@@ -780,7 +780,7 @@ export default function Exam() {
                           {optKey}
                         </span>
                         <span className="text-sm sm:text-base font-semibold flex-1 text-gray-950">
-                          <MathText text={opt} className="text-gray-950 font-semibold" />
+                          <MathText text={opt} className="text-gray-950 font-semibold" inlineOnly />
                         </span>
                       </button>
                     );

@@ -255,7 +255,7 @@ export function AdaptiveTest() {
                       {label}
                     </span>
                     <div className="flex-1 pt-1 text-sm sm:text-base text-gray-900 font-sans leading-relaxed">
-                      <MathText text={opt} />
+                      <MathText text={opt} inlineOnly />
                     </div>
                   </button>
                 );

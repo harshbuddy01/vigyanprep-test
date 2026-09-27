@@ -407,7 +407,7 @@ export function AdaptiveDiagnosis() {
                                   {label}
                                 </span>
                                 <div className="pt-0.5 leading-relaxed">
-                                  <MathText text={opt} />
+                                  <MathText text={opt} inlineOnly />
                                 </div>
                               </div>
 
