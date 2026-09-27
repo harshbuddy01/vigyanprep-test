@@ -672,7 +672,7 @@ export default function Exam() {
                     <img
                       src={formatImageUrl((currentQ as any).image_url || (currentQ as any).diagram_url)}
                       alt="Question Diagram"
-                      className="max-h-64 sm:max-h-80 mx-auto object-contain rounded-xl border border-gray-200 shadow-sm bg-white p-1"
+                      className="max-h-80 sm:max-h-[28rem] w-full mx-auto object-contain rounded-xl border border-gray-200 shadow-sm bg-white p-2"
                     />
                   </div>
                 )}

@@ -746,7 +746,7 @@ export const ResponseSheet: React.FC = () => {
 
                           {(q.image_url || (q as any).imageUrl) && (
                             <div className="mb-3">
-                              <img src={formatImageUrl(q.image_url || (q as any).imageUrl || "")} alt="diagram" className="max-h-48 object-contain rounded-xl border border-gray-200 bg-white p-1" />
+                              <img src={formatImageUrl(q.image_url || (q as any).imageUrl || "")} alt="diagram" className="max-h-80 sm:max-h-96 w-full object-contain rounded-xl border border-gray-200 bg-white p-2" />
                             </div>
                           )}
 
