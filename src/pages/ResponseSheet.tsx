@@ -283,7 +283,7 @@ export const ResponseSheet: React.FC = () => {
   }, [localAnswers, activeTestId, serverResult]);
 
   const answeredCount = Object.keys(displayAnswers).filter(k => !!displayAnswers[k]).length;
-  const totalMaxScore = displayQuestions.length * 4;
+  const totalMaxScore = displayQuestions.reduce((sum, q) => sum + (Number((q as any).marks_positive) || 4), 0);
 
   // 🛡️ STRICT DISTINCTION: Paid Test Series vs Free PYQs
   // Free PYQ mode ONLY applies if the test is explicitly a PYQ (content_type === 'pyq' or title contains 'PYQ' / 'Previous Year')

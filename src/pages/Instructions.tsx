@@ -312,10 +312,22 @@ export const Instructions: React.FC = () => {
           <section className="space-y-3 pt-2">
             <h3 className="font-bold text-gray-900 text-base">3. Section & Marking Scheme</h3>
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-900 space-y-1 text-xs">
-              <p className="font-bold">IISER IAT / NISER NEST Marking Scheme:</p>
-              <p>• Correct Answer: <strong>+4 Marks</strong></p>
-              <p>• Incorrect Answer: <strong>-1 Mark</strong></p>
-              <p>• Unattempted: <strong>0 Marks</strong></p>
+              {meta?.examType?.toUpperCase() === 'JEE' ? (
+                <>
+                  <p className="font-bold">JEE Main Marking Scheme:</p>
+                  <p>• <strong>Section A (MCQ):</strong> 20 Questions × (+4 / -1)</p>
+                  <p>• <strong>Section B (Numerical):</strong> 5 Questions × (+4 / 0)</p>
+                  <p>• Total: <strong>75 Questions, 300 Marks</strong></p>
+                  <p>• Subjects: Physics, Chemistry, Mathematics</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-bold">IISER IAT / NISER NEST Marking Scheme:</p>
+                  <p>• Correct Answer: <strong>+4 Marks</strong></p>
+                  <p>• Incorrect Answer: <strong>-1 Mark</strong></p>
+                  <p>• Unattempted: <strong>0 Marks</strong></p>
+                </>
+              )}
             </div>
           </section>
 

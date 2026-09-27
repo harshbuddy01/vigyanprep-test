@@ -351,7 +351,11 @@ export default function Exam() {
   }, [timeRemaining, isSubmitted, questions.length, doSubmit]);
 
   const currentQ = questions[currentQuestionIndex];
-  const sections = ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
+  // JEE Main has only 3 sections (no Biology)
+  const examTypeUpper = (examType || '').toUpperCase();
+  const sections = examTypeUpper === 'JEE'
+    ? ['Physics', 'Chemistry', 'Mathematics']
+    : ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
 
   const sectionQuestions = questions.filter(q =>
     q.section === activeSection || (!sections.includes(q.section) && activeSection === 'Physics')
