@@ -1649,16 +1649,24 @@ ${studentName}`
                               </div>
                             ) : (
                               <p className="text-xs text-zinc-600 font-medium">
-                                Full Prescribed National Entrance Syllabus (Physics, Chemistry, Mathematics &amp; Biology).
+                                {(spotlight.exam_type || spotlight.examType || '').toUpperCase() === 'JEE'
+                                  ? 'Official NTA JEE Main Pattern (Physics, Chemistry & Mathematics — 25 Qs each, 300 Marks).'
+                                  : 'Full Prescribed National Entrance Syllabus (Physics, Chemistry, Mathematics & Biology).'}
                               </p>
                             )}
 
                             <div className="flex flex-wrap items-center gap-3 text-xs font-mono font-bold text-zinc-700 pt-1">
-                              <span className="flex items-center gap-1.5"><FileText size={13} className="text-amber-800" /> {spotlight.questions_count || 60} Questions</span>
+                              <span className="flex items-center gap-1.5">
+                                <FileText size={13} className="text-amber-800" /> 
+                                {spotlight.questions_count || ((spotlight.exam_type || spotlight.examType || '').toUpperCase() === 'JEE' ? 75 : 60)} Questions
+                              </span>
                               <span>•</span>
                               <span className="flex items-center gap-1.5"><Clock size={13} className="text-amber-800" /> {spotlight.duration_minutes || 180} Minutes</span>
                               <span>•</span>
-                              <span className="flex items-center gap-1.5"><Award size={13} className="text-amber-800" /> {spotlight.total_marks || 240} Marks</span>
+                              <span className="flex items-center gap-1.5">
+                                <Award size={13} className="text-amber-800" /> 
+                                {spotlight.total_marks || ((spotlight.exam_type || spotlight.examType || '').toUpperCase() === 'JEE' ? 300 : 240)} Marks
+                              </span>
                             </div>
                           </div>
 
@@ -2150,7 +2158,9 @@ ${studentName}`
                               <div className="grid grid-cols-3 gap-2 pt-2 border-t-2 border-amber-950/25 text-center text-xs">
                                 <div className="bg-white/40 p-2 rounded-xl border border-amber-950/25">
                                   <p className="text-[9px] text-[#1c1815] uppercase font-extrabold">Questions</p>
-                                  <p className="font-extrabold text-[#1c1815]">{paper.questions_count || 60} Qs</p>
+                                  <p className="font-extrabold text-[#1c1815]">
+                                    {paper.questions_count || ((paper.exam_type || paper.examType || '').toUpperCase() === 'JEE' ? 75 : 60)} Qs
+                                  </p>
                                 </div>
                                 <div className="bg-white/40 p-2 rounded-xl border border-amber-950/25">
                                   <p className="text-[9px] text-[#1c1815] uppercase font-extrabold">Duration</p>
@@ -2158,8 +2168,28 @@ ${studentName}`
                                 </div>
                                 <div className="bg-white/40 p-2 rounded-xl border border-amber-950/25">
                                   <p className="text-[9px] text-[#1c1815] uppercase font-extrabold">Marks</p>
-                                  <p className="font-extrabold text-amber-950">{paper.total_marks || 240} M</p>
+                                  <p className="font-extrabold text-amber-950">
+                                    {paper.total_marks || ((paper.exam_type || paper.examType || '').toUpperCase() === 'JEE' ? 300 : 240)} M
+                                  </p>
                                 </div>
+                              </div>
+
+                              {/* Section breakdown pill */}
+                              <div className="flex flex-wrap gap-1 items-center justify-center pt-1">
+                                {((paper.exam_type || paper.examType || '').toUpperCase() === 'JEE') ? (
+                                  <>
+                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-100/90 text-blue-900 border border-blue-200">Physics (25 Qs)</span>
+                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100/90 text-emerald-900 border border-emerald-200">Chemistry (25 Qs)</span>
+                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-100/90 text-purple-900 border border-purple-200">Mathematics (25 Qs)</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-blue-100/70 text-blue-800 border border-blue-200/60">Physics</span>
+                                    <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-emerald-100/70 text-emerald-800 border border-emerald-200/60">Chemistry</span>
+                                    <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-purple-100/70 text-purple-800 border border-purple-200/60">Math</span>
+                                    <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-amber-100/70 text-amber-800 border border-amber-200/60">Biology</span>
+                                  </>
+                                )}
                               </div>
 
                               {/* 📘 Syllabus & Specific Chapters Accordion */}
