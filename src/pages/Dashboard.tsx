@@ -121,7 +121,7 @@ export function Dashboard() {
 
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'TEST_SERIES' | 'PYQ'>('TEST_SERIES');
-  const [activeCategory, setActiveCategory] = useState<'ALL' | 'IAT' | 'NEST' | 'CMI'>('ALL');
+  const [activeCategory, setActiveCategory] = useState<'ALL' | 'IAT' | 'NEST' | 'JEE' | 'CMI'>('ALL');
   const [activeNav, setActiveNav] = useState<'dashboard' | 'test_series' | 'pyq' | 'performance' | 'bookmarks' | 'notes' | 'discussions' | 'settings'>('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -765,14 +765,15 @@ ${studentName}`
     const planName = (s.plan?.name || s.plan_name || s.name || '').toUpperCase();
     if (planName.includes('IAT') || planName.includes('IISER')) subscribedExamTypes.add('IAT');
     if (planName.includes('NEST') || planName.includes('NISER')) subscribedExamTypes.add('NEST');
+    if (planName.includes('JEE')) subscribedExamTypes.add('JEE');
     if (planName.includes('CMI')) subscribedExamTypes.add('CMI');
   });
 
   // Category filter pills: only show categories user is subscribed to on Test Series tab
-  type CategoryType = 'ALL' | 'IAT' | 'NEST' | 'CMI';
+  type CategoryType = 'ALL' | 'IAT' | 'NEST' | 'JEE' | 'CMI';
   const availableCategoryPills: CategoryType[] = activeTab === 'TEST_SERIES' && subscriptions.length > 0
-    ? ['ALL', ...((['IAT', 'NEST', 'CMI'] as CategoryType[]).filter(cat => subscribedExamTypes.has(cat)))]
-    : ['ALL', 'IAT', 'NEST', 'CMI'];
+    ? ['ALL', ...((['IAT', 'NEST', 'JEE', 'CMI'] as CategoryType[]).filter(cat => subscribedExamTypes.has(cat)))]
+    : ['ALL', 'IAT', 'NEST', 'JEE', 'CMI'];
 
   // For TEST_SERIES tab: only show tests matching the user's subscribed exam types
   const testSeriesPapers = subscriptions.length > 0
