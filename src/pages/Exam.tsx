@@ -438,9 +438,13 @@ export default function Exam() {
       localStorage.setItem('vigyan_last_answers', JSON.stringify(updated));
     } catch (e) {}
 
-    // Instant non-blocking server autosave sync on every click
+    // Instant non-blocking server autosave sync on every click (filter only current test questions)
     if (activeAttemptId) {
-      sendHeartbeat(activeAttemptId, timeRemaining, updated, warningCount, activeToken).catch(() => {});
+      const validQIds = new Set((questions || []).map((q: any) => q.id));
+      const cleanUpdated = Object.fromEntries(
+        Object.entries(updated).filter(([qid]) => validQIds.size === 0 || validQIds.has(qid))
+      );
+      sendHeartbeat(activeAttemptId, timeRemaining, cleanUpdated, warningCount, activeToken).catch(() => {});
     }
   };
 
@@ -463,7 +467,11 @@ export default function Exam() {
     if (activeAttemptId) {
       if (heartbeatDebounceRef.current) clearTimeout(heartbeatDebounceRef.current);
       heartbeatDebounceRef.current = setTimeout(() => {
-        sendHeartbeat(activeAttemptId, timeRemaining, updated, warningCount, activeToken).catch(() => {});
+        const validQIds = new Set((questions || []).map((q: any) => q.id));
+        const cleanUpdated = Object.fromEntries(
+          Object.entries(updated).filter(([qid]) => validQIds.size === 0 || validQIds.has(qid))
+        );
+        sendHeartbeat(activeAttemptId, timeRemaining, cleanUpdated, warningCount, activeToken).catch(() => {});
       }, 800);
     }
   };
