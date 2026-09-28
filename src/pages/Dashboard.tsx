@@ -1058,26 +1058,50 @@ ${studentName}`
           </nav>
         </div>
 
-        {/* VIP Demo Account Sidebar Conversion Card */}
+        {/* VIP Demo Account Sidebar Conversion Card — Luxury Scholar's Vault */}
         {isTrialAccount && (
-          <div className="p-3.5 rounded-2xl bg-amber-500/15 border-2 border-amber-500/40 space-y-2 mt-4">
-            <div className="flex items-center justify-between text-[11px] font-black uppercase text-amber-950">
-              <span className="flex items-center gap-1.5">
-                <Sparkles size={13} className="text-amber-700 shrink-0" />
-                <span>24h VIP Demo</span>
-              </span>
-              <span className="font-mono text-[10px] bg-amber-950 text-amber-300 px-2 py-0.5 rounded-full">
+          <div className="relative rounded-2xl bg-gradient-to-b from-[#1a1612] via-[#14110d] to-[#0d0b09] border border-[#d4af37]/35 p-3.5 space-y-2.5 mt-4 shadow-[0_8px_20px_-4px_rgba(20,16,12,0.4),inset_0_1px_1px_0_rgba(255,255,255,0.08)] overflow-hidden">
+            {/* Subtle ambient gold radial sheen */}
+            <div className="absolute -top-10 -right-10 w-24 h-24 bg-[#d4af37]/10 rounded-full blur-xl pointer-events-none" />
+
+            {/* Header: Label + Monospace Countdown Capsule */}
+            <div className="flex items-center justify-between gap-1.5">
+              <div className="flex items-center gap-1.5">
+                <div className="w-5 h-5 rounded-md bg-[#d4af37]/15 border border-[#d4af37]/30 flex items-center justify-center text-[#e6ca65] shadow-xs">
+                  <Sparkles size={11} />
+                </div>
+                <span className="font-serif text-[10px] font-bold uppercase tracking-[0.16em] text-[#f5ebd7]">
+                  24h VIP Pass
+                </span>
+              </div>
+              <span className="font-mono text-[9px] font-bold text-[#fde68a] bg-black/60 px-2 py-0.5 rounded-full border border-[#d4af37]/30 flex items-center gap-1 shadow-inner">
+                <Clock size={9} className="text-[#d4af37]" />
                 {formatTrialCountdown(trialSecondsLeft)}
               </span>
             </div>
-            <p className="text-[10px] text-zinc-600 font-medium leading-tight">
-              Temporary practice pass. Convert now to join Live Tests!
+
+            {/* Description */}
+            <p className="text-[10px] text-[#c4b59f] leading-snug font-sans">
+              Provisional CBT access active. Upgrade anytime to unlock official Live AIR mock rankings.
             </p>
+
+            {/* Subtle Progress Bar */}
+            <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-[#b8860b] via-[#d4af37] to-[#f59e0b] rounded-full transition-all duration-1000"
+                style={{ width: `${Math.min(100, Math.max(5, (trialSecondsLeft / (24 * 3600)) * 100))}%` }}
+              />
+            </div>
+
+            {/* Premium Gold CTA Button */}
             <a
               href="https://vigyanprep.com/tests"
-              className="block w-full py-2 text-center text-[10px] font-extrabold uppercase tracking-wider rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-black transition shadow-xs"
+              className="group block w-full py-2 px-3 text-center rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f7e7b4] to-[#c59b27] hover:from-[#e2c14b] hover:to-[#d4af37] text-[#14100a] font-extrabold text-[10px] uppercase tracking-widest transition-all shadow-[0_2px_10px_rgba(212,175,55,0.25)] hover:shadow-[0_4px_14px_rgba(212,175,55,0.4)] border border-[#fff5cc]/40 active:scale-[0.98]"
             >
-              Upgrade to Full Pass →
+              <span className="flex items-center justify-center gap-1.5">
+                <span>Upgrade to Full Pass</span>
+                <ArrowRight size={11} className="transition-transform group-hover:translate-x-0.5" />
+              </span>
             </a>
           </div>
         )}
@@ -1215,26 +1239,50 @@ ${studentName}`
               </nav>
             </div>
 
-            {/* VIP Demo Account Mobile Conversion Card */}
+            {/* VIP Demo Account Mobile Conversion Card — Luxury Scholar's Vault */}
             {isTrialAccount && (
-              <div className="p-3.5 rounded-2xl bg-amber-500/15 border-2 border-amber-500/40 space-y-2 mt-2">
-                <div className="flex items-center justify-between text-[11px] font-black uppercase text-amber-950">
-                  <span className="flex items-center gap-1.5">
-                    <Sparkles size={13} className="text-amber-700 shrink-0" />
-                    <span>24h VIP Demo</span>
-                  </span>
-                  <span className="font-mono text-[10px] bg-amber-950 text-amber-300 px-2 py-0.5 rounded-full">
+              <div className="relative rounded-2xl bg-gradient-to-b from-[#1a1612] via-[#14110d] to-[#0d0b09] border border-[#d4af37]/35 p-3.5 space-y-2.5 mt-3 shadow-[0_8px_20px_-4px_rgba(20,16,12,0.4),inset_0_1px_1px_0_rgba(255,255,255,0.08)] overflow-hidden">
+                {/* Subtle ambient gold radial sheen */}
+                <div className="absolute -top-10 -right-10 w-24 h-24 bg-[#d4af37]/10 rounded-full blur-xl pointer-events-none" />
+
+                {/* Header: Label + Monospace Countdown Capsule */}
+                <div className="flex items-center justify-between gap-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-5 h-5 rounded-md bg-[#d4af37]/15 border border-[#d4af37]/30 flex items-center justify-center text-[#e6ca65] shadow-xs">
+                      <Sparkles size={11} />
+                    </div>
+                    <span className="font-serif text-[10px] font-bold uppercase tracking-[0.16em] text-[#f5ebd7]">
+                      24h VIP Pass
+                    </span>
+                  </div>
+                  <span className="font-mono text-[9px] font-bold text-[#fde68a] bg-black/60 px-2 py-0.5 rounded-full border border-[#d4af37]/30 flex items-center gap-1 shadow-inner">
+                    <Clock size={9} className="text-[#d4af37]" />
                     {formatTrialCountdown(trialSecondsLeft)}
                   </span>
                 </div>
-                <p className="text-[10px] text-zinc-600 font-medium leading-tight">
-                  Temporary practice pass. Convert now to join Live Tests!
+
+                {/* Description */}
+                <p className="text-[10px] text-[#c4b59f] leading-snug font-sans">
+                  Provisional CBT access active. Upgrade anytime to unlock official Live AIR mock rankings.
                 </p>
+
+                {/* Subtle Progress Bar */}
+                <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#b8860b] via-[#d4af37] to-[#f59e0b] rounded-full transition-all duration-1000"
+                    style={{ width: `${Math.min(100, Math.max(5, (trialSecondsLeft / (24 * 3600)) * 100))}%` }}
+                  />
+                </div>
+
+                {/* Premium Gold CTA Button */}
                 <a
                   href="https://vigyanprep.com/tests"
-                  className="block w-full py-2 text-center text-[10px] font-extrabold uppercase tracking-wider rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-black transition shadow-xs"
+                  className="group block w-full py-2 px-3 text-center rounded-xl bg-gradient-to-r from-[#d4af37] via-[#f7e7b4] to-[#c59b27] hover:from-[#e2c14b] hover:to-[#d4af37] text-[#14100a] font-extrabold text-[10px] uppercase tracking-widest transition-all shadow-[0_2px_10px_rgba(212,175,55,0.25)] hover:shadow-[0_4px_14px_rgba(212,175,55,0.4)] border border-[#fff5cc]/40 active:scale-[0.98]"
                 >
-                  Upgrade to Full Pass →
+                  <span className="flex items-center justify-center gap-1.5">
+                    <span>Upgrade to Full Pass</span>
+                    <ArrowRight size={11} className="transition-transform group-hover:translate-x-0.5" />
+                  </span>
                 </a>
               </div>
             )}
@@ -1257,43 +1305,52 @@ ${studentName}`
          ═══════════════════════════════════════════════════════════════════════ */}
       <div className="flex-1 flex flex-col min-w-0 z-10">
         
-        {/* 🌟 VIP 24-HOUR ALL-ACCESS TRIAL COUNTDOWN BANNER */}
+        {/* 🌟 VIP 24-HOUR ALL-ACCESS TRIAL COUNTDOWN BANNER — Luxury Obsidian & Gold Ribbon */}
         {isTrialAccount && (
-          <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-orange-500 text-black px-4 sm:px-8 py-2.5 flex items-center justify-between flex-wrap gap-2 text-xs font-semibold shadow-md border-b-2 border-amber-950/30 z-40 sticky top-0">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <span className="flex h-2.5 w-2.5 relative shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-200 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-black"></span>
-              </span>
-              <span className="font-extrabold uppercase tracking-wider text-black">
-                VIP 24-Hour All-Access Pass
-              </span>
-              <span className="text-black/40 hidden sm:inline">•</span>
-              <span className="font-mono font-black text-white bg-black/85 px-2.5 py-0.5 rounded-lg border border-black/40 shadow-inner flex items-center gap-1.5 shrink-0">
-                <Clock size={12} className="text-amber-400" />
-                {formatTrialCountdown(trialSecondsLeft)} remaining
-              </span>
-              <span className="hidden md:inline text-black/85 font-medium text-[11px]">
-                Full practice access to IAT &amp; JEE CBT Mock Papers and PYQs. Subscribe to enter official Live AIR Tests!
+          <div className="bg-[#12100d]/95 backdrop-blur-md text-[#f5ebd7] px-4 sm:px-8 py-2 flex items-center justify-between flex-wrap gap-2.5 text-xs shadow-[0_4px_20px_-2px_rgba(18,16,13,0.5)] border-b border-[#d4af37]/30 z-40 sticky top-0">
+            {/* Left Info: Amber Live Beacon + Serif Pass Title + Chronometer */}
+            <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="flex h-2 w-2 relative shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400 shadow-[0_0_8px_#f59e0b]"></span>
+                </span>
+                <span className="font-serif text-[11px] font-bold tracking-[0.16em] uppercase text-[#f5ebd7]">
+                  24-Hour VIP Provisional Pass
+                </span>
+              </div>
+
+              <span className="text-[#d4af37]/35 hidden sm:inline">•</span>
+
+              {/* Bespoke Chronometer Capsule */}
+              <div className="font-mono text-[11px] font-bold text-[#fde68a] bg-[#1f1a14] px-3 py-0.5 rounded-full border border-[#d4af37]/35 shadow-inner flex items-center gap-1.5 shrink-0">
+                <Clock size={11} className="text-[#d4af37]" />
+                <span>{formatTrialCountdown(trialSecondsLeft)}</span>
+                <span className="text-[10px] text-[#c4b59f] font-sans font-normal lowercase">remaining</span>
+              </div>
+
+              <span className="hidden xl:inline text-[#a89b88] text-[11px] font-normal tracking-wide">
+                Full CBT Mock Archive active. Upgrade to participate in official All-India Ranked Live Tests.
               </span>
             </div>
 
+            {/* Right Actions: Refined Wireframe Feedback + Champagne Gold Upgrade Button */}
             <div className="flex items-center gap-2 shrink-0">
               <a
                 href="https://wa.me/917488057284?text=Hi%20VigyanPrep,%20I%20am%20testing%20the%2024-hour%20demo%20account%20and%20have%20feedback"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-1 bg-black/10 hover:bg-black/20 text-black font-bold rounded-lg border border-black/20 transition cursor-pointer flex items-center gap-1 text-[11px]"
+                className="px-3 py-1 rounded-full border border-[#d4af37]/30 hover:border-[#d4af37]/70 bg-white/[0.04] hover:bg-[#d4af37]/10 text-[#d4af37] text-[11px] font-medium transition flex items-center gap-1.5 cursor-pointer"
               >
-                <MessageSquare size={13} />
+                <MessageSquare size={12} />
                 <span>Feedback</span>
               </a>
               <a
                 href="https://vigyanprep.com/tests"
-                className="px-3.5 py-1 bg-black hover:bg-neutral-900 text-amber-300 font-extrabold rounded-lg shadow-md hover:scale-105 transition flex items-center gap-1 text-[11px]"
+                className="group px-3.5 py-1 rounded-full bg-gradient-to-r from-[#d4af37] via-[#f7e7b4] to-[#c59b27] hover:from-[#e2c14b] hover:to-[#d4af37] text-[#14100a] text-[11px] font-black uppercase tracking-wider transition-all shadow-[0_2px_12px_rgba(212,175,55,0.25)] hover:shadow-[0_4px_16px_rgba(212,175,55,0.4)] flex items-center gap-1.5 border border-[#fff5cc]/40 active:scale-95"
               >
                 <span>Upgrade to Full Pass</span>
-                <ArrowRight size={13} />
+                <ArrowRight size={11} className="transition-transform group-hover:translate-x-0.5" />
               </a>
             </div>
           </div>
