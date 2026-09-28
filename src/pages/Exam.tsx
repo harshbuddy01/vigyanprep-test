@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useExamStore } from '../stores/examStore';
 import { QuestionPalette } from '../components/QuestionPalette';
@@ -49,6 +49,7 @@ export default function Exam() {
   const [reportSuccess, setReportSuccess] = useState(false);
 
   const submittingRef = useRef(false);
+  const heartbeatDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-Fetch Questions from API if store empty on direct URL access
   useEffect(() => {
@@ -363,23 +364,27 @@ export default function Exam() {
   const currentQ = questions[currentQuestionIndex];
   // Dynamic section calculation: only display sections that actually contain questions!
   // Fall back to standard exam sections if questions haven't finished loading.
-  const examTypeUpper = (examType || '').toUpperCase();
-  const baseStandardSections = (examTypeUpper === 'JEE' || examTypeUpper === 'JEE_MAIN')
-    ? ['Physics', 'Chemistry', 'Mathematics']
-    : (examTypeUpper === 'ISI' || examTypeUpper === 'CMI')
-    ? ['Mathematics']
-    : examTypeUpper === 'NEET'
-    ? ['Physics', 'Chemistry', 'Biology']
-    : ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
+  // Memoized to avoid recalculation on every render — critical for smooth section switching.
+  const sections = useMemo(() => {
+    const examTypeUpper = (examType || '').toUpperCase();
+    const baseStandardSections = (examTypeUpper === 'JEE' || examTypeUpper === 'JEE_MAIN')
+      ? ['Physics', 'Chemistry', 'Mathematics']
+      : (examTypeUpper === 'ISI' || examTypeUpper === 'CMI')
+      ? ['Mathematics']
+      : examTypeUpper === 'NEET'
+      ? ['Physics', 'Chemistry', 'Biology']
+      : ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
 
-  const questionSections = Array.from(new Set(questions.map(q => q.section).filter(Boolean))) as string[];
-  const sections = questionSections.length > 0
-    ? [
-        ...baseStandardSections.filter(s => questionSections.includes(s)),
-        ...questionSections.filter(s => !baseStandardSections.includes(s))
-      ]
-    : baseStandardSections;
+    const questionSections = Array.from(new Set(questions.map(q => q.section).filter(Boolean))) as string[];
+    if (questionSections.length === 0) return baseStandardSections;
+    return [
+      ...baseStandardSections.filter(s => questionSections.includes(s)),
+      ...questionSections.filter(s => !baseStandardSections.includes(s))
+    ];
+  }, [questions, examType]);
 
+  // Auto-correct activeSection if it doesn't exist in available sections (e.g. after questions load)
+  // Only fires when sections array actually changes (thanks to useMemo stable reference)
   useEffect(() => {
     if (sections.length > 0 && !sections.includes(activeSection)) {
       setActiveSection(sections[0]);
@@ -387,14 +392,18 @@ export default function Exam() {
   }, [sections, activeSection]);
 
   const fallbackSection = sections[0] || 'Physics';
-  const sectionQuestions = questions
-    .filter(q => q.section === activeSection || (!sections.includes(q.section) && activeSection === fallbackSection))
-    .sort((a, b) => {
-      const aIsNum = a.type === 'Numerical';
-      const bIsNum = b.type === 'Numerical';
-      if (aIsNum !== bIsNum) return aIsNum ? 1 : -1;
-      return (a.question_number || 0) - (b.question_number || 0);
-    });
+
+  // Memoize section questions to prevent re-sorting on every render — eliminates lag on section switch
+  const sectionQuestions = useMemo(() => {
+    return questions
+      .filter(q => q.section === activeSection || (!sections.includes(q.section) && activeSection === fallbackSection))
+      .sort((a, b) => {
+        const aIsNum = a.type === 'Numerical';
+        const bIsNum = b.type === 'Numerical';
+        if (aIsNum !== bIsNum) return aIsNum ? 1 : -1;
+        return (a.question_number || 0) - (b.question_number || 0);
+      });
+  }, [questions, activeSection, sections, fallbackSection]);
 
   const currentSectionQIndex = sectionQuestions.findIndex(q => q.id === currentQ?.id);
 
@@ -434,9 +443,12 @@ export default function Exam() {
       localStorage.setItem('vigyan_last_answers', JSON.stringify(updated));
     } catch (e) {}
 
-    // Instant non-blocking server autosave sync
+    // Debounced server autosave — waits 800ms after last keystroke to avoid flooding API
     if (activeAttemptId) {
-      sendHeartbeat(activeAttemptId, timeRemaining, updated, warningCount, activeToken).catch(() => {});
+      if (heartbeatDebounceRef.current) clearTimeout(heartbeatDebounceRef.current);
+      heartbeatDebounceRef.current = setTimeout(() => {
+        sendHeartbeat(activeAttemptId, timeRemaining, updated, warningCount, activeToken).catch(() => {});
+      }, 800);
     }
   };
 
@@ -529,12 +541,8 @@ export default function Exam() {
     }
   }, [currentQ?.id, markVisited]);
 
-  // Auto-submit on timer expiration
-  useEffect(() => {
-    if (timeRemaining <= 0 && questions.length > 0 && !submittingRef.current) {
-      doSubmit();
-    }
-  }, [timeRemaining, questions.length, doSubmit]);
+
+
 
   const formatTimer = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);

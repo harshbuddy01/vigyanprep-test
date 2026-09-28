@@ -11,7 +11,7 @@ interface Props {
   onSelect?: (q: Question) => void;
 }
 
-export const QuestionPalette: React.FC<Props> = (props) => {
+export const QuestionPalette: React.FC<Props> = React.memo((props) => {
   const store = useExamStore();
 
   const allQuestions = props.questions ?? store.questions;
@@ -20,11 +20,18 @@ export const QuestionPalette: React.FC<Props> = (props) => {
   const currentId = props.currentId ?? store.questions[store.currentQuestionIndex]?.id;
   const activeSection = props.activeSection;
 
-  const sections = ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
+  // Derive sections dynamically from actual question data (instead of hardcoding all 4 subjects)
+  const allSections = Array.from(new Set(allQuestions.map(q => q.section).filter(Boolean)));
+  const standardOrder = ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
+  const sections = [
+    ...standardOrder.filter(s => allSections.includes(s)),
+    ...allSections.filter(s => !standardOrder.includes(s))
+  ];
+  const firstSection = sections[0] || 'Physics';
 
   // Filter questions strictly for active section if specified, sorted MCQs first then Numericals
   const filteredQuestions = (activeSection
-    ? allQuestions.filter(q => q.section === activeSection || (!sections.includes(q.section) && activeSection === 'Physics'))
+    ? allQuestions.filter(q => q.section === activeSection || (!sections.includes(q.section) && activeSection === firstSection))
     : allQuestions).slice().sort((a, b) => {
       const aIsNum = a.type === 'Numerical';
       const bIsNum = b.type === 'Numerical';
@@ -132,4 +139,4 @@ export const QuestionPalette: React.FC<Props> = (props) => {
       {filteredQuestions.map((q, idx) => renderButton(q, idx + 1))}
     </div>
   );
-};
+});
