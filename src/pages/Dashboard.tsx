@@ -1007,6 +1007,30 @@ ${studentName}`
           </nav>
         </div>
 
+        {/* VIP Demo Account Sidebar Conversion Card */}
+        {isTrialAccount && (
+          <div className="p-3.5 rounded-2xl bg-amber-500/15 border-2 border-amber-500/40 space-y-2 mt-4">
+            <div className="flex items-center justify-between text-[11px] font-black uppercase text-amber-950">
+              <span className="flex items-center gap-1.5">
+                <Sparkles size={13} className="text-amber-700 shrink-0" />
+                <span>24h VIP Demo</span>
+              </span>
+              <span className="font-mono text-[10px] bg-amber-950 text-amber-300 px-2 py-0.5 rounded-full">
+                {formatTrialCountdown(trialSecondsLeft)}
+              </span>
+            </div>
+            <p className="text-[10px] text-zinc-600 font-medium leading-tight">
+              Temporary practice pass. Convert now to join Live Tests!
+            </p>
+            <a
+              href="https://vigyanprep.com/tests"
+              className="block w-full py-2 text-center text-[10px] font-extrabold uppercase tracking-wider rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-black transition shadow-xs"
+            >
+              Upgrade to Full Pass →
+            </a>
+          </div>
+        )}
+
         {/* Footer Quick Logout */}
         <div className="pt-6 border-t-2 border-amber-950/20 space-y-3 text-center">
           <button
@@ -1139,6 +1163,30 @@ ${studentName}`
                 </button>
               </nav>
             </div>
+
+            {/* VIP Demo Account Mobile Conversion Card */}
+            {isTrialAccount && (
+              <div className="p-3.5 rounded-2xl bg-amber-500/15 border-2 border-amber-500/40 space-y-2 mt-2">
+                <div className="flex items-center justify-between text-[11px] font-black uppercase text-amber-950">
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-amber-700 shrink-0" />
+                    <span>24h VIP Demo</span>
+                  </span>
+                  <span className="font-mono text-[10px] bg-amber-950 text-amber-300 px-2 py-0.5 rounded-full">
+                    {formatTrialCountdown(trialSecondsLeft)}
+                  </span>
+                </div>
+                <p className="text-[10px] text-zinc-600 font-medium leading-tight">
+                  Temporary practice pass. Convert now to join Live Tests!
+                </p>
+                <a
+                  href="https://vigyanprep.com/tests"
+                  className="block w-full py-2 text-center text-[10px] font-extrabold uppercase tracking-wider rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-black transition shadow-xs"
+                >
+                  Upgrade to Full Pass →
+                </a>
+              </div>
+            )}
 
             <div className="pt-6 border-t-2 border-amber-950/20 space-y-2 text-center">
               <button
@@ -2926,6 +2974,46 @@ ${studentName}`
                 })}
               </div>
             </div>
+
+            {/* 🌟 VIP Trial Account Status & Conversion Card */}
+            {isTrialAccount && (
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-amber-500/20 border-2 border-amber-500/40 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
+                    <span className="text-xs font-black uppercase tracking-wider text-amber-950">
+                      VIP 24-Hour Preview Account
+                    </span>
+                  </div>
+                  <span className="font-mono font-bold text-xs bg-amber-950 text-amber-300 px-2.5 py-0.5 rounded-full">
+                    ⏱️ {formatTrialCountdown(trialSecondsLeft)} left
+                  </span>
+                </div>
+
+                <p className="text-xs text-neutral-700 leading-relaxed font-medium">
+                  You are exploring VigyanPrep with a temporary VIP trial pass. Convert to a verified enrolled student now to keep your test history, unlock official All-India Ranks (AIR), and join Sunday's live scheduled tests.
+                </p>
+
+                <div className="pt-1 flex items-center gap-2">
+                  <a
+                    href="https://vigyanprep.com/tests"
+                    className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-extrabold text-xs uppercase tracking-wider shadow-md text-center flex items-center justify-center gap-1.5 transition"
+                  >
+                    <span>⚡ Convert to Verified Enrolled Student</span>
+                    <ArrowRight size={13} />
+                  </a>
+                  <a
+                    href="https://wa.me/917488057284?text=Hi%20VigyanPrep,%20I%20am%20testing%20the%2024-hour%20demo%20and%20want%20to%20subscribe"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="py-2.5 px-3 rounded-xl bg-white/80 hover:bg-white text-zinc-800 font-bold text-xs border border-amber-950/20 flex items-center gap-1 transition"
+                  >
+                    <MessageSquare size={13} className="text-emerald-700" />
+                    <span>Inquire</span>
+                  </a>
+                </div>
+              </div>
+            )}
 
             {/* Section 2: Candidate Identity Card */}
             <div className="bg-[#f5ebd7]/50 rounded-2xl p-4 border border-[#d9cea8]/80 space-y-3">

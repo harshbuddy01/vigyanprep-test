@@ -7,7 +7,7 @@ import {
   CheckCircle2, XCircle, Download, Home, RotateCcw,
   Trophy, BarChart3, Minus, AlertTriangle, Loader2,
   ChevronDown, ChevronUp, Flag, X, Send, CheckCircle, BookOpen,
-  Lock, ShieldCheck
+  Lock, ShieldCheck, Sparkles, ArrowRight
 } from "lucide-react";
 
 function formatImageUrl(url?: string): string {
@@ -88,6 +88,11 @@ export const ResponseSheet: React.FC = () => {
     reason: 'unauthenticated' | 'forbidden' | null;
     message?: string;
   }>({ denied: false, reason: null });
+
+  // 🌟 VIP Demo Account & Trial Expiry State
+  const [isTrialAccount, setIsTrialAccount] = useState(false);
+  const [isTrialExpired, setIsTrialExpired] = useState(false);
+  const [trialSecondsLeft, setTrialSecondsLeft] = useState<number | null>(null);
 
   useEffect(() => {
     const authToken = token || getCookie('student_token') || localStorage.getItem('student_token') || getCookie('auth_token') || localStorage.getItem('auth_token') || localStorage.getItem('token') || '';
@@ -217,6 +222,52 @@ export const ResponseSheet: React.FC = () => {
       }
     };
     fetchResult();
+
+    // Check VIP Demo / Trial Status
+    const checkTrial = async () => {
+      try {
+        const studentEmail = getCookie('student_email') || localStorage.getItem('student_email') || '';
+        const queryParam = studentEmail ? `?email=${encodeURIComponent(studentEmail)}` : '';
+        const trialRes = await fetch(`${apiBase}/api/trial/status${queryParam}`, {
+          headers: authToken ? { "Authorization": `Bearer ${authToken}` } : {}
+        });
+        if (trialRes.ok) {
+          const trialData = await trialRes.json();
+          if (trialData.success && trialData.isTrial) {
+            setIsTrialAccount(true);
+            setIsTrialExpired(Boolean(trialData.isExpired));
+            setTrialSecondsLeft(trialData.remainingSeconds ?? 0);
+          }
+        }
+      } catch (err) {
+        console.warn("Trial status check notice:", err);
+      }
+
+      if (authToken) {
+        try {
+          const subRes = await fetch(`${apiBase}/api/student/subscriptions?cb=${Date.now()}`, {
+            headers: { "Authorization": `Bearer ${authToken}` }
+          });
+          if (subRes.ok) {
+            const subData = await subRes.json();
+            const trial = (subData.subscriptions || []).find((s: any) => 
+              s.is_trial || s.plan_id === 'e0000000-0000-0000-0000-000000000024' || (s.plan?.name && s.plan.name.toLowerCase().includes('trial'))
+            );
+            if (trial) {
+              setIsTrialAccount(true);
+              const remaining = typeof trial.seconds_remaining === 'number'
+                ? trial.seconds_remaining
+                : Math.max(0, Math.floor((new Date(trial.expires_at).getTime() - Date.now()) / 1000));
+              setTrialSecondsLeft(remaining);
+              if (remaining <= 0) {
+                setIsTrialExpired(true);
+              }
+            }
+          }
+        } catch (e) {}
+      }
+    };
+    checkTrial();
   }, [activeAttemptId, token, activeTestId, isSolutionsOnly]);
 
   // 🚩 Report handler
@@ -547,6 +598,50 @@ export const ResponseSheet: React.FC = () => {
           <>
             {/* SUMMARY CARDS & PERFORMANCE SCORECARD */}
             <div className="no-print space-y-4">
+
+            {/* 🌟 24h VIP Demo Diagnostic Performance Banner */}
+            {isTrialAccount && (
+              <div className={`p-4 rounded-2xl border-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm ${
+                isTrialExpired 
+                  ? "bg-gradient-to-r from-rose-500/10 via-amber-500/10 to-transparent border-amber-400" 
+                  : "bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-transparent border-amber-500/40"
+              }`}>
+                <div className="flex items-start sm:items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                    isTrialExpired ? "bg-amber-500/20 text-amber-900 border border-amber-400" : "bg-amber-500/20 text-amber-800 border border-amber-500/40"
+                  }`}>
+                    {isTrialExpired ? <AlertTriangle size={20} /> : <Sparkles size={20} />}
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-extrabold text-neutral-900 flex items-center gap-2 flex-wrap">
+                      <span>{isTrialExpired ? "24-Hour VIP Demo Concluded" : "24-Hour VIP Demo Diagnostic Report"}</span>
+                      <span className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full ${
+                        isTrialExpired ? "bg-neutral-900 text-rose-300" : "bg-amber-950 text-amber-300"
+                      }`}>
+                        {isTrialExpired 
+                          ? "Trial Expired" 
+                          : trialSecondsLeft !== null && trialSecondsLeft > 0
+                          ? `⏱️ ${Math.floor(trialSecondsLeft / 3600)}h ${Math.floor((trialSecondsLeft % 3600) / 60)}m left`
+                          : "Diagnostic Mode • AIR Excluded"}
+                      </span>
+                    </h4>
+                    <p className="text-xs text-neutral-600 mt-0.5 leading-relaxed">
+                      {isTrialExpired
+                        ? "Your temporary preview pass has ended. Convert to a verified enrolled student now to keep your attempt history, unlock full step-by-step solutions, and participate in live national mock tests."
+                        : "Reviewing your raw performance and subject diagnostic mastery. Official All-India Merit Ranks (AIR) and national percentile rankings are awarded to verified enrolled students."}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <a
+                    href="https://vigyanprep.com/tests"
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-extrabold text-xs uppercase tracking-wider text-center shadow-md transition cursor-pointer"
+                  >
+                    {isTrialExpired ? "Unlock Full Access →" : "Upgrade to Enrolled Student →"}
+                  </a>
+                </div>
+              </div>
+            )}
             
             {/* 🌟 Result Declared: Show Comprehensive Scorecard & AIR Rank */}
             {isResultDeclared ? (
@@ -556,16 +651,22 @@ export const ResponseSheet: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <Trophy className="text-amber-500" size={24} />
                       <h2 className="text-lg sm:text-xl font-black text-[#1b365d] tracking-wide">
-                        {isPaidSeries ? "Official Examination Scorecard & AIR Rank" : "Instant Practice Exam Scorecard"}
+                        {isTrialAccount
+                          ? "VIP Demo Diagnostic Performance Analysis"
+                          : isPaidSeries ? "Official Examination Scorecard & AIR Rank" : "Instant Practice Exam Scorecard"}
                       </h2>
                       <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase ${
-                        isPaidSeries ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-emerald-100 text-emerald-800"
+                        isTrialAccount
+                          ? "bg-amber-100 text-amber-900 border border-amber-300"
+                          : isPaidSeries ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-emerald-100 text-emerald-800"
                       }`}>
-                        {isPaidSeries ? "Official Result" : "PYQ Mode"}
+                        {isTrialAccount ? (isTrialExpired ? "Trial Expired" : "VIP Demo Pass") : isPaidSeries ? "Official Result" : "PYQ Mode"}
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
-                      {isPaidSeries 
+                      {isTrialAccount
+                        ? "Subject-wise diagnostic strengths & weaknesses • Official AIR excluded until enrolled pass activation"
+                        : isPaidSeries 
                         ? `Official merit analysis declared by academic board • ${testTitle || 'Live Test Series'}`
                         : "Detailed accuracy, section-wise marks breakdown, and verified question solutions"}
                     </p>
@@ -592,13 +693,15 @@ export const ResponseSheet: React.FC = () => {
                   </div>
                   <div className="text-center p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl border border-emerald-100">
                     <p className="text-3xl font-black text-emerald-700">
-                      {serverResult?.rank ? `#${serverResult.rank}` : `${localScoring.accuracy}%`}
+                      {isTrialAccount ? `${localScoring.accuracy}%` : (serverResult?.rank ? `#${serverResult.rank}` : `${localScoring.accuracy}%`)}
                     </p>
                     <p className="text-xs text-gray-500 font-bold mt-1">
-                      {serverResult?.rank ? "All-India Rank" : "Accuracy Rate"}
+                      {isTrialAccount ? "Accuracy Rate (AIR Excluded)" : (serverResult?.rank ? "All-India Rank" : "Accuracy Rate")}
                     </p>
                     <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">
-                      {serverResult?.percentile ? `${serverResult.percentile.toFixed(1)}th percentile` : `${localScoring.correctCount} of ${localScoring.attemptedCount} Correct`}
+                      {isTrialAccount
+                        ? `${localScoring.correctCount} of ${localScoring.attemptedCount} Correct • Unranked Trial`
+                        : (serverResult?.percentile ? `${serverResult.percentile.toFixed(1)}th percentile` : `${localScoring.correctCount} of ${localScoring.attemptedCount} Correct`)}
                     </p>
                   </div>
                   <div className="text-center p-4 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100">
@@ -626,14 +729,26 @@ export const ResponseSheet: React.FC = () => {
                       const s = (serverResult?.sectionScores && serverResult.sectionScores[sec]) || localScoring.sectionScores[sec] || { correct: 0, incorrect: 0, unattempted: 0, score: 0, total: 0 };
                       const secAttempted = s.correct + s.incorrect;
                       const secAcc = secAttempted > 0 ? Math.round((s.correct / secAttempted) * 100) : 0;
+                      const competencyTag = secAcc >= 75
+                        ? { label: "Strong Mastery", color: "bg-emerald-100 text-emerald-800 border-emerald-300" }
+                        : secAcc >= 45
+                        ? { label: "Moderate", color: "bg-amber-100 text-amber-800 border-amber-300" }
+                        : { label: "Focus Needed", color: "bg-rose-100 text-rose-800 border-rose-300" };
                       return (
                         <div key={sec} className="bg-gray-50 rounded-2xl p-4 border border-gray-200 flex flex-col justify-between">
                           <div>
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-xs font-bold text-[#1b365d]">{sec}</span>
-                              <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${s.score >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
-                                {s.score > 0 ? `+${s.score}` : s.score} Marks
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                {isTrialAccount && secAttempted > 0 && (
+                                  <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border ${competencyTag.color}`}>
+                                    {competencyTag.label}
+                                  </span>
+                                )}
+                                <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${s.score >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
+                                  {s.score > 0 ? `+${s.score}` : s.score} Marks
+                                </span>
+                              </div>
                             </div>
                             <div className="space-y-1 text-xs text-gray-600">
                               <div className="flex justify-between"><span className="text-emerald-700">✓ Correct</span><span className="font-bold">{s.correct}</span></div>
@@ -898,10 +1013,23 @@ export const ResponseSheet: React.FC = () => {
                               {isResultDeclared && ((q as any).solution_explanation || (q as any).model_answer) && (
                                 <button
                                   onClick={() => toggleSolution(q.id)}
-                                  className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition cursor-pointer"
+                                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                                    isTrialAccount && isTrialExpired
+                                      ? "bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300"
+                                      : "bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200"
+                                  }`}
                                 >
-                                  {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                                  {isExpanded ? "Hide Solution" : "View Explanation"}
+                                  {isTrialAccount && isTrialExpired ? (
+                                    <>
+                                      <Lock size={12} className="text-amber-700" />
+                                      <span>{isExpanded ? "Hide Paywall" : "Solution Locked (Upgrade)"}</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                                      <span>{isExpanded ? "Hide Solution" : "View Explanation"}</span>
+                                    </>
+                                  )}
                                 </button>
                               )}
                               <button
@@ -915,13 +1043,38 @@ export const ResponseSheet: React.FC = () => {
                           </div>
 
                           {/* Expandable Model Solution */}
-                          {isResultDeclared && isExpanded && ((q as any).solution_explanation || (q as any).model_answer) && (
-                            <div className="mt-3 p-4 bg-gradient-to-br from-indigo-50/70 to-blue-50/70 border border-indigo-200 rounded-xl text-xs text-indigo-950 space-y-2 leading-relaxed animate-fade-in">
-                              <p className="font-extrabold text-indigo-900 flex items-center gap-1.5">
-                                <BookOpen size={14} className="text-indigo-600" /> Academic Model Solution &amp; Explanation:
-                              </p>
-                              <div className="text-gray-800"><MathText text={(q as any).solution_explanation || (q as any).model_answer || ""} /></div>
-                            </div>
+                          {isResultDeclared && isExpanded && (
+                            isTrialAccount && isTrialExpired ? (
+                              <div className="mt-3 p-5 bg-gradient-to-br from-amber-500/10 via-slate-900/5 to-amber-500/10 border-2 border-dashed border-amber-400 rounded-2xl text-center space-y-3 relative overflow-hidden animate-fade-in">
+                                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-900 border border-amber-500/40 flex items-center justify-center mx-auto shadow-xs">
+                                  <Lock size={18} />
+                                </div>
+                                <div className="space-y-1">
+                                  <h5 className="text-xs sm:text-sm font-extrabold text-slate-900 uppercase tracking-wide">
+                                    Step-by-Step Solution Locked
+                                  </h5>
+                                  <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
+                                    Your 24-Hour VIP Demo Pass has concluded. Upgrade to an enrolled student pass to unlock full step-by-step mathematical derivations, reaction mechanisms, and mistake analysis.
+                                  </p>
+                                </div>
+                                <div className="pt-1 flex items-center justify-center gap-2">
+                                  <a
+                                    href="https://vigyanprep.com/tests"
+                                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-extrabold text-xs uppercase tracking-wider shadow-md transition inline-flex items-center gap-1.5 cursor-pointer"
+                                  >
+                                    <span>Unlock Full Solutions & Live Tests</span>
+                                    <ArrowRight size={13} />
+                                  </a>
+                                </div>
+                              </div>
+                            ) : ((q as any).solution_explanation || (q as any).model_answer) && (
+                              <div className="mt-3 p-4 bg-gradient-to-br from-indigo-50/70 to-blue-50/70 border border-indigo-200 rounded-xl text-xs text-indigo-950 space-y-2 leading-relaxed animate-fade-in">
+                                <p className="font-extrabold text-indigo-900 flex items-center gap-1.5">
+                                  <BookOpen size={14} className="text-indigo-600" /> Academic Model Solution &amp; Explanation:
+                                </p>
+                                <div className="text-gray-800"><MathText text={(q as any).solution_explanation || (q as any).model_answer || ""} /></div>
+                              </div>
+                            )
                           )}
 
                         </div>
