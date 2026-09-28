@@ -84,6 +84,8 @@ interface Subscription {
   plan_name?: string;
   name?: string;
   bundle_includes?: string[];
+  is_trial?: boolean;
+  seconds_remaining?: number;
   plan: {
     id?: string;
     name: string;
@@ -146,6 +148,44 @@ export function Dashboard() {
     }, 10000);
     return () => clearInterval(timer);
   }, []);
+
+  // 🌟 VIP 24-Hour Demo / Trial Account State
+  const [trialSecondsLeft, setTrialSecondsLeft] = useState<number>(0);
+  const [showTrialExpiredModal, setShowTrialExpiredModal] = useState(false);
+
+  const trialSubscription = subscriptions.find(s => s.is_trial || s.plan_id === 'e0000000-0000-0000-0000-000000000024' || (s.plan?.name && s.plan.name.toLowerCase().includes('trial')));
+  const isTrialAccount = !!trialSubscription;
+
+  useEffect(() => {
+    if (trialSubscription) {
+      const sec = typeof trialSubscription.seconds_remaining === 'number'
+        ? trialSubscription.seconds_remaining
+        : Math.max(0, Math.floor((new Date(trialSubscription.expires_at).getTime() - Date.now()) / 1000));
+      setTrialSecondsLeft(sec);
+    }
+  }, [trialSubscription]);
+
+  useEffect(() => {
+    if (!isTrialAccount || trialSecondsLeft <= 0) return;
+    const interval = setInterval(() => {
+      setTrialSecondsLeft(prev => {
+        if (prev <= 1) {
+          setShowTrialExpiredModal(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isTrialAccount, trialSecondsLeft]);
+
+  const formatTrialCountdown = (totalSec: number) => {
+    if (totalSec <= 0) return '00:00:00';
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   const toggleSyllabus = (id: string) => {
     setExpandedSyllabus(prev => ({ ...prev, [id]: !prev[id] }));
@@ -645,6 +685,12 @@ ${studentName}`
   const handleTestClick = (paper: TestPaper) => {
     const status = getWindowStatus(paper);
 
+    // Strict Anti-Cheating & AIR Merit Isolation: Trial accounts cannot access active Live scheduled tests
+    if (isTrialAccount && paper.content_type === 'test_series' && (status.isLive || (!status.isReleased && !status.isPractice))) {
+      triggerToast('🔒 Live proctored mock tests are reserved for enrolled students to protect All-India Merit Rankings. You have full access to all practice papers (IAT 01-03, JEE 01) and PYQ archives!');
+      return;
+    }
+
     // If student already attempted this live exam and results are not released yet
     if (status.isAttempted && !status.isReleased && paper.content_type === 'test_series') {
       triggerToast('You have already submitted this exam. Official scorecard & AIR rankings will be released after 09:00 PM.');
@@ -1112,6 +1158,48 @@ ${studentName}`
          ═══════════════════════════════════════════════════════════════════════ */}
       <div className="flex-1 flex flex-col min-w-0 z-10">
         
+        {/* 🌟 VIP 24-HOUR ALL-ACCESS TRIAL COUNTDOWN BANNER */}
+        {isTrialAccount && (
+          <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-orange-500 text-black px-4 sm:px-8 py-2.5 flex items-center justify-between flex-wrap gap-2 text-xs font-semibold shadow-md border-b-2 border-amber-950/30 z-40 sticky top-0">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="flex h-2.5 w-2.5 relative shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-200 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-black"></span>
+              </span>
+              <span className="font-extrabold uppercase tracking-wider text-black">
+                VIP 24-Hour All-Access Pass
+              </span>
+              <span className="text-black/40 hidden sm:inline">•</span>
+              <span className="font-mono font-black text-white bg-black/85 px-2.5 py-0.5 rounded-lg border border-black/40 shadow-inner flex items-center gap-1.5 shrink-0">
+                <Clock size={12} className="text-amber-400" />
+                {formatTrialCountdown(trialSecondsLeft)} remaining
+              </span>
+              <span className="hidden md:inline text-black/85 font-medium text-[11px]">
+                Full practice access to IAT &amp; JEE CBT Mock Papers and PYQs. Subscribe to enter official Live AIR Tests!
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <a
+                href="https://wa.me/917488057284?text=Hi%20VigyanPrep,%20I%20am%20testing%20the%2024-hour%20demo%20account%20and%20have%20feedback"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1 bg-black/10 hover:bg-black/20 text-black font-bold rounded-lg border border-black/20 transition cursor-pointer flex items-center gap-1 text-[11px]"
+              >
+                <MessageSquare size={13} />
+                <span>Feedback</span>
+              </a>
+              <a
+                href="https://vigyanprep.com/tests"
+                className="px-3.5 py-1 bg-black hover:bg-neutral-900 text-amber-300 font-extrabold rounded-lg shadow-md hover:scale-105 transition flex items-center gap-1 text-[11px]"
+              >
+                <span>Upgrade to Full Pass</span>
+                <ArrowRight size={13} />
+              </a>
+            </div>
+          </div>
+        )}
+
         {/* TOP HEADER BAR (Ultra-Transparent Glass with Dark Defined Border) */}
         <header className="px-4 sm:px-8 py-3.5 sm:py-5 flex items-center justify-between gap-3 sm:gap-6 bg-white/20 backdrop-blur-2xl border-b-2 border-amber-950/30 sticky top-0 z-30 shadow-md">
           
@@ -1708,13 +1796,24 @@ ${studentName}`
                                     onExpire={() => setCurrentTime(new Date())}
                                   />
                                 )}
-                                <button
-                                  onClick={() => handleTestClick(spotlight)}
-                                  className="w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-900/20 border-2 border-emerald-400 flex items-center justify-center gap-2 cursor-pointer transition transform active:scale-98"
-                                >
-                                  <PlayCircle size={18} />
-                                  <span>{myHallTicket ? 'Enter Live Exam (CBT)' : 'Start CBT Exam'}</span>
-                                </button>
+                                {isTrialAccount ? (
+                                  <button
+                                    onClick={() => handleTestClick(spotlight)}
+                                    className="w-full py-3.5 rounded-2xl font-bold text-xs uppercase tracking-wider bg-amber-100 text-amber-900 border-2 border-amber-300 flex items-center justify-center gap-2 cursor-pointer shadow-md hover:bg-amber-200 transition"
+                                    title="Live proctored tests are reserved for enrolled students"
+                                  >
+                                    <Lock size={16} className="text-amber-800" />
+                                    <span>Live AIR Test (Enrolled Students Only)</span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleTestClick(spotlight)}
+                                    className="w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-900/20 border-2 border-emerald-400 flex items-center justify-center gap-2 cursor-pointer transition transform active:scale-98"
+                                  >
+                                    <PlayCircle size={18} />
+                                    <span>{myHallTicket ? 'Enter Live Exam (CBT)' : 'Start CBT Exam'}</span>
+                                  </button>
+                                )}
                               </div>
                             ) : st.isReleased ? (
                               st.isAttempted ? (
@@ -2049,13 +2148,24 @@ ${studentName}`
                                           <span className="text-[10px] font-medium text-zinc-500">Official AIR at 9 PM</span>
                                         </div>
                                       ) : status.isLive ? (
-                                        <button
-                                          onClick={() => handleTestClick(paper)}
-                                          className="px-4 py-2 rounded-xl font-black text-xs uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-950/20 border-2 border-emerald-400 inline-flex items-center gap-1.5 cursor-pointer transition transform active:scale-95"
-                                        >
-                                          <PlayCircle size={14} />
-                                          <span>{myHallTicket ? 'Enter Live Exam' : 'Start CBT Exam'}</span>
-                                        </button>
+                                        isTrialAccount ? (
+                                          <button
+                                            onClick={() => handleTestClick(paper)}
+                                            className="px-3 py-1.5 rounded-xl font-bold text-xs bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1.5 cursor-pointer shadow-2xs hover:bg-amber-200 transition"
+                                            title="Live proctored tests are reserved for enrolled students"
+                                          >
+                                            <Lock size={12} className="text-amber-800" />
+                                            <span>Live AIR Test (Enrolled Only)</span>
+                                          </button>
+                                        ) : (
+                                          <button
+                                            onClick={() => handleTestClick(paper)}
+                                            className="px-4 py-2 rounded-xl font-black text-xs uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-950/20 border-2 border-emerald-400 inline-flex items-center gap-1.5 cursor-pointer transition transform active:scale-95"
+                                          >
+                                            <PlayCircle size={14} />
+                                            <span>{myHallTicket ? 'Enter Live Exam' : 'Start CBT Exam'}</span>
+                                          </button>
+                                        )
                                       ) : status.isReleased ? (
                                         status.isAttempted ? (
                                           <div className="flex items-center justify-end gap-1.5">
@@ -2286,17 +2396,28 @@ ${studentName}`
                                     onExpire={() => setCurrentTime(new Date())}
                                   />
                                 )}
-                                <button
-                                  onClick={() => handleTestClick(paper)}
-                                  className={`w-full py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md cursor-pointer ${
-                                    myHallTicket
-                                      ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-900/30 border border-emerald-500'
-                                      : 'bg-[#1c1815] text-amber-300 hover:bg-black shadow-amber-950/30 border border-amber-500/30'
-                                  }`}
-                                >
-                                  <PlayCircle size={16} />
-                                  <span>{myHallTicket ? 'Enter Live Exam (CBT)' : 'Start CBT Exam'}</span>
-                                </button>
+                                {isTrialAccount ? (
+                                  <button
+                                    onClick={() => handleTestClick(paper)}
+                                    className="w-full py-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-xs bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 cursor-pointer"
+                                    title="Live proctored tests are reserved for enrolled students"
+                                  >
+                                    <Lock size={15} className="text-amber-800" />
+                                    <span>Live AIR Test (Enrolled Only)</span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleTestClick(paper)}
+                                    className={`w-full py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md cursor-pointer ${
+                                      myHallTicket
+                                        ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-900/30 border border-emerald-500'
+                                        : 'bg-[#1c1815] text-amber-300 hover:bg-black shadow-amber-950/30 border border-amber-500/30'
+                                    }`}
+                                  >
+                                    <PlayCircle size={16} />
+                                    <span>{myHallTicket ? 'Enter Live Exam (CBT)' : 'Start CBT Exam'}</span>
+                                  </button>
+                                )}
                               </div>
                             ) : (paper.window_start && new Date(paper.window_start) > currentTime) ? (
                               <div className="space-y-2">
@@ -3065,6 +3186,73 @@ ${studentName}`
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          MODAL: 24-HOUR VIP TRIAL EXPIRED UPGRADE MODAL
+         ═══════════════════════════════════════════════════════════════════════ */}
+      {showTrialExpiredModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-[#1c1815] border-2 border-amber-500/40 rounded-3xl w-full max-w-lg p-6 sm:p-8 space-y-6 shadow-2xl text-center relative overflow-hidden text-neutral-100">
+            <div className="w-16 h-16 rounded-full bg-amber-500/20 border-2 border-amber-400/40 mx-auto flex items-center justify-center text-amber-400 shadow-inner">
+              <Trophy size={32} />
+            </div>
+            <div className="space-y-2">
+              <span className="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300 text-xs font-black uppercase tracking-wider">
+                Trial Concluded
+              </span>
+              <h3 className="font-serif text-2xl font-bold text-white pt-1">
+                Your 24-Hour VIP Pass Has Ended
+              </h3>
+              <p className="text-neutral-300 text-xs sm:text-sm leading-relaxed max-w-md mx-auto">
+                We hope you enjoyed exploring the official NTA CBT interface, mathematical palette, and real exam simulations!
+              </p>
+            </div>
+
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-xs text-neutral-300 space-y-2.5 text-left">
+              <p className="font-bold text-amber-300 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+                <CheckCircle2 size={15} className="text-emerald-400" /> Unlock the Complete 2026 Test Series Pass:
+              </p>
+              <ul className="space-y-1.5 text-neutral-300 text-[11px] pl-1">
+                <li className="flex items-center gap-2">
+                  <span className="text-amber-400 font-bold">✓</span>
+                  <span>Full access to all Live Proctored Mock Tests with All-India Ranks (AIR)</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-amber-400 font-bold">✓</span>
+                  <span>Comprehensive step-by-step mathematical &amp; scientific solutions</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-amber-400 font-bold">✓</span>
+                  <span>10+ Years Official Solved PYQ Archives (IISER IAT, NISER NEST, ISI, CMI)</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-amber-400 font-bold">✓</span>
+                  <span>Adaptive Chapter Revision &amp; AI Diagnostic Analytics</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-1">
+              <a
+                href="https://vigyanprep.com/tests"
+                className="flex-1 py-3 px-5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-black font-extrabold text-xs uppercase tracking-wider shadow-lg hover:opacity-95 transition text-center flex items-center justify-center gap-1.5"
+              >
+                <span>🚀 Unlock 2026 Full Pass</span>
+                <ArrowRight size={14} />
+              </a>
+              <a
+                href="https://wa.me/917488057284?text=Hi%20VigyanPrep,%20my%2024-hour%20trial%20pass%20ended%20and%20I%20want%20to%20enroll%20in%20the%20test%20series"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="py-3 px-4 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs border border-white/20 transition flex items-center justify-center gap-1.5"
+              >
+                <MessageSquare size={14} className="text-emerald-400" />
+                <span>Chat on WhatsApp</span>
+              </a>
             </div>
           </div>
         </div>

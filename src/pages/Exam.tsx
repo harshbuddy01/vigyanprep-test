@@ -383,8 +383,24 @@ export default function Exam() {
     ];
   }, [questions, examType]);
 
+  // VP-P001: Ensure Physics section is opened first by default on test start
+  const hasInitializedSectionRef = useRef(false);
+  useEffect(() => {
+    if (!hasInitializedSectionRef.current && sections.length > 0) {
+      const initialSec = sections.includes('Physics') ? 'Physics' : sections[0];
+      setActiveSection(initialSec);
+      hasInitializedSectionRef.current = true;
+    }
+  }, [sections]);
+
+  // Keep activeSection in sync with current question when navigating via palette or next/prev
+  useEffect(() => {
+    if (currentQ?.section && sections.includes(currentQ.section) && currentQ.section !== activeSection) {
+      setActiveSection(currentQ.section);
+    }
+  }, [currentQ?.id, currentQ?.section, sections, activeSection]);
+
   // Auto-correct activeSection if it doesn't exist in available sections (e.g. after questions load)
-  // Only fires when sections array actually changes (thanks to useMemo stable reference)
   useEffect(() => {
     if (sections.length > 0 && !sections.includes(activeSection)) {
       setActiveSection(sections[0]);
