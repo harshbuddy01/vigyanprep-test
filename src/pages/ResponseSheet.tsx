@@ -94,9 +94,87 @@ export const ResponseSheet: React.FC = () => {
   const [isTrialExpired, setIsTrialExpired] = useState(false);
   const [trialSecondsLeft, setTrialSecondsLeft] = useState<number | null>(null);
 
+  // 🔄 Device Response Auto-Sync State
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [hasUnsyncedAnswers, setHasUnsyncedAnswers] = useState(false);
+
   useEffect(() => {
     const authToken = token || getCookie('student_token') || localStorage.getItem('student_token') || getCookie('auth_token') || localStorage.getItem('auth_token') || localStorage.getItem('token') || '';
     const apiBase = import.meta.env.VITE_API_URL || "https://api.vigyanprep.com";
+
+    const syncLocalAnswersIfAvailable = async (attemptIdToSync: string, currentData: any) => {
+      try {
+        let localAns: Record<string, string> = {};
+        const pendingStr = localStorage.getItem('vigyan_pending_submit');
+        if (pendingStr) {
+          try {
+            const p = JSON.parse(pendingStr);
+            if (p.answers && typeof p.answers === 'object') {
+              localAns = { ...localAns, ...p.answers };
+            }
+          } catch {}
+        }
+        const testAnsStr = localStorage.getItem(`vigyan_response_${activeTestId || currentData?.test?.id}`);
+        if (testAnsStr) {
+          try {
+            const ta = JSON.parse(testAnsStr);
+            if (ta && typeof ta === 'object') {
+              localAns = { ...localAns, ...ta };
+            }
+          } catch {}
+        }
+        const lastAnsStr = localStorage.getItem('vigyan_last_answers');
+        if (lastAnsStr) {
+          try {
+            const la = JSON.parse(lastAnsStr);
+            if (la && typeof la === 'object') {
+              localAns = { ...localAns, ...la };
+            }
+          } catch {}
+        }
+
+        const localCount = Object.keys(localAns).filter(k => localAns[k] !== undefined && localAns[k] !== null && String(localAns[k]).trim() !== '').length;
+        const serverCount = (currentData?.questions || []).filter((q: any) => q.studentAnswer !== undefined && q.studentAnswer !== null && String(q.studentAnswer).trim() !== '').length;
+
+        console.log(`[ResponseSheet] Recovery check: local=${localCount}, server=${serverCount}`);
+
+        if (localCount > serverCount && attemptIdToSync) {
+          setHasUnsyncedAnswers(true);
+          console.log(`[ResponseSheet] Detected ${localCount - serverCount} unsynced local answers. Triggering automatic sync to server...`);
+          setIsSyncing(true);
+          const syncRes = await fetch(`${apiBase}/api/exam/lifecycle/sync-answers/${attemptIdToSync}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ answers: localAns })
+          });
+
+          if (syncRes.ok) {
+            console.log('[ResponseSheet] Answers successfully synced. Refetching updated result...');
+            const refreshed = await fetch(`${apiBase}/api/exam/lifecycle/result/${attemptIdToSync}`, {
+              headers: { "Authorization": `Bearer ${authToken}` }
+            });
+            if (refreshed.ok) {
+              const refreshedData = await refreshed.json();
+              if (refreshedData.success && refreshedData.questions?.length > 0) {
+                setSyncNotice(`✅ Exam recovery: Successfully synchronized all ${localCount} answers from your device. Your scores and ranks have been updated!`);
+                setHasUnsyncedAnswers(false);
+                setIsSyncing(false);
+                return refreshedData;
+              }
+            }
+          }
+          setIsSyncing(false);
+        }
+      } catch (syncErr) {
+        console.warn('[ResponseSheet] Auto-sync notice:', syncErr);
+        setIsSyncing(false);
+      }
+      return currentData;
+    };
 
     const fetchResult = async () => {
       setIsLoading(true);
@@ -128,8 +206,9 @@ export const ResponseSheet: React.FC = () => {
               return;
             }
             if (res.ok) {
-              const data = await res.json();
+              let data = await res.json();
               if (data.success && data.questions && data.questions.length > 0) {
+                data = await syncLocalAnswersIfAvailable(activeAttemptId, data);
                 setServerResult(data as AttemptResult);
                 if (data.test) setTestData(data.test);
                 setIsLoading(false);
@@ -165,8 +244,9 @@ export const ResponseSheet: React.FC = () => {
                   return;
                 }
                 if (res.ok) {
-                  const data = await res.json();
+                  let data = await res.json();
                   if (data.success && data.questions && data.questions.length > 0) {
+                    data = await syncLocalAnswersIfAvailable(match.id, data);
                     setServerResult(data as AttemptResult);
                     if (data.test) setTestData(data.test);
                     setIsLoading(false);
@@ -303,6 +383,66 @@ export const ResponseSheet: React.FC = () => {
       }
     } catch (err) { console.error('Report failed:', err); }
     finally { setReportSubmitting(false); }
+  };
+
+  const handleManualSync = async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    try {
+      const apiBase = import.meta.env.VITE_API_URL || "https://api.vigyanprep.com";
+      const authToken = token || getCookie('student_token') || localStorage.getItem('student_token') || getCookie('auth_token') || localStorage.getItem('auth_token') || localStorage.getItem('token') || '';
+      let localAns: Record<string, string> = {};
+      const pendingStr = localStorage.getItem('vigyan_pending_submit');
+      if (pendingStr) {
+        try {
+          const p = JSON.parse(pendingStr);
+          if (p.answers && typeof p.answers === 'object') localAns = { ...localAns, ...p.answers };
+        } catch {}
+      }
+      const testAnsStr = localStorage.getItem(`vigyan_response_${activeTestId || testData?.id}`);
+      if (testAnsStr) {
+        try {
+          const ta = JSON.parse(testAnsStr);
+          if (ta && typeof ta === 'object') localAns = { ...localAns, ...ta };
+        } catch {}
+      }
+      const lastAnsStr = localStorage.getItem('vigyan_last_answers');
+      if (lastAnsStr) {
+        try {
+          const la = JSON.parse(lastAnsStr);
+          if (la && typeof la === 'object') localAns = { ...localAns, ...la };
+        } catch {}
+      }
+
+      const targetAttId = activeAttemptId || (serverResult as any)?.attempt_id;
+      if (targetAttId && Object.keys(localAns).length > 0) {
+        const syncRes = await fetch(`${apiBase}/api/exam/lifecycle/sync-answers/${targetAttId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({ answers: localAns })
+        });
+        if (syncRes.ok) {
+          const refreshed = await fetch(`${apiBase}/api/exam/lifecycle/result/${targetAttId}`, {
+            headers: { "Authorization": `Bearer ${authToken}` }
+          });
+          if (refreshed.ok) {
+            const fresh = await refreshed.json();
+            if (fresh.success && fresh.questions) {
+              setServerResult(fresh as AttemptResult);
+              setSyncNotice(`✅ Synchronized ${Object.keys(localAns).length} device responses. Scorecard updated!`);
+              setHasUnsyncedAnswers(false);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Manual sync failed:', err);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const displayQuestions = React.useMemo(() => {
@@ -543,6 +683,11 @@ export const ResponseSheet: React.FC = () => {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
+            {hasUnsyncedAnswers && (
+              <button onClick={handleManualSync} disabled={isSyncing} className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow transition cursor-pointer">
+                <RotateCcw size={15} className={isSyncing ? "animate-spin" : ""} /> {isSyncing ? "Syncing..." : "Sync Device Answers"}
+              </button>
+            )}
             {!isPaidSeries && (
               <button onClick={handleReattempt} className="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow transition cursor-pointer">
                 <RotateCcw size={15} /> Re-Attempt Test
@@ -576,6 +721,16 @@ export const ResponseSheet: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+
+        {syncNotice && (
+          <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 px-4 py-3 rounded-xl flex items-center justify-between shadow-sm animate-fade-in no-print">
+            <div className="flex items-center gap-2 text-xs font-semibold">
+              <CheckCircle className="text-emerald-600 shrink-0" size={18} />
+              <span>{syncNotice}</span>
+            </div>
+            <button onClick={() => setSyncNotice(null)} className="text-emerald-600 hover:text-emerald-900 text-xs font-bold cursor-pointer">Dismiss</button>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-16 text-center shadow-sm flex flex-col items-center justify-center gap-4">
