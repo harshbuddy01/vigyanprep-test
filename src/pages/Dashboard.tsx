@@ -297,6 +297,57 @@ ${studentName}`
     setRequestSent(true);
   };
 
+  // 24-Hour VIP Demo Pass Claim State
+  const [isClaimingTrial, setIsClaimingTrial] = useState(false);
+  const [trialClaimError, setTrialClaimError] = useState<string | null>(null);
+
+  const handleClaimTrialPass = async () => {
+    if (isClaimingTrial) return;
+    setIsClaimingTrial(true);
+    setTrialClaimError(null);
+
+    try {
+      const token = getCookie('student_token') || localStorage.getItem('student_token') || '';
+      const email = studentEmail || getCookie('student_email') || localStorage.getItem('student_email') || '';
+      const name = studentName || getCookie('student_name') || localStorage.getItem('student_name') || 'Student';
+
+      if (!email || !email.includes('@')) {
+        setTrialClaimError('A valid student email is required to activate your pass.');
+        setIsClaimingTrial(false);
+        return;
+      }
+
+      const res = await fetch('https://api.vigyanprep.com/api/trial/claim', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          name: name.trim(),
+          targetExam: 'ALL'
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setToastMessage('🎉 24-Hour VIP Demo Pass Activated!');
+        setTimeout(() => {
+          window.location.reload();
+        }, 1200);
+      } else {
+        setTrialClaimError(data.error || 'Unable to activate trial pass. Please check eligibility.');
+      }
+    } catch (err: any) {
+      console.error('Trial claim error:', err);
+      setTrialClaimError('Network error. Please check your internet connection.');
+    } finally {
+      setIsClaimingTrial(false);
+    }
+  };
+
   useEffect(() => {
     let token = getCookie('student_token') || localStorage.getItem('student_token');
     let name = getCookie('student_name') || localStorage.getItem('student_name') || localStorage.getItem('full_name') || 'Student';
@@ -1417,22 +1468,68 @@ ${studentName}`
             {/* Right Banner Side Action Cards */}
             <div className="lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10">
               
-              {/* Dark Teak Card: Explore Test Passes */}
-              <div className="p-6 rounded-2xl bg-[#1c1815]/95 border-2 border-amber-500/40 text-white space-y-4 shadow-2xl flex flex-col justify-between">
-                <div className="space-y-2">
-                  <h3 className="font-serif text-lg font-bold text-amber-200">Explore Test Passes</h3>
-                  <p className="text-[11px] text-neutral-300 leading-relaxed font-medium">
-                    Access all subscribed and available test series in one place.
-                  </p>
+              {/* Card 1: If No Subscription, offer Instant 24-Hour VIP Demo Pass Claim */}
+              {!isTrialAccount && subscriptions.length === 0 ? (
+                <div className="p-6 rounded-2xl bg-gradient-to-br from-[#1c1815] to-[#2a221b] border-2 border-amber-400 text-white space-y-4 shadow-2xl flex flex-col justify-between relative overflow-hidden group">
+                  <div className="absolute top-2 right-2">
+                    <span className="px-2 py-0.5 rounded-full bg-amber-400 text-neutral-950 font-black text-[9px] uppercase tracking-wider shadow-sm">
+                      100% Free
+                    </span>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-amber-300">
+                      <Sparkles size={16} className="text-amber-400 animate-pulse" />
+                      <span className="font-mono text-[10px] uppercase font-bold tracking-widest text-amber-300">New Candidate Trial</span>
+                    </div>
+                    <h3 className="font-serif text-lg font-bold text-amber-100">24-Hour VIP Demo</h3>
+                    <p className="text-[11px] text-neutral-300 leading-relaxed font-medium">
+                      Full CBT practice access to IAT, NEST &amp; JEE mock exams. 1 pass per candidate &amp; network.
+                    </p>
+                  </div>
+
+                  {trialClaimError && (
+                    <div className="p-2 rounded-lg bg-red-950/80 border border-red-500/50 text-red-200 text-[10px] leading-tight">
+                      {trialClaimError}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleClaimTrialPass}
+                    disabled={isClaimingTrial}
+                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400 hover:from-amber-300 hover:to-amber-500 text-neutral-950 font-black text-xs flex items-center justify-center gap-2 transition shadow-md shadow-amber-500/30 cursor-pointer active:scale-95 disabled:opacity-50"
+                  >
+                    {isClaimingTrial ? (
+                      <>
+                        <RefreshCw size={14} className="animate-spin text-neutral-950" />
+                        <span>Activating Pass...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Activate 24-Hour Free Pass</span>
+                        <ArrowRight size={14} />
+                      </>
+                    )}
+                  </button>
                 </div>
-                <a
-                  href="https://vigyanprep.com/tests"
-                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition hover:opacity-95 shadow-md shadow-amber-500/20"
-                >
-                  <span>Explore All Passes</span>
-                  <ArrowRight size={14} />
-                </a>
-              </div>
+              ) : (
+                /* Dark Teak Card: Explore Test Passes */
+                <div className="p-6 rounded-2xl bg-[#1c1815]/95 border-2 border-amber-500/40 text-white space-y-4 shadow-2xl flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <h3 className="font-serif text-lg font-bold text-amber-200">Explore Test Passes</h3>
+                    <p className="text-[11px] text-neutral-300 leading-relaxed font-medium">
+                      Access all subscribed and available test series in one place.
+                    </p>
+                  </div>
+                  <a
+                    href="https://vigyanprep.com/tests"
+                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition hover:opacity-95 shadow-md shadow-amber-500/20"
+                  >
+                    <span>Explore All Passes</span>
+                    <ArrowRight size={14} />
+                  </a>
+                </div>
+              )}
 
               {/* Glassy Parchment Card: Browse PYQ Library */}
               <div className="p-6 rounded-2xl bg-white/30 backdrop-blur-xl border-2 border-amber-950/30 space-y-4 shadow-md flex flex-col justify-between">
@@ -1614,6 +1711,65 @@ ${studentName}`
                       <span>Log In Again</span>
                       <ArrowRight size={15} />
                     </button>
+                  </div>
+                ) : !isTrialAccount && subscriptions.length === 0 && activeTab === 'TEST_SERIES' ? (
+                  /* 🌟 HIGH-CONVERSION 24-HOUR VIP DEMO PASS ACTIVATION PANEL */
+                  <div className="p-8 sm:p-10 rounded-3xl bg-white/20 backdrop-blur-2xl border-2 border-amber-950/40 text-center space-y-6 shadow-2xl flex flex-col items-center shadow-[inset_0_1px_2px_0_rgba(255,255,255,0.6)] relative overflow-hidden">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/20 border border-amber-600/40 text-amber-950 font-black text-xs uppercase tracking-wider shadow-xs">
+                      <Sparkles size={14} className="text-amber-800" />
+                      <span>Exclusive Free Access</span>
+                    </div>
+
+                    <div className="space-y-2 max-w-lg">
+                      <h3 className="font-serif text-3xl font-bold text-[#1c1815]">
+                        Experience VigyanPrep Free for 24 Hours
+                      </h3>
+                      <p className="text-xs text-[#1c1815] leading-relaxed font-bold">
+                        Welcome, <strong className="text-amber-950">{studentName}</strong>! You haven&apos;t enrolled in a test series pass yet. Claim your 24-hour instant VIP demo pass to practice official IISER IAT, NISER NEST, and JEE CBT mock exams with live scientific calculator and diagnostic rank analysis.
+                      </p>
+                      <p className="text-[11px] text-neutral-600 font-semibold italic">
+                        🔒 Anti-Abuse Protection: Strictly 1 Free Trial allowed per Student Email &amp; IP Network.
+                      </p>
+                    </div>
+
+                    {trialClaimError && (
+                      <div className="p-3.5 rounded-xl bg-red-950/90 border border-red-500 text-red-200 text-xs font-semibold max-w-md text-left flex items-start gap-2 shadow-md">
+                        <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-bold">Trial Limitation Notice</p>
+                          <p className="text-[11px] mt-0.5 leading-relaxed">{trialClaimError}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-md justify-center">
+                      <button
+                        type="button"
+                        onClick={handleClaimTrialPass}
+                        disabled={isClaimingTrial}
+                        className="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-600 to-amber-500 hover:from-amber-400 hover:to-amber-600 text-black font-black text-xs uppercase tracking-wider transition shadow-xl shadow-amber-500/25 border-2 border-amber-400 flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
+                      >
+                        {isClaimingTrial ? (
+                          <>
+                            <RefreshCw size={15} className="animate-spin text-black" />
+                            <span>Activating Your Demo Pass...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles size={15} />
+                            <span>Activate 24-Hour VIP Demo Pass (Free)</span>
+                            <ArrowRight size={15} />
+                          </>
+                        )}
+                      </button>
+
+                      <a
+                        href="https://vigyanprep.com/tests"
+                        className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-white/40 hover:bg-white/70 text-[#1c1815] font-extrabold text-xs uppercase tracking-wider transition border-2 border-amber-950/30 flex items-center justify-center gap-1.5"
+                      >
+                        <span>Explore All Passes</span>
+                      </a>
+                    </div>
                   </div>
                 ) : (
                   /* ULTRA-TRANSPARENT GLASS MAIN PANEL WITH HANDCRAFTED STUDENT STUDYING SKETCH */
@@ -2520,6 +2676,30 @@ ${studentName}`
                 </div>
 
                 <div className="space-y-2">
+                  {!isTrialAccount && subscriptions.length === 0 && (
+                    <button
+                      onClick={handleClaimTrialPass}
+                      disabled={isClaimingTrial}
+                      className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-orange-400 hover:from-amber-300 hover:to-orange-400 text-neutral-950 font-extrabold text-left flex items-center justify-between transition group shadow-md border-2 border-amber-600/50 cursor-pointer active:scale-98 disabled:opacity-50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-black text-amber-300 flex items-center justify-center shadow-xs">
+                          <Sparkles size={16} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
+                            <span>24h VIP Demo Pass</span>
+                            <span className="px-1.5 py-0.2 bg-black text-amber-300 text-[9px] rounded-full">FREE</span>
+                          </p>
+                          <p className="text-[10px] text-neutral-900 font-bold">
+                            {isClaimingTrial ? 'Activating pass...' : 'Claim 1-Day Trial'}
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight size={16} className="text-neutral-950 group-hover:translate-x-1 transition" />
+                    </button>
+                  )}
+
                   <button
                     onClick={() => navigate('/adaptive-revision')}
                     className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-amber-200/70 to-amber-300/50 hover:from-amber-200 hover:to-amber-300/80 border-2 border-amber-600/40 text-left flex items-center justify-between transition group shadow-sm cursor-pointer"
