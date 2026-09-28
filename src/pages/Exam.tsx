@@ -361,14 +361,34 @@ export default function Exam() {
   }, [timeRemaining, isSubmitted, questions.length, doSubmit]);
 
   const currentQ = questions[currentQuestionIndex];
-  // JEE Main has only 3 sections (no Biology)
+  // Dynamic section calculation: only display sections that actually contain questions!
+  // Fall back to standard exam sections if questions haven't finished loading.
   const examTypeUpper = (examType || '').toUpperCase();
-  const sections = examTypeUpper === 'JEE'
+  const baseStandardSections = (examTypeUpper === 'JEE' || examTypeUpper === 'JEE_MAIN')
     ? ['Physics', 'Chemistry', 'Mathematics']
+    : (examTypeUpper === 'ISI' || examTypeUpper === 'CMI')
+    ? ['Mathematics']
+    : examTypeUpper === 'NEET'
+    ? ['Physics', 'Chemistry', 'Biology']
     : ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
 
+  const questionSections = Array.from(new Set(questions.map(q => q.section).filter(Boolean))) as string[];
+  const sections = questionSections.length > 0
+    ? [
+        ...baseStandardSections.filter(s => questionSections.includes(s)),
+        ...questionSections.filter(s => !baseStandardSections.includes(s))
+      ]
+    : baseStandardSections;
+
+  useEffect(() => {
+    if (sections.length > 0 && !sections.includes(activeSection)) {
+      setActiveSection(sections[0]);
+    }
+  }, [sections, activeSection]);
+
+  const fallbackSection = sections[0] || 'Physics';
   const sectionQuestions = questions
-    .filter(q => q.section === activeSection || (!sections.includes(q.section) && activeSection === 'Physics'))
+    .filter(q => q.section === activeSection || (!sections.includes(q.section) && activeSection === fallbackSection))
     .sort((a, b) => {
       const aIsNum = a.type === 'Numerical';
       const bIsNum = b.type === 'Numerical';
@@ -603,7 +623,7 @@ export default function Exam() {
         <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-0.5 scrollbar-none flex-1">
           <span className="text-xs font-bold text-[#1b365d] uppercase mr-1 hidden sm:inline shrink-0">Sections:</span>
           {sections.map(sec => {
-            const secQuestions = questions.filter(q => q.section === sec || (!sections.includes(q.section) && sec === 'Physics'));
+            const secQuestions = questions.filter(q => q.section === sec || (!sections.includes(q.section) && sec === fallbackSection));
             const secAnswered = secQuestions.filter(q => answers[q.id] !== undefined).length;
             const isActive = activeSection === sec;
             return (
@@ -611,7 +631,7 @@ export default function Exam() {
                 key={sec}
                 onClick={() => {
                   setActiveSection(sec);
-                  const firstQIndex = questions.findIndex(q => q.section === sec || (!sections.includes(q.section) && sec === 'Physics'));
+                  const firstQIndex = questions.findIndex(q => q.section === sec || (!sections.includes(q.section) && sec === fallbackSection));
                   if (firstQIndex !== -1) goToQuestion(firstQIndex);
                 }}
                 className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer ${

@@ -80,8 +80,6 @@ export const ResponseSheet: React.FC = () => {
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reportSuccess, setReportSuccess] = useState(false);
 
-  const sections = ["Physics", "Chemistry", "Mathematics", "Biology"];
-
   const [fetchedQuestions, setFetchedQuestions] = useState<any[]>([]);
   const [testData, setTestData] = useState<any>(null);
 
@@ -308,17 +306,33 @@ export const ResponseSheet: React.FC = () => {
     Boolean(testData?.response_released_at && new Date(testData.response_released_at) <= new Date())
   );
 
+  const examTypeUpper = (testData?.exam_type || '').toUpperCase();
+  const baseStandardSections = (examTypeUpper === 'JEE' || examTypeUpper === 'JEE_MAIN')
+    ? ['Physics', 'Chemistry', 'Mathematics']
+    : (examTypeUpper === 'ISI' || examTypeUpper === 'CMI')
+    ? ['Mathematics']
+    : examTypeUpper === 'NEET'
+    ? ['Physics', 'Chemistry', 'Biology']
+    : ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
+
+  const questionSections = Array.from(new Set(displayQuestions.map(q => q.section).filter(Boolean))) as string[];
+  const sections = questionSections.length > 0
+    ? [
+        ...baseStandardSections.filter(s => questionSections.includes(s)),
+        ...questionSections.filter(s => !baseStandardSections.includes(s))
+      ]
+    : baseStandardSections;
+
   const localScoring = React.useMemo(() => {
     let correctCount = 0, incorrectCount = 0, unattemptedCount = 0, totalScore = 0;
-    const sectionScores: Record<string, any> = {
-      Physics: { correct: 0, incorrect: 0, unattempted: 0, score: 0, total: 0 },
-      Chemistry: { correct: 0, incorrect: 0, unattempted: 0, score: 0, total: 0 },
-      Mathematics: { correct: 0, incorrect: 0, unattempted: 0, score: 0, total: 0 },
-      Biology: { correct: 0, incorrect: 0, unattempted: 0, score: 0, total: 0 },
-    };
+    const sectionScores: Record<string, any> = {};
+    sections.forEach(s => {
+      sectionScores[s] = { correct: 0, incorrect: 0, unattempted: 0, score: 0, total: 0 };
+    });
+    const fallbackSec = sections[0] || 'Physics';
     displayQuestions.forEach(q => {
       const studentAns = displayAnswers[q.id];
-      const sec = q.section && sections.includes(q.section) ? q.section : "Physics";
+      const sec = q.section && sections.includes(q.section) ? q.section : fallbackSec;
       if (!sectionScores[sec]) sectionScores[sec] = { correct: 0, incorrect: 0, unattempted: 0, score: 0, total: 0 };
       sectionScores[sec].total++;
 
@@ -584,7 +598,10 @@ export const ResponseSheet: React.FC = () => {
                     <BarChart3 size={15} className="text-indigo-600" /> Subject-wise Performance
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {sections.map(sec => {
+                    {sections.filter(sec => {
+                      const s = (serverResult?.sectionScores && serverResult.sectionScores[sec]) || localScoring.sectionScores[sec];
+                      return s && s.total > 0;
+                    }).map(sec => {
                       const s = (serverResult?.sectionScores && serverResult.sectionScores[sec]) || localScoring.sectionScores[sec] || { correct: 0, incorrect: 0, unattempted: 0, score: 0, total: 0 };
                       const secAttempted = s.correct + s.incorrect;
                       const secAcc = secAttempted > 0 ? Math.round((s.correct / secAttempted) * 100) : 0;
