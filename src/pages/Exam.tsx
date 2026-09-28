@@ -704,10 +704,10 @@ export default function Exam() {
                 <div className="flex items-center gap-2">
                   <span className={`px-2.5 py-0.5 sm:px-3 sm:py-1 border font-bold text-[11px] sm:text-xs rounded-full ${
                     currentQ.type === 'Numerical'
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                      ? 'bg-purple-50 text-purple-800 border-purple-200'
                       : 'bg-blue-50 text-blue-800 border-blue-200'
                   }`}>
-                    {currentQ.type === 'Numerical' ? 'Marks: +4 | 0 (No Negative)' : 'Marks: +4 | -1'}
+                    Marks: +4 | -1
                   </span>
                   <button
                     onClick={() => { setShowReportModal(true); setReportSuccess(false); }}

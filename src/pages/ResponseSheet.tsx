@@ -339,22 +339,43 @@ export const ResponseSheet: React.FC = () => {
       const correctKey = (q.correct_answer || (q as any).correctAnswer || '').trim().toUpperCase();
       const studentKey = (studentAns || '').trim().toUpperCase();
 
+      const isNumerical = q.type === 'Numerical' || (q as any).question_type === 'Numerical';
+      let isCorrect = false;
+      if (studentKey && correctKey) {
+        if (isNumerical) {
+          const sNum = parseFloat(studentKey);
+          const cNum = parseFloat(correctKey);
+          if (!isNaN(sNum) && !isNaN(cNum)) {
+            isCorrect = Math.abs(sNum - cNum) <= 0.01 || studentKey === correctKey;
+          } else {
+            isCorrect = studentKey.toLowerCase() === correctKey.toLowerCase();
+          }
+        } else {
+          isCorrect = studentKey === correctKey;
+        }
+      }
+
+      const posMarks = Number((q as any).marks_positive) || 4;
+      const negMarks = (q as any).marks_negative !== undefined && (q as any).marks_negative !== null
+        ? Math.abs(Number((q as any).marks_negative))
+        : 1;
+
       if (!studentKey) {
         unattemptedCount++;
         sectionScores[sec].unattempted++;
-      } else if (correctKey && studentKey === correctKey) {
+      } else if (isCorrect) {
         correctCount++;
-        totalScore += 4;
+        totalScore += posMarks;
         sectionScores[sec].correct++;
-        sectionScores[sec].score += 4;
+        sectionScores[sec].score += posMarks;
       } else if (!correctKey) {
         unattemptedCount++;
         sectionScores[sec].unattempted++;
       } else {
         incorrectCount++;
-        totalScore -= 1;
+        totalScore -= negMarks;
         sectionScores[sec].incorrect++;
-        sectionScores[sec].score -= 1;
+        sectionScores[sec].score -= negMarks;
       }
     });
 
@@ -718,11 +739,33 @@ export const ResponseSheet: React.FC = () => {
               {displayQuestions
                 .filter(q => q.section === activeTab || (!sections.includes(q.section) && activeTab === "Physics"))
                 .map((q, idx) => {
+                  const isNumerical = q.type === 'Numerical' || (q as any).question_type === 'Numerical';
                   const studentAns = (displayAnswers[q.id] || '').trim().toUpperCase();
                   const correctKey = ((q.correct_answer || (q as any).correctAnswer) || '').trim().toUpperCase();
-                  const isCorrect = studentAns && correctKey && studentAns === correctKey;
-                  const isWrong = studentAns && correctKey && studentAns !== correctKey;
+                  let isCorrect = false;
+                  let isWrong = false;
+
+                  if (studentAns && correctKey) {
+                    if (isNumerical) {
+                      const sNum = parseFloat(studentAns);
+                      const cNum = parseFloat(correctKey);
+                      if (!isNaN(sNum) && !isNaN(cNum)) {
+                        isCorrect = Math.abs(sNum - cNum) <= 0.01 || studentAns === correctKey;
+                      } else {
+                        isCorrect = studentAns.toLowerCase() === correctKey.toLowerCase();
+                      }
+                    } else {
+                      isCorrect = studentAns === correctKey;
+                    }
+                    isWrong = !isCorrect;
+                  }
+
                   const isUnattempted = !studentAns;
+                  const posMarks = Number((q as any).marks_positive) || 4;
+                  const negMarks = (q as any).marks_negative !== undefined && (q as any).marks_negative !== null
+                    ? Math.abs(Number((q as any).marks_negative))
+                    : 1;
+
                   const opts = q.options && q.options.length >= 2 ? q.options : ["Option A", "Option B", "Option C", "Option D"];
                   const optLabels = ["A", "B", "C", "D"];
                   const isExpanded = expandedSolutions[q.id];
@@ -738,15 +781,17 @@ export const ResponseSheet: React.FC = () => {
                           {/* Question Top Status Pill when Result is Declared */}
                           {isResultDeclared && (
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs font-bold text-gray-400">Question {idx + 1} ({q.section || activeTab})</span>
+                              <span className="text-xs font-bold text-gray-400">
+                                {isNumerical ? 'Section B Numerical • ' : 'Section A • '}Question {idx + 1} ({q.section || activeTab})
+                              </span>
                               {isCorrect && (
                                 <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-extrabold rounded-full flex items-center gap-1">
-                                  <CheckCircle2 size={12} /> Correct (+4)
+                                  <CheckCircle2 size={12} /> Correct (+{posMarks})
                                 </span>
                               )}
                               {isWrong && (
                                 <span className="px-2.5 py-0.5 bg-rose-100 text-rose-800 border border-rose-200 text-xs font-extrabold rounded-full flex items-center gap-1">
-                                  <XCircle size={12} /> Incorrect (-1)
+                                  <XCircle size={12} /> Incorrect (-{negMarks})
                                 </span>
                               )}
                               {isUnattempted && (
@@ -767,53 +812,82 @@ export const ResponseSheet: React.FC = () => {
                             </div>
                           )}
 
-                          {/* Options Grid */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
-                            {opts.map((opt: string, oi: number) => {
-                              const label = optLabels[oi];
-                              const isStudentChoice = studentAns === label;
-                              const isOfficialCorrect = correctKey === label;
-
-                              let optStyle = "border-gray-200 bg-gray-50 text-gray-700";
-                              let badgeStyle = "bg-gray-200 text-gray-700";
-
-                              if (isResultDeclared) {
-                                // 🌟 Result Declared: Show official answer in emerald and wrong student answer in rose
-                                if (isOfficialCorrect) {
-                                  optStyle = "border-emerald-500 bg-emerald-50/80 text-emerald-900 font-bold shadow-sm ring-1 ring-emerald-400";
-                                  badgeStyle = "bg-emerald-600 text-white";
-                                } else if (isStudentChoice && !isOfficialCorrect) {
-                                  optStyle = "border-rose-400 bg-rose-50 text-rose-900 font-bold";
-                                  badgeStyle = "bg-rose-600 text-white";
-                                }
-                              } else {
-                                // 🔒 Unreleased Live Mode: Only show what candidate picked in neutral blue
-                                if (isStudentChoice) {
-                                  optStyle = "border-[#1b365d] bg-blue-50 text-[#1b365d] font-bold";
-                                  badgeStyle = "bg-[#1b365d] text-white";
-                                }
-                              }
-
-                              return (
-                                <div key={oi} className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-xs transition ${optStyle}`}>
-                                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${badgeStyle}`}>
-                                    {label}
+                          {/* Options Grid or Numerical Response */}
+                          {isNumerical ? (
+                            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-3 space-y-2">
+                              <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-gray-700">Your Response:</span>
+                                  <span className={`font-mono font-black px-2.5 py-1 rounded-lg border ${
+                                    !studentAns
+                                      ? 'bg-gray-100 text-gray-400 border-gray-200'
+                                      : isResultDeclared
+                                      ? isCorrect
+                                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                        : 'bg-rose-50 text-rose-800 border-rose-300'
+                                      : 'bg-blue-50 text-[#1b365d] border-blue-200'
+                                  }`}>
+                                    {studentAns || 'Not Answered'}
                                   </span>
-                                  <div className="flex-1"><MathText text={opt} inlineOnly /></div>
-                                  {isResultDeclared && isOfficialCorrect && (
-                                    <span className="text-[10px] font-extrabold text-emerald-900 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md shrink-0 flex items-center gap-1">
-                                      {isStudentChoice ? "✓ Your Choice (Correct +4)" : "✓ Official Correct Key"}
-                                    </span>
-                                  )}
-                                  {isResultDeclared && isStudentChoice && !isOfficialCorrect && (
-                                    <span className="text-[10px] font-extrabold text-rose-900 bg-rose-100 border border-rose-300 px-2 py-0.5 rounded-md shrink-0 flex items-center gap-1">
-                                      ✗ Your Choice (-1 Mark)
-                                    </span>
-                                  )}
                                 </div>
-                              );
-                            })}
-                          </div>
+                                {isResultDeclared && correctKey && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-gray-700">Official Correct Answer:</span>
+                                    <span className="font-mono font-black px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300">
+                                      {correctKey}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                              {opts.map((opt: string, oi: number) => {
+                                const label = optLabels[oi];
+                                const isStudentChoice = studentAns === label;
+                                const isOfficialCorrect = correctKey === label;
+
+                                let optStyle = "border-gray-200 bg-gray-50 text-gray-700";
+                                let badgeStyle = "bg-gray-200 text-gray-700";
+
+                                if (isResultDeclared) {
+                                  // 🌟 Result Declared: Show official answer in emerald and wrong student answer in rose
+                                  if (isOfficialCorrect) {
+                                    optStyle = "border-emerald-500 bg-emerald-50/80 text-emerald-900 font-bold shadow-sm ring-1 ring-emerald-400";
+                                    badgeStyle = "bg-emerald-600 text-white";
+                                  } else if (isStudentChoice && !isOfficialCorrect) {
+                                    optStyle = "border-rose-400 bg-rose-50 text-rose-900 font-bold";
+                                    badgeStyle = "bg-rose-600 text-white";
+                                  }
+                                } else {
+                                  // 🔒 Unreleased Live Mode: Only show what candidate picked in neutral blue
+                                  if (isStudentChoice) {
+                                    optStyle = "border-[#1b365d] bg-blue-50 text-[#1b365d] font-bold";
+                                    badgeStyle = "bg-[#1b365d] text-white";
+                                  }
+                                }
+
+                                return (
+                                  <div key={oi} className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-xs transition ${optStyle}`}>
+                                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${badgeStyle}`}>
+                                      {label}
+                                    </span>
+                                    <div className="flex-1"><MathText text={opt} inlineOnly /></div>
+                                    {isResultDeclared && isOfficialCorrect && (
+                                      <span className="text-[10px] font-extrabold text-emerald-900 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md shrink-0 flex items-center gap-1">
+                                        {isStudentChoice ? `✓ Your Choice (Correct +${posMarks})` : "✓ Official Correct Key"}
+                                      </span>
+                                    )}
+                                    {isResultDeclared && isStudentChoice && !isOfficialCorrect && (
+                                      <span className="text-[10px] font-extrabold text-rose-900 bg-rose-100 border border-rose-300 px-2 py-0.5 rounded-md shrink-0 flex items-center gap-1">
+                                        ✗ Your Choice (-{negMarks} Mark)
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
 
                           {/* Action Footer */}
                           <div className="flex items-center justify-between text-xs pt-1">

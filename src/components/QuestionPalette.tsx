@@ -123,7 +123,7 @@ export const QuestionPalette: React.FC<Props> = React.memo((props) => {
                 <span className="w-4 h-4 rounded bg-purple-700 text-white flex items-center justify-center text-[9px] font-bold">B</span>
                 Section B: Numerical (Q21–Q{20 + sectionBNumericals.length})
               </span>
-              <span className="text-[10px] text-emerald-700 font-bold font-mono">+4 / 0</span>
+              <span className="text-[10px] text-purple-700 font-bold font-mono">+4 / -1</span>
             </div>
             <div className="grid grid-cols-5 gap-2 sm:gap-2.5">
               {sectionBNumericals.map((q, idx) => renderButton(q, 21 + idx))}
