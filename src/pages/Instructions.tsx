@@ -89,7 +89,17 @@ export const Instructions: React.FC = () => {
             setIsLiveTest(isLive);
 
             if (data.questions && Array.isArray(data.questions)) {
-              setQuestions(data.questions);
+              const secOrder = ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
+              const sorted = [...data.questions].sort((a: any, b: any) => {
+                const sA = secOrder.indexOf(a.section || 'Physics');
+                const sB = secOrder.indexOf(b.section || 'Physics');
+                if (sA !== sB) return (sA >= 0 ? sA : 99) - (sB >= 0 ? sB : 99);
+                const aIsNum = a.type === 'Numerical';
+                const bIsNum = b.type === 'Numerical';
+                if (aIsNum !== bIsNum) return aIsNum ? 1 : -1;
+                return (a.question_number || 0) - (b.question_number || 0);
+              });
+              setQuestions(sorted);
             }
           }
         } catch (err: any) {

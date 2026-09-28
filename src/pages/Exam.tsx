@@ -65,7 +65,17 @@ export default function Exam() {
         const res = await fetch(`${apiBase}/api/public/tests/${activeId}`);
         const data = await res.json();
         if (data.success && data.questions && data.questions.length > 0) {
-          setQuestions(data.questions);
+          const secOrder = ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
+          const sorted = [...data.questions].sort((a: any, b: any) => {
+            const sA = secOrder.indexOf(a.section || 'Physics');
+            const sB = secOrder.indexOf(b.section || 'Physics');
+            if (sA !== sB) return (sA >= 0 ? sA : 99) - (sB >= 0 ? sB : 99);
+            const aIsNum = a.type === 'Numerical';
+            const bIsNum = b.type === 'Numerical';
+            if (aIsNum !== bIsNum) return aIsNum ? 1 : -1;
+            return (a.question_number || 0) - (b.question_number || 0);
+          });
+          setQuestions(sorted);
           if (data.test) {
             setTestMeta({
               testTitle: data.test.title,
@@ -357,9 +367,14 @@ export default function Exam() {
     ? ['Physics', 'Chemistry', 'Mathematics']
     : ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
 
-  const sectionQuestions = questions.filter(q =>
-    q.section === activeSection || (!sections.includes(q.section) && activeSection === 'Physics')
-  );
+  const sectionQuestions = questions
+    .filter(q => q.section === activeSection || (!sections.includes(q.section) && activeSection === 'Physics'))
+    .sort((a, b) => {
+      const aIsNum = a.type === 'Numerical';
+      const bIsNum = b.type === 'Numerical';
+      if (aIsNum !== bIsNum) return aIsNum ? 1 : -1;
+      return (a.question_number || 0) - (b.question_number || 0);
+    });
 
   const currentSectionQIndex = sectionQuestions.findIndex(q => q.id === currentQ?.id);
 
@@ -650,12 +665,21 @@ export default function Exam() {
               </div>
 
               <div className="flex items-center justify-between border-b pb-3 flex-wrap gap-2">
-                <span className="text-xs sm:text-sm font-bold text-[#1b365d] uppercase tracking-wider">
-                  Question No. {currentSectionQIndex !== -1 ? currentSectionQIndex + 1 : 1} of {sectionQuestions.length} ({activeSection})
+                <span className="text-xs sm:text-sm font-bold text-[#1b365d] uppercase tracking-wider flex items-center gap-2">
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-black ${
+                    currentQ.type === 'Numerical' ? 'bg-purple-100 text-purple-900 border border-purple-300' : 'bg-blue-100 text-blue-900 border border-blue-300'
+                  }`}>
+                    {currentQ.type === 'Numerical' ? 'SECTION B' : 'SECTION A'}
+                  </span>
+                  Question No. {currentQ.question_number || (currentSectionQIndex !== -1 ? currentSectionQIndex + 1 : 1)} of {sectionQuestions.length} ({activeSection})
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 bg-blue-50 text-blue-800 border border-blue-200 font-bold text-[11px] sm:text-xs rounded-full">
-                    Marks: +4 | -1
+                  <span className={`px-2.5 py-0.5 sm:px-3 sm:py-1 border font-bold text-[11px] sm:text-xs rounded-full ${
+                    currentQ.type === 'Numerical'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                      : 'bg-blue-50 text-blue-800 border-blue-200'
+                  }`}>
+                    {currentQ.type === 'Numerical' ? 'Marks: +4 | 0 (No Negative)' : 'Marks: +4 | -1'}
                   </span>
                   <button
                     onClick={() => { setShowReportModal(true); setReportSuccess(false); }}
